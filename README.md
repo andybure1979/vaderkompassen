@@ -104,3 +104,9 @@ Ladda upp samtliga filer till en katalog på din webbserver. Ingen Python eller 
 - Prognosanrop har en tidsgräns och ett automatiskt återförsök vid tillfälliga nätverks- eller serverfel.
 - SMHI, Yr/DMI och stödmodeller rapporterar tydligare fel per källa utan att stoppa övriga fungerande prognoser.
 - Webbläsarcache kring prognos-API:erna kringgås så att användaren får aktuell källstatus.
+
+
+## Version 12.2
+- Surfprognosen visar dominant vågriktning.
+- Surfpoängen premierar högre vågor samt starkare vind som blåser från land mot hav.
+- Frånlandsvind beräknas individuellt per kustort utifrån ortens och havspunktens koordinater.
