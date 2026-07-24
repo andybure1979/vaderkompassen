@@ -202,9 +202,9 @@ const ACTIVITIES = {
   ski:{label:"Skidväder",icon:"⛷️"}
 };
 const MODELS = {
-  "SMHI":{type:"smhi"},
-  "Yr / MET Norway":{type:"openMeteo",endpoint:"https://api.open-meteo.com/v1/metno"},
-  "DMI":{type:"openMeteo",endpoint:"https://api.open-meteo.com/v1/dmi"},
+  "SMHI":{type:"smhi",country:"SE"},
+  "Yr / MET Norway":{type:"openMeteo",country:"NO",endpoint:"https://api.open-meteo.com/v1/metno"},
+  "DMI":{type:"openMeteo",country:"DK",endpoint:"https://api.open-meteo.com/v1/dmi"},
   "ECMWF":{type:"openMeteo",model:"ecmwf_ifs025"},
   "ICON":{type:"openMeteo",model:"icon_seamless"},
   "GFS":{type:"openMeteo",model:"gfs_seamless"}
@@ -397,12 +397,23 @@ function renderSourceChoices(){
     :"Endast markerade källor används och de väger lika.";
 }
 
-const BATCH_SIZE=45;
-const SMHI_MAX_PLACES=90;
+const BATCH_SIZE=18;
+const MAX_BATCH_CONCURRENCY=3;
+const SMHI_MAX_PLACES=60;
 const REQUEST_TIMEOUT_MS=18000;
 const REQUEST_RETRIES=1;
 const chunks=(arr,size)=>Array.from({length:Math.ceil(arr.length/size)},(_,i)=>arr.slice(i*size,(i+1)*size));
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+async function mapWithConcurrency(items,limit,worker){
+  const results=new Array(items.length);let next=0;
+  async function runner(){
+    while(next<items.length){const i=next++;try{results[i]={status:"fulfilled",value:await worker(items[i],i)}}catch(reason){results[i]={status:"rejected",reason}}}
+  }
+  await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
+  return results;
+}
+const diagnostics={version:"12.1",lastLoad:null,sources:[]};
+window.vaderkompassenDiagnostics=diagnostics;
 async function resilientFetch(url,{timeout=REQUEST_TIMEOUT_MS,retries=REQUEST_RETRIES}={}){
   let lastError;
   for(let attempt=0;attempt<=retries;attempt++){
@@ -436,9 +447,15 @@ async function fetchModelBatch(label,model,places){
   return rows;
 }
 async function fetchOpenMeteo(label,model,places){
-  const results=await Promise.allSettled(chunks(places,BATCH_SIZE).map(batch=>fetchModelBatch(label,model,batch)));
+  const scoped=model.country?places.filter(p=>countryFor({region:p[2]})===model.country):places;
+  if(!scoped.length)throw new Error(`${label}: inga orter inom källans täckning`);
+  const batches=chunks(scoped,BATCH_SIZE);
+  const results=await mapWithConcurrency(batches,MAX_BATCH_CONCURRENCY,batch=>fetchModelBatch(label,model,batch));
   const rows=results.filter(x=>x.status==="fulfilled").flatMap(x=>x.value);
-  if(!rows.length)throw new Error(`${label}: inga data`);
+  if(!rows.length){
+    const details=[...new Set(results.filter(x=>x.status==="rejected").map(x=>x.reason?.message).filter(Boolean))].slice(0,2).join("; ");
+    throw new Error(`${label}: ${details||"inga data"}`);
+  }
   return rows;
 }
 
@@ -569,7 +586,9 @@ async function load(){
       weatherPromise,fetchMarine(places).catch(()=>[]),fetchSnow(places).catch(()=>[])
     ]);
     const rows=settled.filter(x=>x.status==="fulfilled").flatMap(x=>x.value);
-    const sourceStatus=settled.map((result,i)=>({name:selectedModels[i][0],ok:result.status==="fulfilled",error:result.status==="rejected"?result.reason?.message:""}));
+    const sourceStatus=settled.map((result,i)=>({name:selectedModels[i][0],ok:result.status==="fulfilled",rows:result.status==="fulfilled"?result.value.length:0,error:result.status==="rejected"?result.reason?.message:""}));
+    diagnostics.lastLoad=new Date().toISOString();diagnostics.sources=sourceStatus;diagnostics.placeCount=places.length;
+    console.table(sourceStatus);
     const ok=sourceStatus.filter(x=>x.ok).length;
     if(!rows.length)throw new Error(`Ingen väderkälla svarade. ${sourceStatus.map(x=>`${x.name}: ${x.error||"fel"}`).join(" · ")}`);
     dailyResults=aggregate(rows,marineResult,snowResult);activeDate=Object.keys(dailyResults).sort()[0];

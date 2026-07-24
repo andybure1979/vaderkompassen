@@ -96,10 +96,10 @@ Ladda upp samtliga filer till en katalog på din webbserver. Ingen Python eller 
 - Källstatus visar exakt vilka prognoskällor som svarar eller saknas.
 
 
-## Version 12
+## Version 12.1
 
 - Versionsnumret visas diskret längst ned på sidan.
-- App-, CSS- och service worker-versioner synkroniserade till v12.
+- App-, CSS- och service worker-versioner synkroniserade till v12.1.
 - PWA-cachen uppdaterad så att den nya versionen laddas korrekt.
 - Prognosanrop har en tidsgräns och ett automatiskt återförsök vid tillfälliga nätverks- eller serverfel.
 - SMHI, Yr/DMI och stödmodeller rapporterar tydligare fel per källa utan att stoppa övriga fungerande prognoser.
