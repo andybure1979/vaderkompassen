@@ -163,3 +163,14 @@ fieldset { border:1px solid var(--border); border-radius:14px; }
 .special-metrics { display:flex; flex-wrap:wrap; gap:8px; margin:0 0 14px; }
 .special-metrics span { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:9px 11px; font-weight:750; font-size:13px; }
 .mini-metrics span { white-space:nowrap; }
+
+.map-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}.map-actions .map-button{margin:0;text-align:center;border:0;cursor:pointer}.map-section{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:10px;margin-bottom:18px}.map-legend{display:flex;flex-wrap:wrap;gap:10px;padding:3px 4px 10px;font-size:12px;font-weight:700}.map-legend span{display:flex;align-items:center;gap:4px}.map-legend i{width:10px;height:10px;border-radius:50%;display:inline-block}.legend-green{background:#16803c}.legend-yellow{background:#d6a700}.legend-orange{background:#e67e22}.legend-red{background:#c92a2a}#weatherMap{height:430px;border-radius:13px;overflow:hidden}.update-banner{position:sticky;top:0;z-index:2000;background:#143d32;color:white;padding:10px 14px;display:flex;align-items:center;justify-content:center;gap:14px;font-weight:700}.update-banner button{border:0;border-radius:999px;padding:8px 13px;background:white;color:#143d32;font-weight:800}.leaflet-popup-content{font-family:system-ui,-apple-system,sans-serif;line-height:1.45}@media(max-width:480px){.map-actions{grid-template-columns:1fr}#weatherMap{height:58vh}.region-grid{grid-template-columns:1fr}}
+
+.source-fieldset { background:#f8fbfa; }
+.source-mode-label { margin:8px 0 10px; }
+.source-grid { display:grid; grid-template-columns:1fr 1fr; gap:5px 8px; }
+.source-check { margin:5px 0; font-size:14px; }
+.source-check:has(input:disabled) { opacity:.62; }
+.settings-hint { margin:8px 0 10px; color:var(--muted); font-size:13px; line-height:1.4; font-weight:500; }
+.settings-error { color:#b42318; font-size:13px; font-weight:750; margin:8px 0; }
+@media(max-width:430px){.source-grid{grid-template-columns:1fr}}

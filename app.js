@@ -39,16 +39,16 @@ const PLACES = [
   ["Arvidsjaur","Lappland","Norra Sverige",65.5903,19.1668],["Hemavan","Lappland","Norra Sverige",65.819,15.086],
 
   // Danmark
-  ["Skagen","Danmark","Danmark",57.7209,10.5839],["Aalborg","Danmark","Danmark",57.0488,9.9217],
-  ["Løkken","Danmark","Danmark",57.37,9.714],["Klitmøller","Danmark","Danmark",57.043,8.486],
-  ["Aarhus","Danmark","Danmark",56.1629,10.2039],["Esbjerg","Danmark","Danmark",55.4765,8.4594],
-  ["Hvide Sande","Danmark","Danmark",56.004,8.129],["Billund","Danmark","Danmark",55.7284,9.1124],
-  ["Odense","Danmark","Danmark",55.4038,10.4024],["København","Danmark","Danmark",55.6761,12.5683],
-  ["Roskilde","Danmark","Danmark",55.6415,12.0803],["Næstved","Danmark","Danmark",55.2299,11.7609],
-  ["Rønne/Bornholm","Danmark","Danmark",55.1009,14.7066]
+  ["Skagen","Nordjylland","Jylland",57.7209,10.5839],["Aalborg","Nordjylland","Jylland",57.0488,9.9217],
+  ["Løkken","Nordjylland","Jylland",57.37,9.714],["Klitmøller","Nordjylland","Jylland",57.043,8.486],
+  ["Aarhus","Midtjylland","Jylland",56.1629,10.2039],["Esbjerg","Syddanmark","Jylland",55.4765,8.4594],
+  ["Hvide Sande","Midtjylland","Jylland",56.004,8.129],["Billund","Syddanmark","Jylland",55.7284,9.1124],
+  ["Odense","Fyn","Fyn",55.4038,10.4024],["København","Hovedstaden","Själland",55.6761,12.5683],
+  ["Roskilde","Själland","Själland",55.6415,12.0803],["Næstved","Själland","Själland",55.2299,11.7609],
+  ["Rønne/Bornholm","Bornholm","Själland",55.1009,14.7066]
 ];
 
-const REGIONS = ["Södra Sverige","Mellansverige","Norra Sverige","Danmark"];
+const REGIONS = ["Södra Sverige","Mellansverige","Norra Sverige","Jylland","Fyn","Själland"];
 const ACTIVITIES = {
   general:{label:"Sol och bad",icon:"☀️"},
   coast:{label:"Kustväder",icon:"🏖️"},
@@ -86,13 +86,21 @@ const SNOW_DAILY = "snowfall_sum";
 const SNOW_HOURLY = "snow_depth,freezing_level_height";
 
 
-const defaults={temp:22,rain:3,sun:2,wind:1.5,regions:[...REGIONS],activity:"general"};
+const defaults={
+  temp:22,rain:3,sun:2,wind:1.5,regions:[...REGIONS],activity:"general",
+  sourceMode:"auto",sources:Object.keys(MODELS)
+};
 let settings={...defaults,...JSON.parse(localStorage.getItem("vk-settings")||"{}")};
-if(!Array.isArray(settings.regions)){
-  settings.regions=[...REGIONS];
-  delete settings.landscapes;
-}
-let dailyResults={}, activeDate=null;
+if(!Array.isArray(settings.regions)){ settings.regions=[...REGIONS]; delete settings.landscapes; }
+if(settings.regions.includes("Danmark")){ settings.regions=settings.regions.filter(x=>x!=="Danmark").concat(["Jylland","Fyn","Själland"]); }
+settings.regions=[...new Set(settings.regions.filter(x=>REGIONS.includes(x)))];
+if(!settings.regions.length)settings.regions=[...REGIONS];
+if(!["auto","manual"].includes(settings.sourceMode))settings.sourceMode="auto";
+if(!Array.isArray(settings.sources))settings.sources=Object.keys(MODELS);
+settings.sources=[...new Set(settings.sources.filter(x=>MODELS[x]))];
+if(!settings.sources.length)settings.sources=Object.keys(MODELS);
+
+let dailyResults={}, activeDate=null, map=null, markerLayer=null;
 const $=id=>document.getElementById(id);
 const clamp=n=>Math.max(0,Math.min(100,n));
 const mean=a=>{const b=a.filter(Number.isFinite);return b.length?b.reduce((x,y)=>x+y,0)/b.length:null};
@@ -101,11 +109,12 @@ const fmt=(n,d=1)=>Number.isFinite(n)?n.toFixed(d):"–";
 const validNumber=v=>v===null||v===undefined||v===""?null:(Number.isFinite(Number(v))?Number(v):null);
 
 function countryFor(item){
-  if(item.region==="Danmark") return "DK";
+  if(["Jylland","Fyn","Själland"].includes(item.region)) return "DK";
   if(item.region==="Norge") return "NO";
   return "SE";
 }
 function sourceWeight(model,item){
+  if(settings.sourceMode==="manual")return 1;
   const country=countryFor(item);
   if(country==="SE" && model==="SMHI/MetCoOp") return 3.5;
   if(country==="DK" && model==="DMI") return 3.5;
@@ -119,6 +128,22 @@ function weightedMean(rows,key){
   const total=valid.reduce((sum,r)=>sum+sourceWeight(r.model,r),0);
   return valid.reduce((sum,r)=>sum+r[key]*sourceWeight(r.model,r),0)/total;
 }
+function activeModelEntries(){
+  const names=settings.sourceMode==="auto"?Object.keys(MODELS):settings.sources;
+  return names.filter(name=>MODELS[name]).map(name=>[name,MODELS[name]]);
+}
+function dominantSource(rows,item){
+  const available=[...new Set(rows.filter(r=>Number.isFinite(r.temp)).map(r=>r.model))];
+  if(!available.length)return "–";
+  return available.sort((a,b)=>sourceWeight(b,item)-sourceWeight(a,item))[0];
+}
+function sourceLabel(){
+  const names=activeModelEntries().map(([name])=>name);
+  return settings.sourceMode==="auto"
+    ? `Automatiskt · ${names.length} källor`
+    : `Eget val · ${names.join(", ")}`;
+}
+
 
 const bell=(value,target,width)=>clamp(100-Math.abs(value-target)*(100/width));
 
@@ -187,25 +212,36 @@ function renderRegionChoices(){
     l.append(i,document.createTextNode(" "+name));box.appendChild(l);
   });
 }
-async function fetchModel(label,model,places){
-  const params=new URLSearchParams({
-    latitude:places.map(p=>p[3]).join(","),longitude:places.map(p=>p[4]).join(","),
-    daily:DAILY,timezone:"auto",forecast_days:"7",models:model,wind_speed_unit:"ms"
+function renderSourceChoices(){
+  const box=$("sourceChoices");box.innerHTML="";
+  Object.keys(MODELS).forEach(name=>{
+    const l=document.createElement("label");l.className="check source-check";
+    const i=document.createElement("input");i.type="checkbox";i.value=name;
+    i.checked=settings.sources.includes(name);
+    i.disabled=$("sourceMode").value==="auto";
+    l.append(i,document.createTextNode(" "+name));box.appendChild(l);
   });
+  $("sourceHint").textContent=$("sourceMode").value==="auto"
+    ?"Alla källor används. SMHI/MetCoOp väger tyngst i Sverige och DMI i Danmark."
+    :"Endast markerade källor används och de väger lika.";
+}
+
+const BATCH_SIZE=45;
+const chunks=(arr,size)=>Array.from({length:Math.ceil(arr.length/size)},(_,i)=>arr.slice(i*size,(i+1)*size));
+async function fetchModelBatch(label,model,places){
+  const params=new URLSearchParams({latitude:places.map(p=>p[3]).join(","),longitude:places.map(p=>p[4]).join(","),daily:DAILY,timezone:"auto",forecast_days:"7",models:model,wind_speed_unit:"ms"});
   const res=await fetch(`https://api.open-meteo.com/v1/forecast?${params}`);
   if(!res.ok)throw new Error(`${label}: ${res.status}`);
   let data=await res.json();if(!Array.isArray(data))data=[data];
   const rows=[];
-  data.forEach((item,pi)=>{
-    const d=item.daily||{};
-    (d.time||[]).forEach((day,i)=>rows.push({
-      place:places[pi][0],area:places[pi][1],region:places[pi][2],lat:places[pi][3],lon:places[pi][4],day,model:label,
-      temp:validNumber(d.temperature_2m_max?.[i]),min:validNumber(d.temperature_2m_min?.[i]),
-      rain:validNumber(d.precipitation_sum?.[i]),risk:validNumber(d.precipitation_probability_max?.[i]),
-      sun:validNumber(d.sunshine_duration?.[i])===null?null:validNumber(d.sunshine_duration?.[i])/3600,
-      wind:validNumber(d.wind_speed_10m_max?.[i])
-    }));
-  });return rows;
+  data.forEach((item,pi)=>{const d=item.daily||{};(d.time||[]).forEach((day,i)=>rows.push({place:places[pi][0],area:places[pi][1],region:places[pi][2],lat:places[pi][3],lon:places[pi][4],day,model:label,temp:validNumber(d.temperature_2m_max?.[i]),min:validNumber(d.temperature_2m_min?.[i]),rain:validNumber(d.precipitation_sum?.[i]),risk:validNumber(d.precipitation_probability_max?.[i]),sun:validNumber(d.sunshine_duration?.[i])===null?null:validNumber(d.sunshine_duration?.[i])/3600,wind:validNumber(d.wind_speed_10m_max?.[i])}));});
+  return rows;
+}
+async function fetchModel(label,model,places){
+  const results=await Promise.allSettled(chunks(places,BATCH_SIZE).map(batch=>fetchModelBatch(label,model,batch)));
+  const rows=results.filter(x=>x.status==="fulfilled").flatMap(x=>x.value);
+  if(!rows.length)throw new Error(`${label}: inga data`);
+  return rows;
 }
 
 function hourlyDailyMean(times,values){
@@ -278,7 +314,9 @@ async function load(){
   if(!places.length){showError("Välj minst en region i inställningarna.");return}
   showStatus(`Hämtar väder, havsdata och snödata för ${places.length} orter…`);
   try{
-    const weatherPromise=Promise.allSettled(Object.entries(MODELS).map(([l,m])=>fetchModel(l,m,places)));
+    const selectedModels=activeModelEntries();
+    if(!selectedModels.length)throw new Error("Välj minst en prognoskälla.");
+    const weatherPromise=Promise.allSettled(selectedModels.map(([l,m])=>fetchModel(l,m,places)));
     const [settled,marineResult,snowResult]=await Promise.all([
       weatherPromise,fetchMarine(places).catch(()=>[]),fetchSnow(places).catch(()=>[])
     ]);
@@ -288,7 +326,7 @@ async function load(){
     dailyResults=aggregate(rows,marineResult,snowResult);activeDate=Object.keys(dailyResults).sort()[0];
     const marineCount=new Set(marineResult.map(x=>x.place)).size;
     const snowCount=new Set(snowResult.map(x=>x.place)).size;
-    $("modelCount").textContent=`${ok} modeller · nationell källa väger 3,5× · ${places.length} orter`;
+    $("modelCount").textContent=`${sourceLabel()} · ${ok} svarade · ${places.length} orter`;
     $("statusCard").classList.add("hidden");renderTabs();renderActivities();renderDay();
   }catch(e){showError(`${e.message} Kontrollera internetanslutningen.`)}
 }
@@ -308,7 +346,8 @@ function aggregate(rows,marineRows=[],snowRows=[]){
       seaTemp:validNumber(extra.seaTemp),snowDepth:validNumber(extra.snowDepth),
       newSnow:validNumber(extra.newSnow),freezingLevel:validNumber(extra.freezingLevel)
     };
-    item.primarySource=countryFor(item)==="DK"?"DMI":countryFor(item)==="NO"?"Yr/MET Norway":"SMHI/MetCoOp";
+    item.usedSources=[...new Set(valid.map(x=>x.model))];
+    item.primarySource=dominantSource(valid,item);
     item.hasMarine=Number.isFinite(item.waveHeight)||Number.isFinite(item.seaTemp);
     item.hasSnow=SKI_PLACES.has(item.place)&&(Number.isFinite(item.snowDepth)||Number.isFinite(item.newSnow));
     item.confidence=Math.round(clamp(100-std(g.map(x=>x.temp))*5-std(g.map(x=>x.rain))*9-std(g.map(x=>x.wind))*4));
@@ -343,12 +382,29 @@ function specialMetricHtml(r){
   }
   return "";
 }
+function scoreColor(score){return score>=80?"#16803c":score>=70?"#d6a700":score>=60?"#e67e22":"#c92a2a";}
+function ensureMap(){
+  if(map||!window.L)return;
+  map=L.map("weatherMap",{zoomControl:true}).setView([60.2,15.4],5);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18,attribution:'&copy; OpenStreetMap'}).addTo(map);
+  markerLayer=L.layerGroup().addTo(map);
+}
+function renderMap(list){
+  ensureMap();if(!map||!markerLayer)return;
+  markerLayer.clearLayers();
+  list.forEach(r=>{const color=scoreColor(r.score);const m=L.circleMarker([r.lat,r.lon],{radius:8,fillColor:color,color:"#fff",weight:2,fillOpacity:.92});m.bindPopup(`<strong>${r.place}</strong><br>${r.area} · ${r.region}<br><b>${r.score}/100</b> · ${activitySummary(r.score)}<br>🌡️ ${fmt(r.temp,0)}° · 🌧️ ${fmt(r.rain)} mm · 💨 ${fmt(r.wind)} m/s`);m.addTo(markerLayer);});
+  if(list.length){const bounds=L.latLngBounds(list.map(r=>[r.lat,r.lon]));map.fitBounds(bounds,{padding:[24,24],maxZoom:7});}
+}
+function toggleMap(){const section=$("mapSection");section.classList.toggle("hidden");if(!section.classList.contains("hidden")){renderMap(rankedList());setTimeout(()=>map?.invalidateSize(),50);}}
 function renderDay(){
   const list=rankedList();if(!list.length)return;
+  if(!$("mapSection").classList.contains("hidden"))renderMap(list);
   const best=list[0],activity=ACTIVITIES[settings.activity];
   $("bestEyebrow").textContent=`BÄST ${activity.label.toUpperCase()}`;
   $("bestPlace").textContent=best.place;
-  $("bestRegion").textContent=`${best.area} · ${best.region} · Tyngst: ${best.primarySource}`;
+  $("bestRegion").textContent=settings.sourceMode==="auto"
+    ? `${best.area} · ${best.region} · Tyngst: ${best.primarySource}`
+    : `${best.area} · ${best.region} · ${best.usedSources.length} valda källor`;
   $("bestSummary").textContent=activitySummary(best.score);
   $("bestScore").textContent=best.score;$("bestTemp").textContent=`${fmt(best.temp,0)}°`;
   $("bestRain").textContent=`${fmt(best.rain)} mm`;$("bestSun").textContent=`${fmt(best.sun)} h`;
@@ -361,7 +417,9 @@ function renderDay(){
     const card=$("rankTemplate").content.cloneNode(true);
     card.querySelector(".rank-number").textContent=i+1;
     card.querySelector("h3").textContent=r.place;
-    card.querySelector("p").textContent=`${r.area} · ${r.region} · ${activitySummary(r.score)} · Tyngst: ${r.primarySource}`;
+    card.querySelector("p").textContent=settings.sourceMode==="auto"
+      ? `${r.area} · ${r.region} · ${activitySummary(r.score)} · Tyngst: ${r.primarySource}`
+      : `${r.area} · ${r.region} · ${activitySummary(r.score)} · ${r.usedSources.join(", ")}`;
     card.querySelector(".mini-metrics").innerHTML=`<span>🌡️ ${fmt(r.temp,0)}°</span><span>🌧️ ${fmt(r.rain)} mm</span><span>☀️ ${fmt(r.sun)} h</span><span>💨 ${fmt(r.wind)} m/s</span>${specialMetricHtml(r)}<span>🎯 ${r.confidence}%</span>`;
     card.querySelector(".rank-score").textContent=r.score;ranking.appendChild(card);
   });
@@ -370,17 +428,35 @@ function showStatus(t){$("status").textContent=t;$("statusCard").classList.remov
 function showError(t){$("status").textContent=t;$("statusCard").classList.remove("hidden");$("statusCard").classList.add("error");$("statusCard").querySelector(".spinner").style.display="none"}
 function syncSettings(){
   $("tempTarget").value=settings.temp;$("tempOut").textContent=`${settings.temp} °C`;
-  $("rainWeight").value=settings.rain;$("sunWeight").value=settings.sun;$("windWeight").value=settings.wind;renderRegionChoices();
+  $("rainWeight").value=settings.rain;$("sunWeight").value=settings.sun;$("windWeight").value=settings.wind;
+  $("sourceMode").value=settings.sourceMode;renderRegionChoices();renderSourceChoices();
 }
+$("showMapBtn").onclick=toggleMap;
 $("settingsBtn").onclick=()=>{syncSettings();$("settingsDialog").showModal()};
 $("tempTarget").oninput=e=>$("tempOut").textContent=`${e.target.value} °C`;
+$("sourceMode").onchange=renderSourceChoices;
 $("selectAllRegions").onclick=e=>{e.preventDefault();document.querySelectorAll("#regionChoices input").forEach(x=>x.checked=true)};
 $("clearRegions").onclick=e=>{e.preventDefault();document.querySelectorAll("#regionChoices input").forEach(x=>x.checked=false)};
 $("saveSettings").onclick=e=>{
-  e.preventDefault();settings={...settings,temp:+$("tempTarget").value,rain:+$("rainWeight").value,
-    sun:+$("sunWeight").value,wind:+$("windWeight").value,
+  e.preventDefault();
+  const sourceMode=$("sourceMode").value;
+  const sources=[...document.querySelectorAll("#sourceChoices input:checked")].map(x=>x.value);
+  if(sourceMode==="manual"&&!sources.length){
+    $("sourceError").textContent="Välj minst en prognoskälla.";
+    $("sourceError").classList.remove("hidden");
+    return;
+  }
+  $("sourceError").classList.add("hidden");
+  settings={...settings,temp:+$("tempTarget").value,rain:+$("rainWeight").value,
+    sun:+$("sunWeight").value,wind:+$("windWeight").value,sourceMode,sources,
     regions:[...document.querySelectorAll("#regionChoices input:checked")].map(x=>x.value)};
   localStorage.setItem("vk-settings",JSON.stringify(settings));$("settingsDialog").close();load();
 };
-if("serviceWorker"in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js"));
+if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
+  const reg=await navigator.serviceWorker.register(`sw.js?v=8`);
+  reg.update();
+  reg.addEventListener("updatefound",()=>{const worker=reg.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller){$("updateBanner").classList.remove("hidden");}})});
+  navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload());
+});
+$("updateNow").onclick=()=>navigator.serviceWorker.getRegistration().then(r=>r?.waiting?.postMessage({type:"SKIP_WAITING"}));
 renderActivities();load();

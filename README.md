@@ -55,3 +55,20 @@ Ladda upp samtliga filer till en katalog på din webbserver. Ingen Python eller 
   - Norge: Yr/MET Norway 3,5× när norska orter läggs till
 - ECMWF väger 1,25× och övriga stödmodeller 1×
 - Dominerande prognoskälla visas i resultatet
+
+
+## Version 7
+- Danmark uppdelat i Jylland, Fyn och Själland
+- Interaktiv Leaflet-karta med färgmarkörer efter aktivitetspoäng
+- Prognosanrop görs i grupper om 45 orter för att stödja större ortsregister
+- Tydlig uppdateringsbanner och versionsparametrar för Safari/PWA
+- Service worker kan aktivera ny version direkt
+
+## Version 8
+- Valbara prognoskällor i Inställningar
+- Automatiskt läge använder alla källor och nationell viktning
+- Eget val använder endast markerade källor med lika vikt
+- Valet sparas lokalt på enheten
+- Resultatet visar vilka källor som användes
+- Säkerhetsindikatorn beräknas bara från aktiva källor
+- Service worker och cache uppdaterade till v8
