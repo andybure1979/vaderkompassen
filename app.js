@@ -428,11 +428,13 @@ function renderSourceChoices(){
     :"Endast markerade källor används och de väger lika.";
 }
 
-const BATCH_SIZE=18;
-const MAX_BATCH_CONCURRENCY=3;
-const SMHI_MAX_PLACES=60;
-const REQUEST_TIMEOUT_MS=18000;
-const REQUEST_RETRIES=1;
+const BATCH_SIZE=80;
+const MAX_BATCH_CONCURRENCY=1;
+const SMHI_MAX_PLACES=20;
+const REQUEST_TIMEOUT_MS=22000;
+const REQUEST_RETRIES=3;
+const RESPONSE_CACHE_TTL_MS=10*60*1000;
+const responseCache=new Map();
 const chunks=(arr,size)=>Array.from({length:Math.ceil(arr.length/size)},(_,i)=>arr.slice(i*size,(i+1)*size));
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 async function mapWithConcurrency(items,limit,worker){
@@ -443,9 +445,11 @@ async function mapWithConcurrency(items,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
   return results;
 }
-const diagnostics={version:"12.1",lastLoad:null,sources:[]};
+const diagnostics={version:"12.2.1",lastLoad:null,sources:[]};
 window.vaderkompassenDiagnostics=diagnostics;
 async function resilientFetch(url,{timeout=REQUEST_TIMEOUT_MS,retries=REQUEST_RETRIES}={}){
+  const cached=responseCache.get(url);
+  if(cached&&Date.now()-cached.saved<RESPONSE_CACHE_TTL_MS)return new Response(cached.body,{status:200,headers:{"Content-Type":"application/json"}});
   let lastError;
   for(let attempt=0;attempt<=retries;attempt++){
     const controller=new AbortController();
@@ -453,14 +457,24 @@ async function resilientFetch(url,{timeout=REQUEST_TIMEOUT_MS,retries=REQUEST_RE
     try{
       const response=await fetch(url,{signal:controller.signal,cache:"no-store"});
       clearTimeout(timer);
-      if(response.ok)return response;
+      if(response.ok){
+        const body=await response.text();
+        responseCache.set(url,{saved:Date.now(),body});
+        return new Response(body,{status:200,headers:{"Content-Type":response.headers.get("Content-Type")||"application/json"}});
+      }
       lastError=new Error(`HTTP ${response.status}`);
       if(response.status<500&&response.status!==429)throw lastError;
+      if(response.status===429){
+        const retryAfter=Number(response.headers.get("Retry-After"));
+        const wait=Number.isFinite(retryAfter)&&retryAfter>0?retryAfter*1000:[2500,6000,12000,20000][attempt]||20000;
+        if(attempt<retries)await sleep(wait);
+        continue;
+      }
     }catch(error){
       clearTimeout(timer);
       lastError=error?.name==="AbortError"?new Error("tidsgränsen överskreds"):error;
     }
-    if(attempt<retries)await sleep(650*(attempt+1));
+    if(attempt<retries)await sleep(1200*(attempt+1));
   }
   throw lastError||new Error("nätverksfel");
 }
@@ -565,7 +579,7 @@ async function fetchMarine(places){
     longitude:marine.map(p=>MARINE_COORDS[p[0]][1]).join(","),
     daily:MARINE_DAILY,hourly:MARINE_HOURLY,timezone:"auto",forecast_days:"7",cell_selection:"sea"
   });
-  const res=await fetch(`https://marine-api.open-meteo.com/v1/marine?${params}`);
+  const res=await resilientFetch(`https://marine-api.open-meteo.com/v1/marine?${params}`,{retries:3});
   if(!res.ok)throw new Error(`Havsdata: ${res.status}`);
   let data=await res.json();if(!Array.isArray(data))data=[data];
   const rows=[];
@@ -588,7 +602,7 @@ async function fetchSnow(places){
     latitude:ski.map(p=>p[3]).join(","),longitude:ski.map(p=>p[4]).join(","),
     daily:SNOW_DAILY,hourly:SNOW_HOURLY,timezone:"auto",forecast_days:"7"
   });
-  const res=await fetch(`https://api.open-meteo.com/v1/forecast?${params}`);
+  const res=await resilientFetch(`https://api.open-meteo.com/v1/forecast?${params}`,{retries:3});
   if(!res.ok)throw new Error(`Snödata: ${res.status}`);
   let data=await res.json();if(!Array.isArray(data))data=[data];
   const rows=[];
@@ -613,20 +627,29 @@ async function load(){
   try{
     const selectedModels=activeModelEntries();
     if(!selectedModels.length)throw new Error("Välj minst en prognoskälla.");
-    const weatherPromise=Promise.allSettled(selectedModels.map(([l,m])=>fetchSource(l,m,places)));
-    const [settled,marineResult,snowResult]=await Promise.all([
-      weatherPromise,fetchMarine(places).catch(()=>[]),fetchSnow(places).catch(()=>[])
+    const settled=[];
+    for(let i=0;i<selectedModels.length;i++){
+      const [label,model]=selectedModels[i];
+      try{settled.push({status:"fulfilled",value:await fetchSource(label,model,places)})}
+      catch(reason){
+        if(String(reason?.message||"").includes("inga orter inom källans täckning"))settled.push({status:"skipped",reason});
+        else settled.push({status:"rejected",reason});
+      }
+      if(i<selectedModels.length-1)await sleep(350);
+    }
+    const [marineResult,snowResult]=await Promise.all([
+      fetchMarine(places).catch(()=>[]),fetchSnow(places).catch(()=>[])
     ]);
     const rows=settled.filter(x=>x.status==="fulfilled").flatMap(x=>x.value);
-    const sourceStatus=settled.map((result,i)=>({name:selectedModels[i][0],ok:result.status==="fulfilled",rows:result.status==="fulfilled"?result.value.length:0,error:result.status==="rejected"?result.reason?.message:""}));
+    const sourceStatus=settled.map((result,i)=>({name:selectedModels[i][0],ok:result.status==="fulfilled",skipped:result.status==="skipped",rows:result.status==="fulfilled"?result.value.length:0,error:result.status!=="fulfilled"?result.reason?.message:""}));
     diagnostics.lastLoad=new Date().toISOString();diagnostics.sources=sourceStatus;diagnostics.placeCount=places.length;
     console.table(sourceStatus);
     const ok=sourceStatus.filter(x=>x.ok).length;
-    if(!rows.length)throw new Error(`Ingen väderkälla svarade. ${sourceStatus.map(x=>`${x.name}: ${x.error||"fel"}`).join(" · ")}`);
+    if(!rows.length)throw new Error(`Ingen väderkälla svarade. ${sourceStatus.filter(x=>!x.skipped).map(x=>`${x.name}: ${x.error||"fel"}`).join(" · ")}`);
     dailyResults=aggregate(rows,marineResult,snowResult);activeDate=Object.keys(dailyResults).sort()[0];
     const marineCount=new Set(marineResult.map(x=>x.place)).size;
     const snowCount=new Set(snowResult.map(x=>x.place)).size;
-    const failed=sourceStatus.filter(x=>!x.ok);
+    const failed=sourceStatus.filter(x=>!x.ok&&!x.skipped);
     $("modelCount").textContent=`${sourceLabel()} · ${ok}/${sourceStatus.length} svarade · ${places.length} orter${failed.length?` · Saknas: ${failed.map(x=>x.name).join(", ")}`:""}`;
     $("modelCount").title=failed.map(x=>`${x.name}: ${x.error||"okänt fel"}`).join("\n");
     $("statusCard").classList.add("hidden");renderTabs();renderActivities();renderDay();
