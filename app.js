@@ -292,14 +292,37 @@ function renderSourceChoices(){
 }
 
 const BATCH_SIZE=45;
+const REQUEST_TIMEOUT_MS=18000;
+const REQUEST_RETRIES=1;
 const chunks=(arr,size)=>Array.from({length:Math.ceil(arr.length/size)},(_,i)=>arr.slice(i*size,(i+1)*size));
+const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+async function resilientFetch(url,{timeout=REQUEST_TIMEOUT_MS,retries=REQUEST_RETRIES}={}){
+  let lastError;
+  for(let attempt=0;attempt<=retries;attempt++){
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),timeout);
+    try{
+      const response=await fetch(url,{signal:controller.signal,cache:"no-store"});
+      clearTimeout(timer);
+      if(response.ok)return response;
+      lastError=new Error(`HTTP ${response.status}`);
+      if(response.status<500&&response.status!==429)throw lastError;
+    }catch(error){
+      clearTimeout(timer);
+      lastError=error?.name==="AbortError"?new Error("tidsgränsen överskreds"):error;
+    }
+    if(attempt<retries)await sleep(650*(attempt+1));
+  }
+  throw lastError||new Error("nätverksfel");
+}
 async function fetchModelBatch(label,model,places){
   const query={latitude:places.map(p=>p[3]).join(","),longitude:places.map(p=>p[4]).join(","),daily:DAILY,timezone:"auto",forecast_days:"7",wind_speed_unit:"ms"};
   if(model.model)query.models=model.model;
   const params=new URLSearchParams(query);
   const endpoint=model.endpoint||"https://api.open-meteo.com/v1/forecast";
-  const res=await fetch(`${endpoint}?${params}`);
-  if(!res.ok)throw new Error(`${label}: ${res.status}`);
+  let res;
+  try{res=await resilientFetch(`${endpoint}?${params}`)}
+  catch(error){throw new Error(`${label}: ${error.message}`)}
   let data=await res.json();if(!Array.isArray(data))data=[data];
   const rows=[];
   data.forEach((item,pi)=>{const d=item.daily||{};(d.time||[]).forEach((day,i)=>rows.push({place:places[pi][0],area:places[pi][1],region:places[pi][2],lat:places[pi][3],lon:places[pi][4],day,model:label,temp:validNumber(d.temperature_2m_max?.[i]),min:validNumber(d.temperature_2m_min?.[i]),rain:validNumber(d.precipitation_sum?.[i]),risk:validNumber(d.precipitation_probability_max?.[i]),sun:validNumber(d.sunshine_duration?.[i])===null?null:validNumber(d.sunshine_duration?.[i])/3600,wind:validNumber(d.wind_speed_10m_max?.[i])}));});
@@ -321,8 +344,9 @@ function smhiDayKey(iso){
 async function fetchSmhiPlace(place){
   const [name,area,region,lat,lon]=place;
   const url=`https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${lon.toFixed(6)}/lat/${lat.toFixed(6)}/data.json`;
-  const res=await fetch(url);
-  if(!res.ok)throw new Error(`SMHI ${name}: ${res.status}`);
+  let res;
+  try{res=await resilientFetch(url,{timeout:14000,retries:1})}
+  catch(error){throw new Error(`SMHI ${name}: ${error.message}`)}
   const data=await res.json(),days={};
   (data.timeSeries||[]).forEach(step=>{
     const day=smhiDayKey(step.validTime),hour=new Date(step.validTime).getUTCHours();
