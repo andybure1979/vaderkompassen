@@ -45,10 +45,46 @@ const PLACES = [
   ["Hvide Sande","Midtjylland","Jylland",56.004,8.129],["Billund","Syddanmark","Jylland",55.7284,9.1124],
   ["Odense","Fyn","Fyn",55.4038,10.4024],["København","Hovedstaden","Själland",55.6761,12.5683],
   ["Roskilde","Själland","Själland",55.6415,12.0803],["Næstved","Själland","Själland",55.2299,11.7609],
-  ["Rønne/Bornholm","Bornholm","Själland",55.1009,14.7066]
+  ["Rønne/Bornholm","Bornholm","Själland",55.1009,14.7066],
+
+  // Norge – Østlandet
+  ["Oslo","Oslo","Østlandet",59.9139,10.7522],["Drammen","Buskerud","Østlandet",59.7439,10.2045],
+  ["Lillehammer","Innlandet","Østlandet",61.1153,10.4662],["Hamar","Innlandet","Østlandet",60.7945,11.0679],
+  ["Fredrikstad","Østfold","Østlandet",59.2181,10.9298],["Geilo","Buskerud","Østlandet",60.5333,8.2076],
+  ["Trysil","Innlandet","Østlandet",61.3148,12.2637],["Hemsedal","Buskerud","Østlandet",60.8629,8.5534],
+
+  // Norge – Sørlandet
+  ["Kristiansand","Agder","Sørlandet",58.1467,7.9956],["Arendal","Agder","Sørlandet",58.4618,8.7724],
+  ["Grimstad","Agder","Sørlandet",58.3405,8.5934],["Mandal","Agder","Sørlandet",58.0274,7.4534],
+
+  // Norge – Vestlandet
+  ["Stavanger","Rogaland","Vestlandet",58.9700,5.7331],["Haugesund","Rogaland","Vestlandet",59.4138,5.2680],
+  ["Bergen","Vestland","Vestlandet",60.3913,5.3221],["Voss","Vestland","Vestlandet",60.6287,6.4147],
+  ["Flåm","Vestland","Vestlandet",60.8622,7.1132],["Ålesund","Møre og Romsdal","Vestlandet",62.4722,6.1495],
+  ["Molde","Møre og Romsdal","Vestlandet",62.7375,7.1607],["Kristiansund","Møre og Romsdal","Vestlandet",63.1103,7.7281],
+
+  // Norge – Trøndelag
+  ["Trondheim","Trøndelag","Trøndelag",63.4305,10.3951],["Røros","Trøndelag","Trøndelag",62.5748,11.3841],
+  ["Steinkjer","Trøndelag","Trøndelag",64.0149,11.4954],["Oppdal","Trøndelag","Trøndelag",62.5943,9.6912],
+
+  // Norge – Nord-Norge
+  ["Bodø","Nordland","Nord-Norge",67.2804,14.4049],["Narvik","Nordland","Nord-Norge",68.4385,17.4272],
+  ["Svolvær","Nordland","Nord-Norge",68.2343,14.5682],["Tromsø","Troms","Nord-Norge",69.6492,18.9553],
+  ["Alta","Finnmark","Nord-Norge",69.9689,23.2716],["Hammerfest","Finnmark","Nord-Norge",70.6634,23.6821],
+  ["Kirkenes","Finnmark","Nord-Norge",69.7269,30.0450]
+
 ];
 
-const REGIONS = ["Södra Sverige","Mellansverige","Norra Sverige","Jylland","Fyn","Själland"];
+const REGIONS = ["Södra Sverige","Mellansverige","Norra Sverige","Jylland","Fyn","Själland","Østlandet","Sørlandet","Vestlandet","Trøndelag","Nord-Norge"];
+const COUNTRY_REGIONS={
+  Sverige:["Södra Sverige","Mellansverige","Norra Sverige"],
+  Danmark:["Jylland","Fyn","Själland"],
+  Norge:["Østlandet","Sørlandet","Vestlandet","Trøndelag","Nord-Norge"]
+};
+const REGION_AREAS=Object.fromEntries(REGIONS.map(region=>[
+  region,[...new Set(PLACES.filter(p=>p[2]===region).map(p=>p[1]))].sort((a,b)=>a.localeCompare(b,"sv"))
+]));
+const ALL_AREAS=[...new Set(PLACES.map(p=>p[1]))];
 const ACTIVITIES = {
   general:{label:"Sol och bad",icon:"☀️"},
   coast:{label:"Kustväder",icon:"🏖️"},
@@ -61,7 +97,7 @@ const ACTIVITIES = {
 };
 const MODELS = {
   "DMI":"dmi_harmonie_arome_europe","ECMWF":"ecmwf_ifs025","ICON":"icon_seamless",
-  "GFS":"gfs_seamless","SMHI/MetCoOp":"metno_nordic"
+  "GFS":"gfs_seamless","Yr / MET Norway":"metno_nordic"
 };
 const DAILY = "temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,sunshine_duration,wind_speed_10m_max";
 
@@ -77,9 +113,13 @@ const MARINE_COORDS = {
   "Piteå":[65.28,21.57],"Haparanda":[65.82,24.18],
   "Skagen":[57.74,10.66],"Aalborg":[57.08,10.10],"Løkken":[57.37,9.62],"Klitmøller":[57.04,8.40],
   "Aarhus":[56.16,10.33],"Esbjerg":[55.47,8.35],"Hvide Sande":[56.00,8.05],"Odense":[55.39,10.53],
-  "København":[55.68,12.68],"Roskilde":[55.65,12.02],"Næstved":[55.20,11.67],"Rønne/Bornholm":[55.10,14.78]
+  "København":[55.68,12.68],"Roskilde":[55.65,12.02],"Næstved":[55.20,11.67],"Rønne/Bornholm":[55.10,14.78],
+  "Oslo":[59.88,10.73],"Fredrikstad":[59.17,10.92],"Kristiansand":[58.10,8.00],"Arendal":[58.42,8.82],
+  "Stavanger":[58.97,5.63],"Haugesund":[59.40,5.20],"Bergen":[60.39,5.20],"Ålesund":[62.47,6.05],
+  "Molde":[62.74,7.08],"Kristiansund":[63.11,7.62],"Trondheim":[63.45,10.30],"Bodø":[67.28,14.30],
+  "Narvik":[68.43,17.30],"Svolvær":[68.23,14.45],"Tromsø":[69.65,18.82],"Hammerfest":[70.66,23.55]
 };
-const SKI_PLACES = new Set(["Sälen","Åre","Sveg","Funäsdalen","Vemdalen","Kiruna","Gällivare","Abisko","Arvidsjaur","Hemavan"]);
+const SKI_PLACES = new Set(["Sälen","Åre","Sveg","Funäsdalen","Vemdalen","Kiruna","Gällivare","Abisko","Arvidsjaur","Hemavan","Geilo","Trysil","Hemsedal","Voss","Røros","Oppdal","Narvik"]);
 const MARINE_DAILY = "wave_height_max,wave_period_max,swell_wave_height_max,swell_wave_period_max";
 const MARINE_HOURLY = "sea_surface_temperature";
 const SNOW_DAILY = "snowfall_sum";
@@ -87,14 +127,17 @@ const SNOW_HOURLY = "snow_depth,freezing_level_height";
 
 
 const defaults={
-  temp:22,rain:3,sun:2,wind:1.5,regions:[...REGIONS],activity:"general",
+  temp:22,rain:3,sun:2,wind:1.5,regions:[...REGIONS],areas:[...ALL_AREAS],activity:"general",
   sourceMode:"auto",sources:Object.keys(MODELS)
 };
 let settings={...defaults,...JSON.parse(localStorage.getItem("vk-settings")||"{}")};
-if(!Array.isArray(settings.regions)){ settings.regions=[...REGIONS]; delete settings.landscapes; }
+if(!Array.isArray(settings.regions)){ settings.regions=[...REGIONS]; }
+if(!Array.isArray(settings.areas))settings.areas=[...ALL_AREAS];
 if(settings.regions.includes("Danmark")){ settings.regions=settings.regions.filter(x=>x!=="Danmark").concat(["Jylland","Fyn","Själland"]); }
 settings.regions=[...new Set(settings.regions.filter(x=>REGIONS.includes(x)))];
 if(!settings.regions.length)settings.regions=[...REGIONS];
+settings.areas=[...new Set(settings.areas.filter(x=>ALL_AREAS.includes(x)))];
+if(!settings.areas.length)settings.areas=[...ALL_AREAS];
 if(!["auto","manual"].includes(settings.sourceMode))settings.sourceMode="auto";
 if(!Array.isArray(settings.sources))settings.sources=Object.keys(MODELS);
 settings.sources=[...new Set(settings.sources.filter(x=>MODELS[x]))];
@@ -109,16 +152,16 @@ const fmt=(n,d=1)=>Number.isFinite(n)?n.toFixed(d):"–";
 const validNumber=v=>v===null||v===undefined||v===""?null:(Number.isFinite(Number(v))?Number(v):null);
 
 function countryFor(item){
-  if(["Jylland","Fyn","Själland"].includes(item.region)) return "DK";
-  if(item.region==="Norge") return "NO";
+  if(COUNTRY_REGIONS.Danmark.includes(item.region)) return "DK";
+  if(COUNTRY_REGIONS.Norge.includes(item.region)) return "NO";
   return "SE";
 }
 function sourceWeight(model,item){
   if(settings.sourceMode==="manual")return 1;
   const country=countryFor(item);
-  if(country==="SE" && model==="SMHI/MetCoOp") return 3.5;
+  if(country==="SE" && model==="Yr / MET Norway") return 3.5;
   if(country==="DK" && model==="DMI") return 3.5;
-  if(country==="NO" && model==="SMHI/MetCoOp") return 3.5;
+  if(country==="NO" && model==="Yr / MET Norway") return 3.5;
   if(model==="ECMWF") return 1.25;
   return 1;
 }
@@ -206,10 +249,28 @@ function renderActivities(){
 }
 function renderRegionChoices(){
   const box=$("regionChoices");box.innerHTML="";
-  REGIONS.forEach(name=>{
-    const l=document.createElement("label");l.className="check region-check";
-    const i=document.createElement("input");i.type="checkbox";i.value=name;i.checked=settings.regions.includes(name);
-    l.append(i,document.createTextNode(" "+name));box.appendChild(l);
+  REGIONS.forEach(region=>{
+    const group=document.createElement("section");group.className="filter-region-group";
+    const head=document.createElement("label");head.className="check region-check region-head";
+    const ri=document.createElement("input");ri.type="checkbox";ri.value=region;ri.dataset.kind="region";
+    ri.checked=settings.regions.includes(region);
+    head.append(ri,document.createTextNode(" "+region));group.appendChild(head);
+    const children=document.createElement("div");children.className="landscape-grid";
+    REGION_AREAS[region].forEach(area=>{
+      const l=document.createElement("label");l.className="check landscape-check";
+      const i=document.createElement("input");i.type="checkbox";i.value=area;i.dataset.kind="area";i.dataset.region=region;
+      i.checked=settings.areas.includes(area) && ri.checked;
+      l.append(i,document.createTextNode(" "+area));children.appendChild(l);
+    });
+    ri.onchange=()=>children.querySelectorAll("input").forEach(i=>i.checked=ri.checked);
+    group.appendChild(children);box.appendChild(group);
+  });
+}
+function selectCountry(country){
+  const target=new Set(COUNTRY_REGIONS[country]||[]);
+  document.querySelectorAll('#regionChoices input[data-kind="region"]').forEach(i=>{
+    i.checked=target.has(i.value);
+    document.querySelectorAll(`#regionChoices input[data-kind="area"][data-region="${i.value}"]`).forEach(a=>a.checked=i.checked);
   });
 }
 function renderSourceChoices(){
@@ -222,7 +283,7 @@ function renderSourceChoices(){
     l.append(i,document.createTextNode(" "+name));box.appendChild(l);
   });
   $("sourceHint").textContent=$("sourceMode").value==="auto"
-    ?"Alla källor används. SMHI/MetCoOp väger tyngst i Sverige och DMI i Danmark."
+    ?"Alla källor används. Nationell källa prioriteras: Yr/MET Norway i Norge och DMI i Danmark."
     :"Endast markerade källor används och de väger lika.";
 }
 
@@ -309,8 +370,8 @@ async function fetchSnow(places){
 }
 
 async function load(){
-  const selected=new Set(settings.regions);
-  const places=PLACES.filter(p=>selected.has(p[2]));
+  const selected=new Set(settings.regions),selectedAreas=new Set(settings.areas);
+  const places=PLACES.filter(p=>selected.has(p[2])&&selectedAreas.has(p[1]));
   if(!places.length){showError("Välj minst en region i inställningarna.");return}
   showStatus(`Hämtar väder, havsdata och snödata för ${places.length} orter…`);
   try{
@@ -437,6 +498,9 @@ $("tempTarget").oninput=e=>$("tempOut").textContent=`${e.target.value} °C`;
 $("sourceMode").onchange=renderSourceChoices;
 $("selectAllRegions").onclick=e=>{e.preventDefault();document.querySelectorAll("#regionChoices input").forEach(x=>x.checked=true)};
 $("clearRegions").onclick=e=>{e.preventDefault();document.querySelectorAll("#regionChoices input").forEach(x=>x.checked=false)};
+$("filterSweden").onclick=e=>{e.preventDefault();selectCountry("Sverige")};
+$("filterDenmark").onclick=e=>{e.preventDefault();selectCountry("Danmark")};
+$("filterNorway").onclick=e=>{e.preventDefault();selectCountry("Norge")};
 $("saveSettings").onclick=e=>{
   e.preventDefault();
   const sourceMode=$("sourceMode").value;
@@ -449,11 +513,12 @@ $("saveSettings").onclick=e=>{
   $("sourceError").classList.add("hidden");
   settings={...settings,temp:+$("tempTarget").value,rain:+$("rainWeight").value,
     sun:+$("sunWeight").value,wind:+$("windWeight").value,sourceMode,sources,
-    regions:[...document.querySelectorAll("#regionChoices input:checked")].map(x=>x.value)};
+    regions:[...document.querySelectorAll('#regionChoices input[data-kind="region"]:checked')].map(x=>x.value),
+    areas:[...document.querySelectorAll('#regionChoices input[data-kind="area"]:checked')].map(x=>x.value)};
   localStorage.setItem("vk-settings",JSON.stringify(settings));$("settingsDialog").close();load();
 };
 if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
-  const reg=await navigator.serviceWorker.register(`sw.js?v=8`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=9`);
   reg.update();
   reg.addEventListener("updatefound",()=>{const worker=reg.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller){$("updateBanner").classList.remove("hidden");}})});
   navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload());

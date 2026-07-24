@@ -10,7 +10,7 @@
   <title>Väderkompassen – hitta bästa vädret</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icons/icon-180.png">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><link rel="stylesheet" href="styles.css?v=8">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><link rel="stylesheet" href="styles.css?v=9">
 </head>
 <body><div id="updateBanner" class="update-banner hidden"><span>En ny version finns.</span><button id="updateNow">Uppdatera nu</button></div>
 <header><div><h1>☀️ Väderkompassen</h1><p>Hitta dagens bästa väder</p></div><button id="settingsBtn" class="icon-btn" aria-label="Inställningar">⚙️</button></header>
@@ -35,7 +35,7 @@
   <section id="specialMetrics" class="special-metrics hidden"></section>
   <div class="map-actions"><button id="showMapBtn" class="map-button">🗺 Visa alla på karta</button><a id="mapLink" class="map-button hidden" target="_blank" rel="noopener">Vinnaren i Apple Kartor</a></div><section id="mapSection" class="map-section hidden"><div class="map-legend"><span><i class="legend-green"></i>80–100</span><span><i class="legend-yellow"></i>70–79</span><span><i class="legend-orange"></i>60–69</span><span><i class="legend-red"></i>0–59</span></div><div id="weatherMap"></div></section>
   <section><div class="section-heading"><h2>Topplista</h2><span id="modelCount"></span></div><div id="ranking" class="ranking"></div></section>
-  <details class="about"><summary>Hur räknas prognosen och aktivitetsbetyget?</summary><p>Varje aktivitet har en egen balans mellan temperatur, regn, sol och vind. Surfväder gynnas exempelvis av mer vind, medan cykel- och båtväder gynnas av lugnare vind. Skidväder premierar kyla och nederbörd. I automatläget är väderprognosen en viktad sammanvägning: SMHI/MetCoOp väger tyngst för svenska orter och DMI för Danmark. I eget läge används bara de valda prognoskällorna och de väger lika. Övriga modeller används som stöd och för att bedöma osäkerheten. Kust- och surfbetyg använder våghöjd, vågperiod, dyning och havstemperatur. Skidbetyget använder modellberäknat snödjup, nysnö och nollgradersnivå. Uppgifterna är prognoser och ersätter inte lokala säkerhetsrapporter.</p></details>
+  <details class="about"><summary>Hur räknas prognosen och aktivitetsbetyget?</summary><p>Varje aktivitet har en egen balans mellan temperatur, regn, sol och vind. Surfväder gynnas exempelvis av mer vind, medan cykel- och båtväder gynnas av lugnare vind. Skidväder premierar kyla och nederbörd. I automatläget är väderprognosen en viktad sammanvägning: Yr/MET Norway väger tyngst för norska orter och DMI för Danmark. I eget läge används bara de valda prognoskällorna och de väger lika. Övriga modeller används som stöd och för att bedöma osäkerheten. Kust- och surfbetyg använder våghöjd, vågperiod, dyning och havstemperatur. Skidbetyget använder modellberäknat snödjup, nysnö och nollgradersnivå. Uppgifterna är prognoser och ersätter inte lokala säkerhetsrapporter.</p></details>
 </main>
 <dialog id="settingsDialog"><form method="dialog">
   <div class="dialog-head"><h2>Inställningar</h2><button value="cancel" class="icon-btn">✕</button></div>
@@ -55,11 +55,16 @@
     <p id="sourceError" class="settings-error hidden"></p>
   </fieldset>
   <fieldset><legend>Regioner</legend>
-    <div class="region-actions"><button id="selectAllRegions">Välj alla</button><button id="clearRegions">Rensa</button></div>
+    <div class="country-filter-actions">
+      <button id="filterSweden">🇸🇪 Hela Sverige</button>
+      <button id="filterDenmark">🇩🇰 Hela Danmark</button>
+      <button id="filterNorway">🇳🇴 Hela Norge</button>
+    </div>
+    <div class="region-actions"><button id="selectAllRegions">Välj alla länder och områden</button><button id="clearRegions">Rensa</button></div>
     <div id="regionChoices" class="region-grid"></div>
   </fieldset>
   <button id="saveSettings" value="default" class="primary">Spara och uppdatera</button>
 </form></dialog>
 <template id="rankTemplate"><article class="rank-card"><div class="rank-number"></div><div class="rank-main"><h3></h3><p></p><div class="mini-metrics"></div></div><div class="rank-score"></div></article></template>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="app.js?v=8" defer></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="app.js?v=9" defer></script>
 </body></html>

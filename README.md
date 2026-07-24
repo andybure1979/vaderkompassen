@@ -72,3 +72,12 @@ Ladda upp samtliga filer till en katalog på din webbserver. Ingen Python eller 
 - Resultatet visar vilka källor som användes
 - Säkerhetsindikatorn beräknas bara från aktiva källor
 - Service worker och cache uppdaterade till v8
+
+## Version 9
+- Norge tillagt med Østlandet, Sørlandet, Vestlandet, Trøndelag och Nord-Norge
+- Yr / MET Norway tillagt som valbar prognoskälla
+- Snabbfilter för hela Sverige, hela Danmark och hela Norge
+- Svenska regioner har landskapsfilter
+- Danska och norska landsdelar har regionala underfilter
+- Norska kust- och skidorter har havs- respektive snödata
+- Cache och service worker uppdaterade till v9
