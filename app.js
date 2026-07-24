@@ -71,7 +71,113 @@ const PLACES = [
   ["Bodø","Nordland","Nord-Norge",67.2804,14.4049],["Narvik","Nordland","Nord-Norge",68.4385,17.4272],
   ["Svolvær","Nordland","Nord-Norge",68.2343,14.5682],["Tromsø","Troms","Nord-Norge",69.6492,18.9553],
   ["Alta","Finnmark","Nord-Norge",69.9689,23.2716],["Hammerfest","Finnmark","Nord-Norge",70.6634,23.6821],
-  ["Kirkenes","Finnmark","Nord-Norge",69.7269,30.0450]
+  ["Kirkenes","Finnmark","Nord-Norge",69.7269,30.0450],
+
+  // Version 12 – fler destinationer i Sverige
+  ["Lund","Skåne","Södra Sverige",55.7047,13.1910],["Trelleborg","Skåne","Södra Sverige",55.3751,13.1569],
+  ["Landskrona","Skåne","Södra Sverige",55.8708,12.8302],["Ängelholm","Skåne","Södra Sverige",56.2428,12.8622],
+  ["Höganäs","Skåne","Södra Sverige",56.1997,12.5579],["Kivik","Skåne","Södra Sverige",55.6859,14.2230],
+  ["Åhus","Skåne","Södra Sverige",55.9230,14.2950],["Skanör","Skåne","Södra Sverige",55.4167,12.8500],
+  ["Laholm","Halland","Södra Sverige",56.5120,13.0437],["Kungsbacka","Halland","Södra Sverige",57.4872,12.0761],
+  ["Falköping","Västergötland","Södra Sverige",58.1735,13.5507],["Skövde","Västergötland","Södra Sverige",58.3912,13.8451],
+  ["Lidköping","Västergötland","Södra Sverige",58.5052,13.1577],["Mariestad","Västergötland","Södra Sverige",58.7097,13.8237],
+  ["Alingsås","Västergötland","Södra Sverige",57.9300,12.5334],["Ulricehamn","Västergötland","Södra Sverige",57.7918,13.4148],
+  ["Trollhättan","Västergötland","Södra Sverige",58.2837,12.2886],["Vänersborg","Dalsland","Södra Sverige",58.3807,12.3234],
+  ["Åmål","Dalsland","Södra Sverige",59.0520,12.7049],["Lysekil","Bohuslän","Södra Sverige",58.2743,11.4358],
+  ["Kungshamn","Bohuslän","Södra Sverige",58.3630,11.2594],["Fjällbacka","Bohuslän","Södra Sverige",58.5997,11.2842],
+  ["Grebbestad","Bohuslän","Södra Sverige",58.7028,11.2570],["Marstrand","Bohuslän","Södra Sverige",57.8869,11.5823],
+  ["Eksjö","Småland","Södra Sverige",57.6664,14.9721],["Nässjö","Småland","Södra Sverige",57.6531,14.6968],
+  ["Värnamo","Småland","Södra Sverige",57.1860,14.0400],["Ljungby","Småland","Södra Sverige",56.8332,13.9408],
+  ["Oskarshamn","Småland","Södra Sverige",57.2646,16.4484],["Vetlanda","Småland","Södra Sverige",57.4289,15.0776],
+  ["Vimmerby","Småland","Södra Sverige",57.6659,15.8552],["Nybro","Småland","Södra Sverige",56.7446,15.9071],
+  ["Karlshamn","Blekinge","Södra Sverige",56.1706,14.8619],["Sölvesborg","Blekinge","Södra Sverige",56.0521,14.5753],
+  ["Löttorp","Öland","Södra Sverige",57.1664,16.9940],["Mörbylånga","Öland","Södra Sverige",56.5248,16.3788],
+  ["Hemse","Gotland","Södra Sverige",57.2378,18.3748],["Slite","Gotland","Södra Sverige",57.7045,18.8031],
+
+  // Version 12 – fler destinationer i Mellansverige
+  ["Mjölby","Östergötland","Mellansverige",58.3259,15.1237],["Vadstena","Östergötland","Mellansverige",58.4484,14.8895],
+  ["Söderköping","Östergötland","Mellansverige",58.4808,16.3222],["Finspång","Östergötland","Mellansverige",58.7058,15.7674],
+  ["Katrineholm","Södermanland","Mellansverige",58.9959,16.2072],["Strängnäs","Södermanland","Mellansverige",59.3775,17.0312],
+  ["Mariefred","Södermanland","Mellansverige",59.2593,17.2230],["Trosa","Södermanland","Mellansverige",58.8962,17.5481],
+  ["Södertälje","Södermanland","Mellansverige",59.1955,17.6253],["Enköping","Uppland","Mellansverige",59.6361,17.0777],
+  ["Sigtuna","Uppland","Mellansverige",59.6173,17.7236],["Östhammar","Uppland","Mellansverige",60.2597,18.3741],
+  ["Vaxholm","Uppland","Mellansverige",59.4022,18.3532],["Nynäshamn","Södermanland","Mellansverige",58.9034,17.9479],
+  ["Köping","Västmanland","Mellansverige",59.5140,15.9926],["Arboga","Västmanland","Mellansverige",59.3939,15.8388],
+  ["Fagersta","Västmanland","Mellansverige",60.0042,15.7932],["Lindesberg","Västmanland","Mellansverige",59.5920,15.2304],
+  ["Hallsberg","Närke","Mellansverige",59.0657,15.1117],["Nora","Västmanland","Mellansverige",59.5193,15.0398],
+  ["Kristinehamn","Värmland","Mellansverige",59.3098,14.1081],["Sunne","Värmland","Mellansverige",59.8376,13.1430],
+  ["Torsby","Värmland","Mellansverige",60.1353,13.0082],["Filipstad","Värmland","Mellansverige",59.7124,14.1683],
+  ["Leksand","Dalarna","Mellansverige",60.7303,14.9998],["Rättvik","Dalarna","Mellansverige",60.8863,15.1179],
+  ["Malung","Dalarna","Mellansverige",60.6833,13.7154],["Avesta","Dalarna","Mellansverige",60.1455,16.1679],
+  ["Ludvika","Dalarna","Mellansverige",60.1496,15.1878],["Hedemora","Dalarna","Mellansverige",60.2797,15.9886],
+  ["Orsa","Dalarna","Mellansverige",61.1205,14.6154],["Älvdalen","Dalarna","Mellansverige",61.2277,14.0390],
+  ["Tierp","Uppland","Mellansverige",60.3420,17.5181],["Öregrund","Uppland","Mellansverige",60.3392,18.4405],
+
+  // Version 12 – fler destinationer i Norra Sverige
+  ["Ljusdal","Hälsingland","Norra Sverige",61.8272,16.0913],["Bollnäs","Hälsingland","Norra Sverige",61.3482,16.3946],
+  ["Järvsö","Hälsingland","Norra Sverige",61.7155,16.1702],["Timrå","Medelpad","Norra Sverige",62.4870,17.3257],
+  ["Ånge","Medelpad","Norra Sverige",62.5246,15.6590],["Sollefteå","Ångermanland","Norra Sverige",63.1668,17.2684],
+  ["Kramfors","Ångermanland","Norra Sverige",62.9316,17.7765],["Höga Kusten","Ångermanland","Norra Sverige",63.0250,18.3500],
+  ["Krokom","Jämtland","Norra Sverige",63.3260,14.4488],["Strömsund","Jämtland","Norra Sverige",63.8521,15.5558],
+  ["Storlien","Jämtland","Norra Sverige",63.3167,12.1000],["Bräcke","Jämtland","Norra Sverige",62.7509,15.4174],
+  ["Hede","Härjedalen","Norra Sverige",62.4170,13.5120],["Lofsdalen","Härjedalen","Norra Sverige",62.1137,13.2693],
+  ["Vilhelmina","Lappland","Norra Sverige",64.6242,16.6559],["Storuman","Lappland","Norra Sverige",65.0959,17.1173],
+  ["Lycksele","Lappland","Norra Sverige",64.5958,18.6764],["Dorotea","Lappland","Norra Sverige",64.2619,16.4135],
+  ["Norsjö","Västerbotten","Norra Sverige",64.9121,19.4815],["Robertsfors","Västerbotten","Norra Sverige",64.1932,20.8481],
+  ["Vindeln","Västerbotten","Norra Sverige",64.2018,19.7195],["Holmsund","Västerbotten","Norra Sverige",63.7063,20.3640],
+  ["Kalix","Norrbotten","Norra Sverige",65.8557,23.1432],["Boden","Norrbotten","Norra Sverige",65.8251,21.6887],
+  ["Älvsbyn","Norrbotten","Norra Sverige",65.6762,21.0016],["Jokkmokk","Lappland","Norra Sverige",66.6060,19.8234],
+  ["Pajala","Norrbotten","Norra Sverige",67.2128,23.3661],["Överkalix","Norrbotten","Norra Sverige",66.3275,22.8441],
+  ["Karesuando","Lappland","Norra Sverige",68.4417,22.4786],["Riksgränsen","Lappland","Norra Sverige",68.4264,18.1255],
+  ["Björkliden","Lappland","Norra Sverige",68.4060,18.6860],["Tärnaby","Lappland","Norra Sverige",65.7106,15.2575],
+
+  // Version 12 – fler destinationer i Danmark
+  ["Frederikshavn","Nordjylland","Jylland",57.4407,10.5366],["Hirtshals","Nordjylland","Jylland",57.5881,9.9592],
+  ["Hanstholm","Nordjylland","Jylland",57.1167,8.6167],["Thisted","Nordjylland","Jylland",56.9552,8.6949],
+  ["Randers","Midtjylland","Jylland",56.4607,10.0364],["Silkeborg","Midtjylland","Jylland",56.1697,9.5451],
+  ["Viborg","Midtjylland","Jylland",56.4532,9.4020],["Herning","Midtjylland","Jylland",56.1362,8.9766],
+  ["Horsens","Midtjylland","Jylland",55.8607,9.8503],["Vejle","Syddanmark","Jylland",55.7113,9.5364],
+  ["Kolding","Syddanmark","Jylland",55.4904,9.4722],["Sønderborg","Syddanmark","Jylland",54.9093,9.7922],
+  ["Aabenraa","Syddanmark","Jylland",55.0443,9.4174],["Ribe","Syddanmark","Jylland",55.3288,8.7623],
+  ["Blåvand","Syddanmark","Jylland",55.5572,8.1275],["Ringkøbing","Midtjylland","Jylland",56.0901,8.2440],
+  ["Svendborg","Fyn","Fyn",55.0598,10.6068],["Nyborg","Fyn","Fyn",55.3127,10.7896],
+  ["Faaborg","Fyn","Fyn",55.0951,10.2423],["Kerteminde","Fyn","Fyn",55.4490,10.6577],
+  ["Middelfart","Fyn","Fyn",55.5059,9.7305],["Assens","Fyn","Fyn",55.2702,9.9008],
+  ["Helsingør","Hovedstaden","Själland",56.0361,12.6136],["Hillerød","Hovedstaden","Själland",55.9279,12.3008],
+  ["Køge","Själland","Själland",55.4580,12.1821],["Slagelse","Själland","Själland",55.4028,11.3546],
+  ["Holbæk","Själland","Själland",55.7167,11.7167],["Kalundborg","Själland","Själland",55.6795,11.0886],
+  ["Vordingborg","Själland","Själland",55.0080,11.9106],["Møn","Själland","Själland",54.9833,12.3000],
+  ["Gilleleje","Hovedstaden","Själland",56.1219,12.3106],["Hundested","Hovedstaden","Själland",55.9678,11.8500],
+
+  // Version 12 – fler destinationer i Norge
+  ["Moss","Østfold","Østlandet",59.4340,10.6577],["Halden","Østfold","Østlandet",59.1248,11.3875],
+  ["Sarpsborg","Østfold","Østlandet",59.2839,11.1096],["Kongsberg","Buskerud","Østlandet",59.6686,9.6502],
+  ["Hønefoss","Buskerud","Østlandet",60.1680,10.2565],["Gol","Buskerud","Østlandet",60.7014,8.9457],
+  ["Fagernes","Innlandet","Østlandet",60.9858,9.2324],["Gjøvik","Innlandet","Østlandet",60.7957,10.6916],
+  ["Elverum","Innlandet","Østlandet",60.8819,11.5623],["Kongsvinger","Innlandet","Østlandet",60.1905,12.0038],
+  ["Otta","Innlandet","Østlandet",61.7712,9.5356],["Beitostølen","Innlandet","Østlandet",61.2475,8.9065],
+  ["Lillestrøm","Akershus","Østlandet",59.9550,11.0492],["Tønsberg","Vestfold","Østlandet",59.2675,10.4076],
+  ["Sandefjord","Vestfold","Østlandet",59.1312,10.2166],["Larvik","Vestfold","Østlandet",59.0533,10.0352],
+  ["Skien","Telemark","Østlandet",59.2096,9.6090],["Porsgrunn","Telemark","Østlandet",59.1405,9.6561],
+  ["Rjukan","Telemark","Østlandet",59.8789,8.5941],["Hovden","Agder","Sørlandet",59.5608,7.3568],
+  ["Flekkefjord","Agder","Sørlandet",58.2970,6.6607],["Lillesand","Agder","Sørlandet",58.2488,8.3778],
+  ["Farsund","Agder","Sørlandet",58.0948,6.8047],["Lindesnes","Agder","Sørlandet",57.9820,7.0460],
+  ["Egersund","Rogaland","Vestlandet",58.4513,5.9997],["Sandnes","Rogaland","Vestlandet",58.8524,5.7352],
+  ["Jæren","Rogaland","Vestlandet",58.7000,5.5500],["Odda","Vestland","Vestlandet",60.0691,6.5457],
+  ["Hardanger","Vestland","Vestlandet",60.3500,6.4000],["Sogndal","Vestland","Vestlandet",61.2297,7.1006],
+  ["Førde","Vestland","Vestlandet",61.4522,5.8572],["Nordfjordeid","Vestland","Vestlandet",61.9063,5.9915],
+  ["Geiranger","Møre og Romsdal","Vestlandet",62.1015,7.2059],["Volda","Møre og Romsdal","Vestlandet",62.1468,6.0718],
+  ["Andalsnes","Møre og Romsdal","Vestlandet",62.5675,7.6871],["Levanger","Trøndelag","Trøndelag",63.7464,11.2996],
+  ["Stjørdal","Trøndelag","Trøndelag",63.4680,10.9174],["Namsos","Trøndelag","Trøndelag",64.4662,11.4957],
+  ["Rørvik","Trøndelag","Trøndelag",64.8610,11.2397],["Meråker","Trøndelag","Trøndelag",63.4147,11.7427],
+  ["Mo i Rana","Nordland","Nord-Norge",66.3128,14.1428],["Mosjøen","Nordland","Nord-Norge",65.8350,13.1908],
+  ["Sandnessjøen","Nordland","Nord-Norge",66.0217,12.6316],["Brønnøysund","Nordland","Nord-Norge",65.4749,12.2128],
+  ["Leknes","Nordland","Nord-Norge",68.1480,13.6115],["Andenes","Nordland","Nord-Norge",69.3143,16.1194],
+  ["Harstad","Troms","Nord-Norge",68.7986,16.5415],["Finnsnes","Troms","Nord-Norge",69.2296,17.9811],
+  ["Senja","Troms","Nord-Norge",69.3000,17.5000],["Lyngen","Troms","Nord-Norge",69.5761,20.2189],
+  ["Longyearbyen","Svalbard","Nord-Norge",78.2232,15.6469],["Ny-Ålesund","Svalbard","Nord-Norge",78.9236,11.9287],
+  ["Honningsvåg","Finnmark","Nord-Norge",70.9821,25.9704],["Vadsø","Finnmark","Nord-Norge",70.0744,29.7487],
+  ["Vardø","Finnmark","Nord-Norge",70.3705,31.1107],["Karasjok","Finnmark","Nord-Norge",69.4722,25.5112]
 
 ];
 
@@ -292,6 +398,7 @@ function renderSourceChoices(){
 }
 
 const BATCH_SIZE=45;
+const SMHI_MAX_PLACES=90;
 const REQUEST_TIMEOUT_MS=18000;
 const REQUEST_RETRIES=1;
 const chunks=(arr,size)=>Array.from({length:Math.ceil(arr.length/size)},(_,i)=>arr.slice(i*size,(i+1)*size));
@@ -366,7 +473,12 @@ async function fetchSmhiPlace(place){
   }));
 }
 async function fetchSmhi(places){
-  const swedish=places.filter(p=>countryFor({region:p[2]})==="SE");
+  let swedish=places.filter(p=>countryFor({region:p[2]})==="SE");
+  // SMHI har ett punkt-API. Vid stora urval används ett geografiskt jämnt urval för snabbare laddning.
+  if(swedish.length>SMHI_MAX_PLACES){
+    const step=swedish.length/SMHI_MAX_PLACES;
+    swedish=Array.from({length:SMHI_MAX_PLACES},(_,i)=>swedish[Math.floor(i*step)]);
+  }
   if(!swedish.length)throw new Error("SMHI: inga svenska orter valda");
   const rows=[];
   for(const batch of chunks(swedish,8)){
