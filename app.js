@@ -97,8 +97,8 @@ const ACTIVITIES = {
 };
 const MODELS = {
   "SMHI":{type:"smhi"},
-  "Yr / MET Norway":{type:"openMeteo",model:"metno_nordic"},
-  "DMI":{type:"openMeteo",model:"dmi_harmonie_arome_europe"},
+  "Yr / MET Norway":{type:"openMeteo",endpoint:"https://api.open-meteo.com/v1/metno"},
+  "DMI":{type:"openMeteo",endpoint:"https://api.open-meteo.com/v1/dmi"},
   "ECMWF":{type:"openMeteo",model:"ecmwf_ifs025"},
   "ICON":{type:"openMeteo",model:"icon_seamless"},
   "GFS":{type:"openMeteo",model:"gfs_seamless"}
@@ -294,8 +294,11 @@ function renderSourceChoices(){
 const BATCH_SIZE=45;
 const chunks=(arr,size)=>Array.from({length:Math.ceil(arr.length/size)},(_,i)=>arr.slice(i*size,(i+1)*size));
 async function fetchModelBatch(label,model,places){
-  const params=new URLSearchParams({latitude:places.map(p=>p[3]).join(","),longitude:places.map(p=>p[4]).join(","),daily:DAILY,timezone:"auto",forecast_days:"7",models:model.model,wind_speed_unit:"ms"});
-  const res=await fetch(`https://api.open-meteo.com/v1/forecast?${params}`);
+  const query={latitude:places.map(p=>p[3]).join(","),longitude:places.map(p=>p[4]).join(","),daily:DAILY,timezone:"auto",forecast_days:"7",wind_speed_unit:"ms"};
+  if(model.model)query.models=model.model;
+  const params=new URLSearchParams(query);
+  const endpoint=model.endpoint||"https://api.open-meteo.com/v1/forecast";
+  const res=await fetch(`${endpoint}?${params}`);
   if(!res.ok)throw new Error(`${label}: ${res.status}`);
   let data=await res.json();if(!Array.isArray(data))data=[data];
   const rows=[];
@@ -430,12 +433,15 @@ async function load(){
       weatherPromise,fetchMarine(places).catch(()=>[]),fetchSnow(places).catch(()=>[])
     ]);
     const rows=settled.filter(x=>x.status==="fulfilled").flatMap(x=>x.value);
-    const ok=settled.filter(x=>x.status==="fulfilled").length;
-    if(!rows.length)throw new Error("Ingen väderkälla svarade.");
+    const sourceStatus=settled.map((result,i)=>({name:selectedModels[i][0],ok:result.status==="fulfilled",error:result.status==="rejected"?result.reason?.message:""}));
+    const ok=sourceStatus.filter(x=>x.ok).length;
+    if(!rows.length)throw new Error(`Ingen väderkälla svarade. ${sourceStatus.map(x=>`${x.name}: ${x.error||"fel"}`).join(" · ")}`);
     dailyResults=aggregate(rows,marineResult,snowResult);activeDate=Object.keys(dailyResults).sort()[0];
     const marineCount=new Set(marineResult.map(x=>x.place)).size;
     const snowCount=new Set(snowResult.map(x=>x.place)).size;
-    $("modelCount").textContent=`${sourceLabel()} · ${ok} svarade · ${places.length} orter`;
+    const failed=sourceStatus.filter(x=>!x.ok);
+    $("modelCount").textContent=`${sourceLabel()} · ${ok}/${sourceStatus.length} svarade · ${places.length} orter${failed.length?` · Saknas: ${failed.map(x=>x.name).join(", ")}`:""}`;
+    $("modelCount").title=failed.map(x=>`${x.name}: ${x.error||"okänt fel"}`).join("\n");
     $("statusCard").classList.add("hidden");renderTabs();renderActivities();renderDay();
   }catch(e){showError(`${e.message} Kontrollera internetanslutningen.`)}
 }

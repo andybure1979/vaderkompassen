@@ -89,3 +89,8 @@ Ladda upp samtliga filer till en katalog på din webbserver. Ingen Python eller 
 - SMHI hämtas endast för svenska orter; övriga källor fortsätter via Open-Meteo.
 - Ikonvägar i manifest, HTML och service worker korrigerade för GitHub Pages.
 - Cache och versionsparametrar uppdaterade till v10.
+
+
+## Version 10.1
+- Yr och DMI använder nu sina dedikerade Open-Meteo-endpoints.
+- Källstatus visar exakt vilka prognoskällor som svarar eller saknas.
