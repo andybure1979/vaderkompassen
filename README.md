@@ -119,8 +119,16 @@ Ladda upp samtliga filer till en katalog på din webbserver. Ingen Python eller 
 - Havs- och snödata har separata tidsgränser.
 
 
-## v12.2.5
+## v12.2.6
 - Rätt versionsmärkning i sidfot, resurser och PWA-cache.
 - Områdesbalanserat ortsurval: minst en prognosort per valt område.
 - Upp till 24 svenska SMHI-orter och 18 MET Norway-orter per land.
 - Lägre parallellitet för MET Norway för stabilitet utan att minska täckningen till 1–3 orter.
+
+
+## v12.2.6
+- Visar senast sparade väderdata direkt vid sidladdning.
+- Siduppdatering utlöser inte längre ett nytt liveanrop när giltig cache finns.
+- Försöker uppdatera väderdata i bakgrunden var 30:e minut medan appen är aktiv.
+- Misslyckad bakgrundsuppdatering behåller den senast fungerande prognosen.
+- Ny hämtning sker direkt endast första gången eller när inställningarna ändras och ingen matchande cache finns.

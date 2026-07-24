@@ -383,7 +383,7 @@ function renderActivities(){
     const b=document.createElement("button");
     b.type="button";b.className="activity-chip"+(settings.activity===key?" active":"");
     b.innerHTML=`<span>${a.icon}</span>${a.label}`;
-    b.onclick=()=>{settings.activity=key;localStorage.setItem("vk-settings",JSON.stringify(settings));renderActivities();renderDay();};
+    b.onclick=()=>{settings.activity=key;localStorage.setItem("vk-settings",JSON.stringify(settings));renderActivities();if(!restoreWeatherCache())load();};
     box.appendChild(b);
   });
   $("activeActivity").textContent=`${ACTIVITIES[settings.activity].icon} ${ACTIVITIES[settings.activity].label}`;
@@ -447,7 +447,45 @@ async function mapWithConcurrency(items,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
   return results;
 }
-const diagnostics={version:"12.2.5",lastLoad:null,sources:[]};
+const diagnostics={version:"12.2.6",lastLoad:null,sources:[]};
+const WEATHER_CACHE_KEY="vk-weather-cache-v12.2.6";
+const BACKGROUND_REFRESH_MS=30*60*1000;
+let refreshTimer=null;
+let loadInProgress=false;
+function cacheSignature(){
+  return JSON.stringify({regions:[...settings.regions].sort(),areas:[...settings.areas].sort(),activity:settings.activity});
+}
+function formatUpdatedAt(timestamp){
+  return new Intl.DateTimeFormat("sv-SE",{dateStyle:"short",timeStyle:"short"}).format(new Date(timestamp));
+}
+function readWeatherCache(){
+  try{
+    const cache=JSON.parse(localStorage.getItem(WEATHER_CACHE_KEY)||"null");
+    return cache&&cache.signature===cacheSignature()&&cache.dailyResults?cache:null;
+  }catch{return null}
+}
+function saveWeatherCache(meta={}){
+  try{localStorage.setItem(WEATHER_CACHE_KEY,JSON.stringify({signature:cacheSignature(),savedAt:Date.now(),dailyResults,activeDate,modelText:$("modelCount").textContent,modelTitle:$("modelCount").title,...meta}))}catch{}
+}
+function restoreWeatherCache(){
+  const cache=readWeatherCache();
+  if(!cache)return false;
+  dailyResults=cache.dailyResults||{};
+  activeDate=cache.activeDate||Object.keys(dailyResults).sort()[0]||null;
+  if(!activeDate)return false;
+  $("modelCount").textContent=`${cache.modelText||"Sparad prognos"} · uppdaterad ${formatUpdatedAt(cache.savedAt)}`;
+  $("modelCount").title=cache.modelTitle||"";
+  $("statusCard").classList.add("hidden");
+  renderTabs();renderActivities();renderDay();
+  scheduleBackgroundRefresh(cache.savedAt);
+  return true;
+}
+function scheduleBackgroundRefresh(lastSaved=Date.now()){
+  clearTimeout(refreshTimer);
+  const delay=Math.max(1000,BACKGROUND_REFRESH_MS-(Date.now()-lastSaved));
+  refreshTimer=setTimeout(()=>load({background:true}),delay);
+}
+
 window.vaderkompassenDiagnostics=diagnostics;
 async function resilientFetch(url,{timeout=REQUEST_TIMEOUT_MS,retries=REQUEST_RETRIES}={}){
   const cached=responseCache.get(url);
@@ -698,11 +736,13 @@ async function fetchMetNo(places){
   return rows;
 }
 
-async function load(){
+async function load({background=false}={}){
+  if(loadInProgress)return;
+  loadInProgress=true;
   const selected=new Set(settings.regions),selectedAreas=new Set(settings.areas);
   const places=PLACES.filter(p=>selected.has(p[2])&&selectedAreas.has(p[1]));
-  if(!places.length){showError("Välj minst en region i inställningarna.");return}
-  showStatus(`Hämtar stabil prognos för ${places.length} valda orter…`);
+  if(!places.length){loadInProgress=false;showError("Välj minst en region i inställningarna.");return}
+  if(!background)showStatus(`Hämtar stabil prognos för ${places.length} valda orter…`);
   try{
     let rows=[];
     const sourceStatus=[];
@@ -750,7 +790,16 @@ async function load(){
     $("modelCount").textContent=`Nationella källor · ${ok}/${sourceStatus.length} svarade · ${new Set(rows.map(r=>r.place)).size} prognosorter`;
     $("modelCount").title=failed.map(x=>`${x.name}: ${x.error||"okänt fel"}`).join("\n");
     $("statusCard").classList.add("hidden");renderTabs();renderActivities();renderDay();
-  }catch(e){showError(`${e.message} Kontrollera internetanslutningen.`)}
+    saveWeatherCache({sourceStatus});
+    scheduleBackgroundRefresh();
+  }catch(e){
+    if(background){
+      console.warn("Bakgrundsuppdateringen misslyckades:",e);
+      const cache=readWeatherCache();
+      if(cache){$("modelCount").textContent=`${cache.modelText||"Sparad prognos"} · senast uppdaterad ${formatUpdatedAt(cache.savedAt)} · bakgrundsuppdatering misslyckades`;}
+      scheduleBackgroundRefresh(Date.now());
+    }else showError(`${e.message} Kontrollera internetanslutningen.`)
+  }finally{loadInProgress=false}
 }
 
 function aggregate(rows,marineRows=[],snowRows=[]){
@@ -883,13 +932,19 @@ $("saveSettings").onclick=e=>{
     sun:+$("sunWeight").value,wind:+$("windWeight").value,sourceMode,sources,
     regions:[...document.querySelectorAll('#regionChoices input[data-kind="region"]:checked')].map(x=>x.value),
     areas:[...document.querySelectorAll('#regionChoices input[data-kind="area"]:checked')].map(x=>x.value)};
-  localStorage.setItem("vk-settings",JSON.stringify(settings));$("settingsDialog").close();load();
+  localStorage.setItem("vk-settings",JSON.stringify(settings));$("settingsDialog").close();if(!restoreWeatherCache())load();
 };
 if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
-  const reg=await navigator.serviceWorker.register(`sw.js?v=12.2.5`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=12.2.6`);
   reg.update();
   reg.addEventListener("updatefound",()=>{const worker=reg.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller){$("updateBanner").classList.remove("hidden");}})});
   navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload());
 });
 $("updateNow").onclick=()=>navigator.serviceWorker.getRegistration().then(r=>r?.waiting?.postMessage({type:"SKIP_WAITING"}));
-renderActivities();load();
+renderActivities();
+if(!restoreWeatherCache())load();
+document.addEventListener("visibilitychange",()=>{
+  if(document.visibilityState!=="visible")return;
+  const cache=readWeatherCache();
+  if(cache&&Date.now()-cache.savedAt>=BACKGROUND_REFRESH_MS)load({background:true});
+});
