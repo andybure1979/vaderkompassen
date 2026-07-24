@@ -50,7 +50,7 @@ const PLACES = [
 
 const REGIONS = ["Södra Sverige","Mellansverige","Norra Sverige","Danmark"];
 const ACTIVITIES = {
-  general:{label:"Bäst väder",icon:"☀️"},
+  general:{label:"Sol och bad",icon:"☀️"},
   coast:{label:"Kustväder",icon:"🏖️"},
   surf:{label:"Surfväder",icon:"🏄"},
   boat:{label:"Båtväder",icon:"⛵"},
@@ -61,7 +61,7 @@ const ACTIVITIES = {
 };
 const MODELS = {
   "DMI":"dmi_harmonie_arome_europe","ECMWF":"ecmwf_ifs025","ICON":"icon_seamless",
-  "GFS":"gfs_seamless","MET Norway":"metno_nordic"
+  "GFS":"gfs_seamless","SMHI/MetCoOp":"metno_nordic"
 };
 const DAILY = "temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,sunshine_duration,wind_speed_10m_max";
 
@@ -99,6 +99,27 @@ const mean=a=>{const b=a.filter(Number.isFinite);return b.length?b.reduce((x,y)=
 const std=a=>{const b=a.filter(Number.isFinite);if(b.length<2)return 0;const m=mean(b);return Math.sqrt(b.reduce((s,x)=>s+(x-m)**2,0)/(b.length-1))};
 const fmt=(n,d=1)=>Number.isFinite(n)?n.toFixed(d):"–";
 const validNumber=v=>v===null||v===undefined||v===""?null:(Number.isFinite(Number(v))?Number(v):null);
+
+function countryFor(item){
+  if(item.region==="Danmark") return "DK";
+  if(item.region==="Norge") return "NO";
+  return "SE";
+}
+function sourceWeight(model,item){
+  const country=countryFor(item);
+  if(country==="SE" && model==="SMHI/MetCoOp") return 3.5;
+  if(country==="DK" && model==="DMI") return 3.5;
+  if(country==="NO" && model==="SMHI/MetCoOp") return 3.5;
+  if(model==="ECMWF") return 1.25;
+  return 1;
+}
+function weightedMean(rows,key){
+  const valid=rows.filter(r=>Number.isFinite(r[key]));
+  if(!valid.length)return null;
+  const total=valid.reduce((sum,r)=>sum+sourceWeight(r.model,r),0);
+  return valid.reduce((sum,r)=>sum+r[key]*sourceWeight(r.model,r),0)/total;
+}
+
 const bell=(value,target,width)=>clamp(100-Math.abs(value-target)*(100/width));
 
 function activityScore(r){
@@ -267,7 +288,7 @@ async function load(){
     dailyResults=aggregate(rows,marineResult,snowResult);activeDate=Object.keys(dailyResults).sort()[0];
     const marineCount=new Set(marineResult.map(x=>x.place)).size;
     const snowCount=new Set(snowResult.map(x=>x.place)).size;
-    $("modelCount").textContent=`${ok} prognosmodeller · ${places.length} orter · ${marineCount} kust · ${snowCount} skid`;
+    $("modelCount").textContent=`${ok} modeller · nationell källa väger 3,5× · ${places.length} orter`;
     $("statusCard").classList.add("hidden");renderTabs();renderActivities();renderDay();
   }catch(e){showError(`${e.message} Kontrollera internetanslutningen.`)}
 }
@@ -280,13 +301,14 @@ function aggregate(rows,marineRows=[],snowRows=[]){
     const valid=g.filter(x=>Number.isFinite(x.temp));if(!valid.length)return;
     const f=g[0],extra=extras[`${f.day}|${f.place}`]||{},item={
       day:f.day,place:f.place,area:f.area,region:f.region,lat:f.lat,lon:f.lon,
-      temp:mean(g.map(x=>x.temp)),min:mean(g.map(x=>x.min)),rain:mean(g.map(x=>x.rain)),
-      risk:mean(g.map(x=>x.risk)),sun:mean(g.map(x=>x.sun)),wind:mean(g.map(x=>x.wind)),models:valid.length,
+      temp:weightedMean(g,"temp"),min:weightedMean(g,"min"),rain:weightedMean(g,"rain"),
+      risk:weightedMean(g,"risk"),sun:weightedMean(g,"sun"),wind:weightedMean(g,"wind"),models:valid.length,
       waveHeight:validNumber(extra.waveHeight),wavePeriod:validNumber(extra.wavePeriod),
       swellHeight:validNumber(extra.swellHeight),swellPeriod:validNumber(extra.swellPeriod),
       seaTemp:validNumber(extra.seaTemp),snowDepth:validNumber(extra.snowDepth),
       newSnow:validNumber(extra.newSnow),freezingLevel:validNumber(extra.freezingLevel)
     };
+    item.primarySource=countryFor(item)==="DK"?"DMI":countryFor(item)==="NO"?"Yr/MET Norway":"SMHI/MetCoOp";
     item.hasMarine=Number.isFinite(item.waveHeight)||Number.isFinite(item.seaTemp);
     item.hasSnow=SKI_PLACES.has(item.place)&&(Number.isFinite(item.snowDepth)||Number.isFinite(item.newSnow));
     item.confidence=Math.round(clamp(100-std(g.map(x=>x.temp))*5-std(g.map(x=>x.rain))*9-std(g.map(x=>x.wind))*4));
@@ -326,7 +348,7 @@ function renderDay(){
   const best=list[0],activity=ACTIVITIES[settings.activity];
   $("bestEyebrow").textContent=`BÄST ${activity.label.toUpperCase()}`;
   $("bestPlace").textContent=best.place;
-  $("bestRegion").textContent=`${best.area} · ${best.region}`;
+  $("bestRegion").textContent=`${best.area} · ${best.region} · Tyngst: ${best.primarySource}`;
   $("bestSummary").textContent=activitySummary(best.score);
   $("bestScore").textContent=best.score;$("bestTemp").textContent=`${fmt(best.temp,0)}°`;
   $("bestRain").textContent=`${fmt(best.rain)} mm`;$("bestSun").textContent=`${fmt(best.sun)} h`;
@@ -339,7 +361,7 @@ function renderDay(){
     const card=$("rankTemplate").content.cloneNode(true);
     card.querySelector(".rank-number").textContent=i+1;
     card.querySelector("h3").textContent=r.place;
-    card.querySelector("p").textContent=`${r.area} · ${r.region} · ${activitySummary(r.score)}`;
+    card.querySelector("p").textContent=`${r.area} · ${r.region} · ${activitySummary(r.score)} · Tyngst: ${r.primarySource}`;
     card.querySelector(".mini-metrics").innerHTML=`<span>🌡️ ${fmt(r.temp,0)}°</span><span>🌧️ ${fmt(r.rain)} mm</span><span>☀️ ${fmt(r.sun)} h</span><span>💨 ${fmt(r.wind)} m/s</span>${specialMetricHtml(r)}<span>🎯 ${r.confidence}%</span>`;
     card.querySelector(".rank-score").textContent=r.score;ranking.appendChild(card);
   });

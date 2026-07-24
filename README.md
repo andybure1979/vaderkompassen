@@ -45,3 +45,13 @@ Ladda upp samtliga filer till en katalog på din webbserver. Ingen Python eller 
 - Marine API: våghöjd, vågperiod, dyning och havstemperatur
 - Snödata: snödjup, nysnö och nollgradersnivå
 - Specialiserade topplistor för kust/surf/båt/fiske och skidor
+
+
+## Version 6
+- ”Bäst väder” heter nu ”Sol och bad”
+- Landsspecifik modellviktning:
+  - Sverige: SMHI/MetCoOp 3,5×
+  - Danmark: DMI 3,5×
+  - Norge: Yr/MET Norway 3,5× när norska orter läggs till
+- ECMWF väger 1,25× och övriga stödmodeller 1×
+- Dominerande prognoskälla visas i resultatet
