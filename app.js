@@ -430,7 +430,7 @@ function renderSourceChoices(){
 
 const BATCH_SIZE=80;
 const MAX_BATCH_CONCURRENCY=1;
-const SMHI_MAX_PLACES=20;
+const SMHI_MAX_PLACES=8;
 const REQUEST_TIMEOUT_MS=12000;
 const REQUEST_RETRIES=1;
 const SOURCE_TIMEOUT_MS=22000;
@@ -447,7 +447,7 @@ async function mapWithConcurrency(items,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
   return results;
 }
-const diagnostics={version:"12.2.3",lastLoad:null,sources:[]};
+const diagnostics={version:"12.2.4",lastLoad:null,sources:[]};
 window.vaderkompassenDiagnostics=diagnostics;
 async function resilientFetch(url,{timeout=REQUEST_TIMEOUT_MS,retries=REQUEST_RETRIES}={}){
   const cached=responseCache.get(url);
@@ -630,75 +630,109 @@ async function withDeadline(promise,ms,label){
     ]);
   }finally{clearTimeout(timer)}
 }
-async function fetchUnifiedForecast(places){
-  // En enda Open-Meteo-förfrågan används per laddning. Detta undviker att ECMWF,
-  // ICON och GFS belastar samma publika API-kvot med tre nästan identiska anrop.
-  const MAX_FORECAST_PLACES=32;
-  let scoped=places;
-  if(scoped.length>MAX_FORECAST_PLACES){
-    const step=scoped.length/MAX_FORECAST_PLACES;
-    scoped=Array.from({length:MAX_FORECAST_PLACES},(_,i)=>scoped[Math.floor(i*step)]);
+function representativePlaces(places,maxPerCountry=6){
+  const groups={SE:[],NO:[],DK:[]};
+  places.forEach(p=>{const c=countryFor({region:p[2]});if(groups[c])groups[c].push(p)});
+  return Object.values(groups).flatMap(list=>{
+    if(list.length<=maxPerCountry)return list;
+    const step=list.length/maxPerCountry;
+    return Array.from({length:maxPerCountry},(_,i)=>list[Math.floor(i*step)]);
+  });
+}
+function metNoDayKey(iso){return String(iso).slice(0,10)}
+async function fetchMetNoPlace(place){
+  const [name,area,region,lat,lon]=place;
+  const url=`https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}`;
+  let res;
+  try{res=await resilientFetch(url,{timeout:12000,retries:0})}
+  catch(error){throw new Error(`MET Norway ${name}: ${error.message}`)}
+  const data=await res.json(),days={};
+  (data.properties?.timeseries||[]).forEach(step=>{
+    const day=metNoDayKey(step.time),instant=step.data?.instant?.details||{};
+    const next=step.data?.next_1_hours?.details||step.data?.next_6_hours?.details||{};
+    const d=days[day]||={temps:[],rain:0,wetHours:0,sunHours:0,winds:[],windDirections:[]};
+    const t=validNumber(instant.air_temperature),wind=validNumber(instant.wind_speed),wd=validNumber(instant.wind_from_direction),cloud=validNumber(instant.cloud_area_fraction),precip=validNumber(next.precipitation_amount);
+    if(Number.isFinite(t))d.temps.push(t);
+    if(Number.isFinite(wind))d.winds.push(wind);
+    if(Number.isFinite(wd))d.windDirections.push(wd);
+    if(Number.isFinite(precip)){d.rain+=Math.max(0,precip);if(precip>.05)d.wetHours++}
+    const hour=new Date(step.time).getUTCHours();
+    if(hour>=4&&hour<=20&&Number.isFinite(cloud))d.sunHours+=clamp(100-cloud)/100;
+  });
+  return Object.entries(days).slice(0,7).map(([day,d])=>({
+    place:name,area,region,lat,lon,day,model:"MET Norway",
+    temp:d.temps.length?Math.max(...d.temps):null,min:d.temps.length?Math.min(...d.temps):null,
+    rain:d.rain,risk:clamp(d.wetHours/24*100),sun:d.sunHours,
+    wind:d.winds.length?Math.max(...d.winds):null,windDirection:circularMean(d.windDirections)
+  }));
+}
+async function fetchMetNo(places){
+  const sampled=representativePlaces(places,6);
+  if(!sampled.length)throw new Error("MET Norway: inga orter valda");
+  const rows=[];
+  for(const batch of chunks(sampled,3)){
+    const result=await Promise.allSettled(batch.map(fetchMetNoPlace));
+    rows.push(...result.filter(x=>x.status==="fulfilled").flatMap(x=>x.value));
   }
-  const model={type:"openMeteo"};
-  return fetchOpenMeteo("Open-Meteo prognos",model,scoped);
+  if(!rows.length)throw new Error("MET Norway: inga data");
+  return rows;
 }
 
 async function load(){
   const selected=new Set(settings.regions),selectedAreas=new Set(settings.areas);
   const places=PLACES.filter(p=>selected.has(p[2])&&selectedAreas.has(p[1]));
   if(!places.length){showError("Välj minst en region i inställningarna.");return}
-  showStatus(`Hämtar väder för ${places.length} orter…`);
+  showStatus(`Hämtar stabil prognos för ${places.length} valda orter…`);
   try{
-    // Grundprognosen gör exakt ett externt anrop. SMHI används som reserv, men
-    // bara om den gemensamma prognosen inte gav någon data.
     let rows=[];
     const sourceStatus=[];
-    try{
-      rows=await withDeadline(fetchUnifiedForecast(places),SOURCE_TIMEOUT_MS,"Grundprognos");
-      sourceStatus.push({name:"Open-Meteo prognos",ok:true,skipped:false,rows:rows.length,error:""});
-    }catch(reason){
-      sourceStatus.push({name:"Open-Meteo prognos",ok:false,skipped:false,rows:0,error:reason?.message||"fel"});
-    }
+    const swedish=places.filter(p=>countryFor({region:p[2]})==="SE");
+    const nordicOther=places.filter(p=>countryFor({region:p[2]})!=="SE");
 
-    if(!rows.length && places.some(p=>countryFor({region:p[2]})==="SE")){
+    if(swedish.length){
       try{
-        const smhiRows=await withDeadline(fetchSmhi(places),SOURCE_TIMEOUT_MS,"SMHI");
-        rows.push(...smhiRows);
-        sourceStatus.push({name:"SMHI reserv",ok:true,skipped:false,rows:smhiRows.length,error:""});
+        const smhiRows=await withDeadline(fetchSmhi(swedish),18000,"SMHI");
+        rows.push(...smhiRows);sourceStatus.push({name:"SMHI",ok:true,rows:smhiRows.length,error:""});
       }catch(reason){
-        sourceStatus.push({name:"SMHI reserv",ok:false,skipped:false,rows:0,error:reason?.message||"fel"});
+        sourceStatus.push({name:"SMHI",ok:false,rows:0,error:reason?.message||"fel"});
+        try{
+          const metFallback=await withDeadline(fetchMetNo(swedish),22000,"MET Norway reserv");
+          rows.push(...metFallback);sourceStatus.push({name:"MET Norway reserv",ok:true,rows:metFallback.length,error:""});
+        }catch(fallbackReason){sourceStatus.push({name:"MET Norway reserv",ok:false,rows:0,error:fallbackReason?.message||"fel"})}
       }
+    }
+    if(nordicOther.length){
+      try{
+        const metRows=await withDeadline(fetchMetNo(nordicOther),24000,"MET Norway");
+        rows.push(...metRows);sourceStatus.push({name:"MET Norway",ok:true,rows:metRows.length,error:""});
+      }catch(reason){sourceStatus.push({name:"MET Norway",ok:false,rows:0,error:reason?.message||"fel"})}
     }
 
     diagnostics.lastLoad=new Date().toISOString();diagnostics.sources=sourceStatus;diagnostics.placeCount=places.length;
     console.table(sourceStatus);
     if(!rows.length)throw new Error(`Ingen väderkälla svarade. ${sourceStatus.map(x=>`${x.name}: ${x.error||"fel"}`).join(" · ")}`);
 
-    // Tilläggsdata hämtas endast när den valda aktiviteten använder den.
     let marineResult=[],snowResult=[];
     const needsMarine=["coast","surf","boat","fishing"].includes(settings.activity);
     const needsSnow=settings.activity==="ski";
     const extraJobs=[];
-    if(needsMarine)extraJobs.push(["marine",withDeadline(fetchMarine(places),EXTRA_TIMEOUT_MS,"Havsdata")]);
-    if(needsSnow)extraJobs.push(["snow",withDeadline(fetchSnow(places),EXTRA_TIMEOUT_MS,"Snödata")]);
+    if(needsMarine)extraJobs.push(["marine",withDeadline(fetchMarine(representativePlaces(places,5)),EXTRA_TIMEOUT_MS,"Havsdata")]);
+    if(needsSnow)extraJobs.push(["snow",withDeadline(fetchSnow(representativePlaces(places,5)),EXTRA_TIMEOUT_MS,"Snödata")]);
     if(extraJobs.length){
       const extraResults=await Promise.allSettled(extraJobs.map(x=>x[1]));
-      extraResults.forEach((result,i)=>{
-        if(result.status!=="fulfilled")return;
-        if(extraJobs[i][0]==="marine")marineResult=result.value;
-        if(extraJobs[i][0]==="snow")snowResult=result.value;
-      });
+      extraResults.forEach((result,i)=>{if(result.status!=="fulfilled")return;if(extraJobs[i][0]==="marine")marineResult=result.value;if(extraJobs[i][0]==="snow")snowResult=result.value});
     }
 
     dailyResults=aggregate(rows,marineResult,snowResult);activeDate=Object.keys(dailyResults).sort()[0];
     if(!activeDate)throw new Error("Väderkällan svarade men prognosdata kunde inte tolkas.");
     const ok=sourceStatus.filter(x=>x.ok).length;
     const failed=sourceStatus.filter(x=>!x.ok);
-    $("modelCount").textContent=`Stabil prognos · ${ok}/${sourceStatus.length} svarade · ${places.length} valda orter`;
+    $("modelCount").textContent=`Nationella källor · ${ok}/${sourceStatus.length} svarade · ${new Set(rows.map(r=>r.place)).size} prognosorter`;
     $("modelCount").title=failed.map(x=>`${x.name}: ${x.error||"okänt fel"}`).join("\n");
     $("statusCard").classList.add("hidden");renderTabs();renderActivities();renderDay();
   }catch(e){showError(`${e.message} Kontrollera internetanslutningen.`)}
 }
+
 function aggregate(rows,marineRows=[],snowRows=[]){
   const groups={};rows.forEach(r=>(groups[`${r.day}|${r.place}`]||=[]).push(r));
   const extras={};
