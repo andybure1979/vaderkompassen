@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#087f5b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Väderkompassen">
+  <title>Väderkompassen</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <div>
+      <h1>☀️ Väderkompassen</h1>
+      <p>Var blir vädret bäst?</p>
+    </div>
+    <button id="settingsBtn" class="icon-btn" aria-label="Inställningar">⚙️</button>
+  </header>
+
+  <main>
+    <section class="status-card" id="statusCard">
+      <span class="spinner"></span>
+      <span id="status">Hämtar prognoser…</span>
+    </section>
+
+    <nav id="dayTabs" class="day-tabs" aria-label="Prognosdagar"></nav>
+
+    <section id="hero" class="hero hidden">
+      <div>
+        <span class="eyebrow">BÄST VÄDER</span>
+        <h2 id="bestPlace">–</h2>
+        <p id="bestSummary">–</p>
+      </div>
+      <div class="score-ring">
+        <strong id="bestScore">–</strong>
+        <span>/100</span>
+      </div>
+    </section>
+
+    <section id="metrics" class="metrics hidden">
+      <article><span>🌡️</span><strong id="bestTemp">–</strong><small>max</small></article>
+      <article><span>🌧️</span><strong id="bestRain">–</strong><small>regn</small></article>
+      <article><span>☀️</span><strong id="bestSun">–</strong><small>sol</small></article>
+      <article><span>🎯</span><strong id="bestConfidence">–</strong><small>säkerhet</small></article>
+    </section>
+
+    <a id="mapLink" class="map-button hidden" target="_blank" rel="noopener">Visa vinnaren på karta</a>
+
+    <section>
+      <div class="section-heading">
+        <h2>Topplista</h2>
+        <span id="modelCount"></span>
+      </div>
+      <div id="ranking" class="ranking"></div>
+    </section>
+
+    <details class="about">
+      <summary>Hur räknas betyget?</summary>
+      <p>Appen jämför flera prognosmodeller. Poängen gynnas av lite regn, mycket sol, lagom temperatur och svag vind. Säkerheten blir hög när modellerna är överens.</p>
+    </details>
+  </main>
+
+  <dialog id="settingsDialog">
+    <form method="dialog">
+      <div class="dialog-head">
+        <h2>Inställningar</h2>
+        <button value="cancel" class="icon-btn">✕</button>
+      </div>
+
+      <label>Önskad temperatur <output id="tempOut">22 °C</output>
+        <input id="tempTarget" type="range" min="12" max="30" value="22">
+      </label>
+
+      <label>Hur viktigt är lite regn?
+        <select id="rainWeight">
+          <option value="2">Viktigt</option>
+          <option value="3" selected>Mycket viktigt</option>
+          <option value="4">Avgörande</option>
+        </select>
+      </label>
+
+      <label>Hur viktigt är mycket sol?
+        <select id="sunWeight">
+          <option value="1">Lite</option>
+          <option value="2" selected>Viktigt</option>
+          <option value="3">Mycket viktigt</option>
+        </select>
+      </label>
+
+      <label>Hur viktigt är svag vind?
+        <select id="windWeight">
+          <option value="0.5">Lite</option>
+          <option value="1.5" selected>Viktigt</option>
+          <option value="3">Mycket viktigt</option>
+        </select>
+      </label>
+
+      <fieldset>
+        <legend>Länder</legend>
+        <label class="check"><input id="sweden" type="checkbox" checked> Sverige</label>
+        <label class="check"><input id="denmark" type="checkbox" checked> Danmark</label>
+      </fieldset>
+
+      <button id="saveSettings" value="default" class="primary">Spara och uppdatera</button>
+    </form>
+  </dialog>
+
+  <template id="rankTemplate">
+    <article class="rank-card">
+      <div class="rank-number"></div>
+      <div class="rank-main">
+        <h3></h3>
+        <p></p>
+        <div class="mini-metrics"></div>
+      </div>
+      <div class="rank-score"></div>
+    </article>
+  </template>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
