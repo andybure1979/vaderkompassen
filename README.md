@@ -94,3 +94,10 @@ Ladda upp samtliga filer till en katalog på din webbserver. Ingen Python eller 
 ## Version 10.1
 - Yr och DMI använder nu sina dedikerade Open-Meteo-endpoints.
 - Källstatus visar exakt vilka prognoskällor som svarar eller saknas.
+
+
+## Version 11
+
+- Versionsnumret visas diskret längst ned på sidan.
+- App-, CSS- och service worker-versioner synkroniserade till v11.
+- PWA-cachen uppdaterad så att den nya versionen laddas korrekt.

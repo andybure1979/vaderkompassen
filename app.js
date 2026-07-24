@@ -572,7 +572,7 @@ $("saveSettings").onclick=e=>{
   localStorage.setItem("vk-settings",JSON.stringify(settings));$("settingsDialog").close();load();
 };
 if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
-  const reg=await navigator.serviceWorker.register(`sw.js?v=10`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=11`);
   reg.update();
   reg.addEventListener("updatefound",()=>{const worker=reg.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller){$("updateBanner").classList.remove("hidden");}})});
   navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload());
