@@ -110,3 +110,10 @@ Ladda upp samtliga filer till en katalog på din webbserver. Ingen Python eller 
 - Surfprognosen visar dominant vågriktning.
 - Surfpoängen premierar högre vågor samt starkare vind som blåser från land mot hav.
 - Frånlandsvind beräknas individuellt per kustort utifrån ortens och havspunktens koordinater.
+
+
+## v12.2.2
+- Hårda tidsgränser per väderkälla.
+- Källor laddas oberoende och kan inte blockera hela appen.
+- Kortare och begränsad backoff vid HTTP 429.
+- Havs- och snödata har separata tidsgränser.
