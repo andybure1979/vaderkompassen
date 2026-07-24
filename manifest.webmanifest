@@ -1,6 +1,6 @@
 {
-  "name": "Väderkompassen",
-  "short_name": "Väder",
+  "name": "Väderkompassen – hitta bästa vädret",
+  "short_name": "Väderkompassen",
   "description": "Jämför prognoser och hitta det bästa vädret i södra Sverige och Danmark.",
   "start_url": "./",
   "display": "standalone",
