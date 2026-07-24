@@ -10,7 +10,7 @@
   <title>Väderkompassen – hitta bästa vädret</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icon-180.png">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><link rel="stylesheet" href="styles.css?v=12.2.7">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><link rel="stylesheet" href="styles.css?v=12.2.8">
 </head>
 <body><div id="updateBanner" class="update-banner hidden"><span>En ny version finns.</span><button id="updateNow">Uppdatera nu</button></div>
 <header><div><h1>☀️ Väderkompassen</h1><p>Hitta dagens bästa väder</p></div><button id="settingsBtn" class="icon-btn" aria-label="Inställningar">⚙️</button></header>
@@ -37,7 +37,7 @@
   <section><div class="section-heading"><h2>Topplista</h2><span id="modelCount"></span></div><div id="ranking" class="ranking"></div></section>
   <details class="about"><summary>Hur räknas prognosen och aktivitetsbetyget?</summary><p>Varje aktivitet har en egen balans mellan temperatur, regn, sol och vind. Surfväder gynnas exempelvis av mer vind, medan cykel- och båtväder gynnas av lugnare vind. Skidväder premierar kyla och nederbörd. I automatläget är väderprognosen en viktad sammanvägning: SMHI väger tyngst för svenska orter, Yr/MET Norway för norska orter och DMI för Danmark. I eget läge används bara de valda prognoskällorna och de väger lika. Övriga modeller används som stöd och för att bedöma osäkerheten. Kust- och surfbetyg använder våghöjd, vågperiod, dyning och havstemperatur. Skidbetyget använder modellberäknat snödjup, nysnö och nollgradersnivå. Uppgifterna är prognoser och ersätter inte lokala säkerhetsrapporter.</p></details>
 </main>
-<footer class="app-footer" aria-label="Versionsinformation"><span>Väderkompassen v12.2.7</span></footer>
+<footer class="app-footer" aria-label="Versionsinformation"><span>Väderkompassen v12.2.8</span></footer>
 <dialog id="settingsDialog"><form method="dialog">
   <div class="dialog-head"><h2>Inställningar</h2><button value="cancel" class="icon-btn">✕</button></div>
   <label>Önskad temperatur <output id="tempOut">22 °C</output><input id="tempTarget" type="range" min="12" max="30" value="22"></label>
@@ -67,5 +67,5 @@
   <button id="saveSettings" value="default" class="primary">Spara och uppdatera</button>
 </form></dialog>
 <template id="rankTemplate"><article class="rank-card"><div class="rank-number"></div><div class="rank-main"><h3></h3><p></p><div class="mini-metrics"></div></div><div class="rank-score"></div></article></template>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="app.js?v=12.2.7" defer></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="app.js?v=12.2.8" defer></script>
 </body></html>

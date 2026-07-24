@@ -134,9 +134,16 @@ Ladda upp samtliga filer till en katalog på din webbserver. Ingen Python eller 
 - Ny hämtning sker direkt endast första gången eller när inställningarna ändras och ingen matchande cache finns.
 
 
-## v12.2.7
+## v12.2.8
 - Alla valda orter hämtas åter från de nationella punktkällorna.
 - 30-minuterscachen behålls och sidladdning visar sparad prognos direkt.
 - Full uppdatering körs med högst fyra samtidiga punktanrop per källa.
 - Status visar uppdaterade prognosorter i förhållande till antal valda orter.
 - Havs- och snödata hämtas för alla relevanta valda orter.
+
+
+## v12.2.8
+- Alla valda orter hämtas i en kontrollerad bakgrundskö.
+- Varje lyckad ort sparas separat, så partiella uppdateringar inte går förlorade.
+- Tidigare sparad punktprognos används om en enskild ort tillfälligt misslyckas.
+- 30-minuterscachen och direkt visning av senast fungerande resultat behålls.

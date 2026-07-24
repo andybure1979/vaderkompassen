@@ -430,7 +430,7 @@ function renderSourceChoices(){
 
 const BATCH_SIZE=80;
 const MAX_BATCH_CONCURRENCY=1;
-const POINT_SOURCE_CONCURRENCY=4;
+const POINT_SOURCE_CONCURRENCY=6;
 const REQUEST_TIMEOUT_MS=12000;
 const REQUEST_RETRIES=1;
 const SOURCE_TIMEOUT_MS=22000;
@@ -447,8 +447,9 @@ async function mapWithConcurrency(items,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
   return results;
 }
-const diagnostics={version:"12.2.7",lastLoad:null,sources:[]};
-const WEATHER_CACHE_KEY="vk-weather-cache-v12.2.6";
+const diagnostics={version:"12.2.8",lastLoad:null,sources:[]};
+const WEATHER_CACHE_KEY="vk-weather-cache-v12.2.8";
+const POINT_CACHE_KEY="vk-point-cache-v12.2.8";
 const BACKGROUND_REFRESH_MS=30*60*1000;
 let refreshTimer=null;
 let loadInProgress=false;
@@ -484,6 +485,27 @@ function scheduleBackgroundRefresh(lastSaved=Date.now()){
   clearTimeout(refreshTimer);
   const delay=Math.max(1000,BACKGROUND_REFRESH_MS-(Date.now()-lastSaved));
   refreshTimer=setTimeout(()=>load({background:true}),delay);
+}
+
+
+function pointCacheId(source,place){return `${source}|${place[0]}|${place[3]}|${place[4]}`}
+function readPointCache(){try{return JSON.parse(localStorage.getItem(POINT_CACHE_KEY)||"{}")||{}}catch{return {}}}
+function savePointCache(cache){try{localStorage.setItem(POINT_CACHE_KEY,JSON.stringify(cache))}catch{}}
+async function fetchPlacesPersistently(source,places,worker){
+  const cache=readPointCache();
+  const results=await mapWithConcurrency(places,POINT_SOURCE_CONCURRENCY,async place=>{
+    const id=pointCacheId(source,place);
+    try{
+      const rows=await worker(place);
+      cache[id]={savedAt:Date.now(),rows};savePointCache(cache);
+      return rows;
+    }catch(error){
+      const old=cache[id];
+      if(old?.rows?.length)return old.rows;
+      throw error;
+    }
+  });
+  return {rows:results.filter(x=>x.status==="fulfilled").flatMap(x=>x.value),results};
 }
 
 window.vaderkompassenDiagnostics=diagnostics;
@@ -579,8 +601,7 @@ async function fetchSmhi(places){
   const swedish=places.filter(p=>countryFor({region:p[2]})==="SE");
   if(!swedish.length)throw new Error("SMHI: inga svenska orter valda");
   // Alla valda svenska orter uppdateras. Låg parallellitet skyddar punkt-API:t.
-  const results=await mapWithConcurrency(swedish,POINT_SOURCE_CONCURRENCY,fetchSmhiPlace);
-  const rows=results.filter(x=>x.status==="fulfilled").flatMap(x=>x.value);
+  const {rows,results}=await fetchPlacesPersistently("SMHI",swedish,fetchSmhiPlace);
   if(!rows.length)throw new Error("SMHI: inga data");
   return rows;
 }
@@ -720,8 +741,7 @@ async function fetchMetNoPlace(place){
 async function fetchMetNo(places){
   if(!places.length)throw new Error("MET Norway: inga orter valda");
   // Alla valda norska/danska orter uppdateras med kontrollerad parallellitet.
-  const results=await mapWithConcurrency(places,POINT_SOURCE_CONCURRENCY,fetchMetNoPlace);
-  const rows=results.filter(x=>x.status==="fulfilled").flatMap(x=>x.value);
+  const {rows,results}=await fetchPlacesPersistently("MET Norway",places,fetchMetNoPlace);
   if(!rows.length)throw new Error("MET Norway: inga data");
   return rows;
 }
@@ -741,19 +761,19 @@ async function load({background=false}={}){
 
     if(swedish.length){
       try{
-        const smhiRows=await withDeadline(fetchSmhi(swedish),180000,"SMHI");
+        const smhiRows=await withDeadline(fetchSmhi(swedish),600000,"SMHI");
         rows.push(...smhiRows);sourceStatus.push({name:"SMHI",ok:true,rows:smhiRows.length,error:""});
       }catch(reason){
         sourceStatus.push({name:"SMHI",ok:false,rows:0,error:reason?.message||"fel"});
         try{
-          const metFallback=await withDeadline(fetchMetNo(swedish),180000,"MET Norway reserv");
+          const metFallback=await withDeadline(fetchMetNo(swedish),600000,"MET Norway reserv");
           rows.push(...metFallback);sourceStatus.push({name:"MET Norway reserv",ok:true,rows:metFallback.length,error:""});
         }catch(fallbackReason){sourceStatus.push({name:"MET Norway reserv",ok:false,rows:0,error:fallbackReason?.message||"fel"})}
       }
     }
     if(nordicOther.length){
       try{
-        const metRows=await withDeadline(fetchMetNo(nordicOther),180000,"MET Norway");
+        const metRows=await withDeadline(fetchMetNo(nordicOther),600000,"MET Norway");
         rows.push(...metRows);sourceStatus.push({name:"MET Norway",ok:true,rows:metRows.length,error:""});
       }catch(reason){sourceStatus.push({name:"MET Norway",ok:false,rows:0,error:reason?.message||"fel"})}
     }
@@ -925,7 +945,7 @@ $("saveSettings").onclick=e=>{
   localStorage.setItem("vk-settings",JSON.stringify(settings));$("settingsDialog").close();if(!restoreWeatherCache())load();
 };
 if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
-  const reg=await navigator.serviceWorker.register(`sw.js?v=12.2.7`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=12.2.8`);
   reg.update();
   reg.addEventListener("updatefound",()=>{const worker=reg.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller){$("updateBanner").classList.remove("hidden");}})});
   navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload());
