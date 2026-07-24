@@ -39,3 +39,9 @@ Ladda upp samtliga filer till en katalog på din webbserver. Ingen Python eller 
 ## Viktigt
 
 `index.html` kan inte öppnas direkt från appen Filer med full funktion. Den behöver publiceras via HTTPS för att service worker och hemskärmsinstallation ska fungera korrekt.
+
+
+## Version 5
+- Marine API: våghöjd, vågperiod, dyning och havstemperatur
+- Snödata: snödjup, nysnö och nollgradersnivå
+- Specialiserade topplistor för kust/surf/båt/fiske och skidor

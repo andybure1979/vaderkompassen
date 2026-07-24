@@ -159,3 +159,7 @@ fieldset { border:1px solid var(--border); border-radius:14px; }
   .metrics-five { grid-template-columns:repeat(3,1fr); }
   .metrics-five article:nth-child(4), .metrics-five article:nth-child(5) { grid-column:auto; }
 }
+
+.special-metrics { display:flex; flex-wrap:wrap; gap:8px; margin:0 0 14px; }
+.special-metrics span { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:9px 11px; font-weight:750; font-size:13px; }
+.mini-metrics span { white-space:nowrap; }

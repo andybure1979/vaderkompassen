@@ -65,6 +65,27 @@ const MODELS = {
 };
 const DAILY = "temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,sunshine_duration,wind_speed_10m_max";
 
+const MARINE_COORDS = {
+  "Malmö":[55.58,12.93],"Ystad":[55.40,13.84],"Simrishamn":[55.55,14.39],"Helsingborg":[56.04,12.64],
+  "Båstad":[56.43,12.78],"Halmstad":[56.65,12.78],"Varberg":[57.10,12.15],"Falkenberg":[56.88,12.39],
+  "Göteborg":[57.67,11.83],"Strömstad":[58.94,11.08],"Uddevalla":[58.32,11.80],"Smögen":[58.35,11.16],
+  "Kalmar":[56.66,16.43],"Västervik":[57.76,16.72],"Karlskrona":[56.13,15.63],"Ronneby":[56.16,15.33],
+  "Borgholm":[56.88,16.72],"Färjestaden":[56.65,16.51],"Visby":[57.64,18.34],"Fårösund":[57.87,19.10],
+  "Nyköping":[58.74,17.08],"Stockholm":[59.33,18.20],"Norrtälje":[59.75,18.82],"Gävle":[60.68,17.24],
+  "Hudiksvall":[61.73,17.19],"Söderhamn":[61.30,17.16],"Sundsvall":[62.39,17.42],"Härnösand":[62.63,18.05],
+  "Örnsköldsvik":[63.29,18.82],"Umeå":[63.77,20.40],"Skellefteå":[64.72,21.05],"Luleå":[65.56,22.28],
+  "Piteå":[65.28,21.57],"Haparanda":[65.82,24.18],
+  "Skagen":[57.74,10.66],"Aalborg":[57.08,10.10],"Løkken":[57.37,9.62],"Klitmøller":[57.04,8.40],
+  "Aarhus":[56.16,10.33],"Esbjerg":[55.47,8.35],"Hvide Sande":[56.00,8.05],"Odense":[55.39,10.53],
+  "København":[55.68,12.68],"Roskilde":[55.65,12.02],"Næstved":[55.20,11.67],"Rønne/Bornholm":[55.10,14.78]
+};
+const SKI_PLACES = new Set(["Sälen","Åre","Sveg","Funäsdalen","Vemdalen","Kiruna","Gällivare","Abisko","Arvidsjaur","Hemavan"]);
+const MARINE_DAILY = "wave_height_max,wave_period_max,swell_wave_height_max,swell_wave_period_max";
+const MARINE_HOURLY = "sea_surface_temperature";
+const SNOW_DAILY = "snowfall_sum";
+const SNOW_HOURLY = "snow_depth,freezing_level_height";
+
+
 const defaults={temp:22,rain:3,sun:2,wind:1.5,regions:[...REGIONS],activity:"general"};
 let settings={...defaults,...JSON.parse(localStorage.getItem("vk-settings")||"{}")};
 if(!Array.isArray(settings.regions)){
@@ -84,21 +105,40 @@ function activityScore(r){
   const temp=r.temp??0, rain=r.rain??0, risk=r.risk??0, sun=r.sun??0, wind=r.wind??0, min=r.min??0;
   const dry=clamp(100-rain*18-risk*.45), sunny=clamp(sun/12*100);
   switch(settings.activity){
-    case "coast": return .28*bell(temp,22,12)+.28*dry+.24*sunny+.20*bell(wind,5,6);
-    case "surf": return .12*bell(temp,18,14)+.18*dry+.15*sunny+.55*bell(wind,10,8);
-    case "boat": return .20*bell(temp,19,13)+.30*dry+.15*sunny+.35*bell(wind,5,5);
-    case "fishing": return .20*bell(temp,16,14)+.30*dry+.15*sunny+.35*bell(wind,3.5,5);
+    case "coast":{
+      const sea=Number.isFinite(r.seaTemp)?bell(r.seaTemp,20,10):45;
+      const waves=Number.isFinite(r.waveHeight)?bell(r.waveHeight,.6,1.5):45;
+      return .20*bell(temp,22,12)+.20*dry+.18*sunny+.14*bell(wind,5,6)+.18*sea+.10*waves;
+    }
+    case "surf":{
+      const wave=Number.isFinite(r.waveHeight)?bell(r.waveHeight,1.8,1.8):0;
+      const period=Number.isFinite(r.wavePeriod)?bell(r.wavePeriod,9,7):0;
+      const swell=Number.isFinite(r.swellHeight)?bell(r.swellHeight,1.5,1.7):0;
+      return .12*bell(temp,18,14)+.08*dry+.10*bell(wind,9,8)+.38*wave+.18*period+.14*swell;
+    }
+    case "boat":{
+      const waves=Number.isFinite(r.waveHeight)?clamp(100-r.waveHeight*45):0;
+      return .16*bell(temp,19,13)+.24*dry+.10*sunny+.30*bell(wind,4,5)+.20*waves;
+    }
+    case "fishing":{
+      const waves=Number.isFinite(r.waveHeight)?bell(r.waveHeight,.5,1.5):50;
+      return .18*bell(temp,16,14)+.25*dry+.10*sunny+.27*bell(wind,3.5,5)+.20*waves;
+    }
     case "cycling": return .30*bell(temp,19,11)+.35*dry+.15*sunny+.20*bell(wind,2.5,5);
     case "hiking": return .30*bell(temp,17,12)+.35*dry+.15*sunny+.20*bell(wind,3,6);
-    case "ski":
-      const cold=clamp(100-Math.abs(Math.min(temp,3)-(-3))*10);
-      const freezing=clamp((3-min)*16);
-      const precip=clamp(rain*16);
-      return .38*cold+.27*freezing+.18*precip+.17*bell(wind,2,6);
-    default:
+    case "ski":{
+      const depth=Number.isFinite(r.snowDepth)?clamp(r.snowDepth/80*100):0;
+      const fresh=Number.isFinite(r.newSnow)?clamp(r.newSnow/15*100):0;
+      const cold=bell(temp,-3,12);
+      const windScore=bell(wind,3,7);
+      const freeze=Number.isFinite(r.freezingLevel)?clamp(100-r.freezingLevel/18):50;
+      return .32*depth+.25*fresh+.18*cold+.15*windScore+.10*freeze;
+    }
+    default:{
       const tempScore=bell(temp,settings.temp,14);
       const windScore=clamp(100-Math.max(0,wind-3)*10);
       return (tempScore+dry*settings.rain+windScore*settings.wind+sunny*settings.sun)/(1+settings.rain+settings.wind+settings.sun);
+    }
   }
 }
 function activitySummary(score){
@@ -146,37 +186,122 @@ async function fetchModel(label,model,places){
     }));
   });return rows;
 }
+
+function hourlyDailyMean(times,values){
+  const out={};
+  (times||[]).forEach((t,i)=>{
+    const day=String(t).slice(0,10),v=validNumber(values?.[i]);
+    if(Number.isFinite(v))(out[day]||=[]).push(v);
+  });
+  return Object.fromEntries(Object.entries(out).map(([d,v])=>[d,mean(v)]));
+}
+function hourlyDailyMax(times,values){
+  const out={};
+  (times||[]).forEach((t,i)=>{
+    const day=String(t).slice(0,10),v=validNumber(values?.[i]);
+    if(Number.isFinite(v))out[day]=Math.max(out[day]??-Infinity,v);
+  });
+  return out;
+}
+async function fetchMarine(places){
+  const marine=places.filter(p=>MARINE_COORDS[p[0]]);
+  if(!marine.length)return [];
+  const params=new URLSearchParams({
+    latitude:marine.map(p=>MARINE_COORDS[p[0]][0]).join(","),
+    longitude:marine.map(p=>MARINE_COORDS[p[0]][1]).join(","),
+    daily:MARINE_DAILY,hourly:MARINE_HOURLY,timezone:"auto",forecast_days:"7",cell_selection:"sea"
+  });
+  const res=await fetch(`https://marine-api.open-meteo.com/v1/marine?${params}`);
+  if(!res.ok)throw new Error(`Havsdata: ${res.status}`);
+  let data=await res.json();if(!Array.isArray(data))data=[data];
+  const rows=[];
+  data.forEach((item,pi)=>{
+    const p=marine[pi],d=item.daily||{},h=item.hourly||{};
+    const seaByDay=hourlyDailyMean(h.time,h.sea_surface_temperature);
+    (d.time||[]).forEach((day,i)=>rows.push({
+      place:p[0],day,kind:"marine",
+      waveHeight:validNumber(d.wave_height_max?.[i]),wavePeriod:validNumber(d.wave_period_max?.[i]),
+      swellHeight:validNumber(d.swell_wave_height_max?.[i]),swellPeriod:validNumber(d.swell_wave_period_max?.[i]),
+      seaTemp:validNumber(seaByDay[day])
+    }));
+  });
+  return rows;
+}
+async function fetchSnow(places){
+  const ski=places.filter(p=>SKI_PLACES.has(p[0]));
+  if(!ski.length)return [];
+  const params=new URLSearchParams({
+    latitude:ski.map(p=>p[3]).join(","),longitude:ski.map(p=>p[4]).join(","),
+    daily:SNOW_DAILY,hourly:SNOW_HOURLY,timezone:"auto",forecast_days:"7"
+  });
+  const res=await fetch(`https://api.open-meteo.com/v1/forecast?${params}`);
+  if(!res.ok)throw new Error(`Snödata: ${res.status}`);
+  let data=await res.json();if(!Array.isArray(data))data=[data];
+  const rows=[];
+  data.forEach((item,pi)=>{
+    const p=ski[pi],d=item.daily||{},h=item.hourly||{};
+    const depthByDay=hourlyDailyMax(h.time,h.snow_depth);
+    const freezeByDay=hourlyDailyMean(h.time,h.freezing_level_height);
+    (d.time||[]).forEach((day,i)=>rows.push({
+      place:p[0],day,kind:"snow",
+      snowDepth:Number.isFinite(depthByDay[day])?depthByDay[day]*100:null,
+      newSnow:validNumber(d.snowfall_sum?.[i]),freezingLevel:validNumber(freezeByDay[day])
+    }));
+  });
+  return rows;
+}
+
 async function load(){
   const selected=new Set(settings.regions);
   const places=PLACES.filter(p=>selected.has(p[2]));
   if(!places.length){showError("Välj minst en region i inställningarna.");return}
-  showStatus(`Hämtar ${places.length} orter från fem prognosmodeller…`);
+  showStatus(`Hämtar väder, havsdata och snödata för ${places.length} orter…`);
   try{
-    const settled=await Promise.allSettled(Object.entries(MODELS).map(([l,m])=>fetchModel(l,m,places)));
+    const weatherPromise=Promise.allSettled(Object.entries(MODELS).map(([l,m])=>fetchModel(l,m,places)));
+    const [settled,marineResult,snowResult]=await Promise.all([
+      weatherPromise,fetchMarine(places).catch(()=>[]),fetchSnow(places).catch(()=>[])
+    ]);
     const rows=settled.filter(x=>x.status==="fulfilled").flatMap(x=>x.value);
     const ok=settled.filter(x=>x.status==="fulfilled").length;
     if(!rows.length)throw new Error("Ingen väderkälla svarade.");
-    dailyResults=aggregate(rows);activeDate=Object.keys(dailyResults).sort()[0];
-    $("modelCount").textContent=`${ok} prognosmodeller · ${places.length} orter`;
+    dailyResults=aggregate(rows,marineResult,snowResult);activeDate=Object.keys(dailyResults).sort()[0];
+    const marineCount=new Set(marineResult.map(x=>x.place)).size;
+    const snowCount=new Set(snowResult.map(x=>x.place)).size;
+    $("modelCount").textContent=`${ok} prognosmodeller · ${places.length} orter · ${marineCount} kust · ${snowCount} skid`;
     $("statusCard").classList.add("hidden");renderTabs();renderActivities();renderDay();
   }catch(e){showError(`${e.message} Kontrollera internetanslutningen.`)}
 }
-function aggregate(rows){
+function aggregate(rows,marineRows=[],snowRows=[]){
   const groups={};rows.forEach(r=>(groups[`${r.day}|${r.place}`]||=[]).push(r));
+  const extras={};
+  [...marineRows,...snowRows].forEach(r=>Object.assign(extras[`${r.day}|${r.place}`]||={},r));
   const result={};
   Object.values(groups).forEach(g=>{
     const valid=g.filter(x=>Number.isFinite(x.temp));if(!valid.length)return;
-    const f=g[0],item={
+    const f=g[0],extra=extras[`${f.day}|${f.place}`]||{},item={
       day:f.day,place:f.place,area:f.area,region:f.region,lat:f.lat,lon:f.lon,
       temp:mean(g.map(x=>x.temp)),min:mean(g.map(x=>x.min)),rain:mean(g.map(x=>x.rain)),
-      risk:mean(g.map(x=>x.risk)),sun:mean(g.map(x=>x.sun)),wind:mean(g.map(x=>x.wind)),models:valid.length
+      risk:mean(g.map(x=>x.risk)),sun:mean(g.map(x=>x.sun)),wind:mean(g.map(x=>x.wind)),models:valid.length,
+      waveHeight:validNumber(extra.waveHeight),wavePeriod:validNumber(extra.wavePeriod),
+      swellHeight:validNumber(extra.swellHeight),swellPeriod:validNumber(extra.swellPeriod),
+      seaTemp:validNumber(extra.seaTemp),snowDepth:validNumber(extra.snowDepth),
+      newSnow:validNumber(extra.newSnow),freezingLevel:validNumber(extra.freezingLevel)
     };
+    item.hasMarine=Number.isFinite(item.waveHeight)||Number.isFinite(item.seaTemp);
+    item.hasSnow=SKI_PLACES.has(item.place)&&(Number.isFinite(item.snowDepth)||Number.isFinite(item.newSnow));
     item.confidence=Math.round(clamp(100-std(g.map(x=>x.temp))*5-std(g.map(x=>x.rain))*9-std(g.map(x=>x.wind))*4));
     (result[item.day]||=[]).push(item);
   });return result;
 }
 function rankedList(){
-  const list=(dailyResults[activeDate]||[]).map(x=>({...x,score:Math.round(activityScore(x))}));
+  let list=(dailyResults[activeDate]||[]);
+  if(["coast","surf","boat","fishing"].includes(settings.activity)){
+    const specialized=list.filter(x=>x.hasMarine);if(specialized.length)list=specialized;
+  }
+  if(settings.activity==="ski"){
+    const specialized=list.filter(x=>x.hasSnow);if(specialized.length)list=specialized;
+  }
+  list=list.map(x=>({...x,score:Math.round(activityScore(x))}));
   return list.sort((a,b)=>b.score-a.score||b.confidence-a.confidence);
 }
 function renderTabs(){
@@ -186,6 +311,15 @@ function renderTabs(){
     b.innerHTML=`${i===0?"Idag":d.toLocaleDateString("sv-SE",{weekday:"short"})}<small>${d.toLocaleDateString("sv-SE",{day:"numeric",month:"numeric"})}</small>`;
     b.className=day===activeDate?"active":"";b.onclick=()=>{activeDate=day;renderTabs();renderDay()};nav.appendChild(b);
   });
+}
+function specialMetricHtml(r){
+  if(["coast","surf","boat","fishing"].includes(settings.activity)){
+    return `<span>🌊 ${fmt(r.waveHeight)} m</span><span>↔️ ${fmt(r.wavePeriod,0)} s</span><span>🏄 ${fmt(r.swellHeight)} m</span><span>🌡️ Hav ${fmt(r.seaTemp,0)}°</span>`;
+  }
+  if(settings.activity==="ski"){
+    return `<span>❄️ ${fmt(r.snowDepth,0)} cm</span><span>🌨️ ${fmt(r.newSnow)} cm</span><span>🏔️ 0° ${fmt(r.freezingLevel,0)} m</span>`;
+  }
+  return "";
 }
 function renderDay(){
   const list=rankedList();if(!list.length)return;
@@ -197,6 +331,7 @@ function renderDay(){
   $("bestScore").textContent=best.score;$("bestTemp").textContent=`${fmt(best.temp,0)}°`;
   $("bestRain").textContent=`${fmt(best.rain)} mm`;$("bestSun").textContent=`${fmt(best.sun)} h`;
   $("bestWind").textContent=`${fmt(best.wind)} m/s`;$("bestConfidence").textContent=`${best.confidence}%`;
+  $("specialMetrics").innerHTML=specialMetricHtml(best);$("specialMetrics").classList.toggle("hidden",!$("specialMetrics").innerHTML);
   $("mapLink").href=`https://maps.apple.com/?q=${encodeURIComponent(best.place)}&ll=${best.lat},${best.lon}`;
   ["hero","metrics","mapLink"].forEach(id=>$(id).classList.remove("hidden"));
   const ranking=$("ranking");ranking.innerHTML="";
@@ -205,7 +340,7 @@ function renderDay(){
     card.querySelector(".rank-number").textContent=i+1;
     card.querySelector("h3").textContent=r.place;
     card.querySelector("p").textContent=`${r.area} · ${r.region} · ${activitySummary(r.score)}`;
-    card.querySelector(".mini-metrics").innerHTML=`<span>🌡️ ${fmt(r.temp,0)}°</span><span>🌧️ ${fmt(r.rain)} mm</span><span>☀️ ${fmt(r.sun)} h</span><span>💨 ${fmt(r.wind)} m/s</span><span>🎯 ${r.confidence}%</span>`;
+    card.querySelector(".mini-metrics").innerHTML=`<span>🌡️ ${fmt(r.temp,0)}°</span><span>🌧️ ${fmt(r.rain)} mm</span><span>☀️ ${fmt(r.sun)} h</span><span>💨 ${fmt(r.wind)} m/s</span>${specialMetricHtml(r)}<span>🎯 ${r.confidence}%</span>`;
     card.querySelector(".rank-score").textContent=r.score;ranking.appendChild(card);
   });
 }
