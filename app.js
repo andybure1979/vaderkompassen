@@ -447,7 +447,7 @@ async function mapWithConcurrency(items,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
   return results;
 }
-const diagnostics={version:"12.2.2",lastLoad:null,sources:[]};
+const diagnostics={version:"12.2.3",lastLoad:null,sources:[]};
 window.vaderkompassenDiagnostics=diagnostics;
 async function resilientFetch(url,{timeout=REQUEST_TIMEOUT_MS,retries=REQUEST_RETRIES}={}){
   const cached=responseCache.get(url);
@@ -630,47 +630,71 @@ async function withDeadline(promise,ms,label){
     ]);
   }finally{clearTimeout(timer)}
 }
+async function fetchUnifiedForecast(places){
+  // En enda Open-Meteo-förfrågan används per laddning. Detta undviker att ECMWF,
+  // ICON och GFS belastar samma publika API-kvot med tre nästan identiska anrop.
+  const MAX_FORECAST_PLACES=32;
+  let scoped=places;
+  if(scoped.length>MAX_FORECAST_PLACES){
+    const step=scoped.length/MAX_FORECAST_PLACES;
+    scoped=Array.from({length:MAX_FORECAST_PLACES},(_,i)=>scoped[Math.floor(i*step)]);
+  }
+  const model={type:"openMeteo"};
+  return fetchOpenMeteo("Open-Meteo prognos",model,scoped);
+}
+
 async function load(){
   const selected=new Set(settings.regions),selectedAreas=new Set(settings.areas);
   const places=PLACES.filter(p=>selected.has(p[2])&&selectedAreas.has(p[1]));
   if(!places.length){showError("Välj minst en region i inställningarna.");return}
   showStatus(`Hämtar väder för ${places.length} orter…`);
   try{
-    const selectedModels=activeModelEntries();
-    if(!selectedModels.length)throw new Error("Välj minst en prognoskälla.");
+    // Grundprognosen gör exakt ett externt anrop. SMHI används som reserv, men
+    // bara om den gemensamma prognosen inte gav någon data.
+    let rows=[];
+    const sourceStatus=[];
+    try{
+      rows=await withDeadline(fetchUnifiedForecast(places),SOURCE_TIMEOUT_MS,"Grundprognos");
+      sourceStatus.push({name:"Open-Meteo prognos",ok:true,skipped:false,rows:rows.length,error:""});
+    }catch(reason){
+      sourceStatus.push({name:"Open-Meteo prognos",ok:false,skipped:false,rows:0,error:reason?.message||"fel"});
+    }
 
-    // Källorna körs oberoende. En långsam eller rate-begränsad källa får aldrig låsa hela appen.
-    const sourcePromises=selectedModels.map(async([label,model],i)=>{
-      if(i)await sleep(i*250);
+    if(!rows.length && places.some(p=>countryFor({region:p[2]})==="SE")){
       try{
-        const value=await withDeadline(fetchSource(label,model,places),SOURCE_TIMEOUT_MS,label);
-        return {status:"fulfilled",value};
+        const smhiRows=await withDeadline(fetchSmhi(places),SOURCE_TIMEOUT_MS,"SMHI");
+        rows.push(...smhiRows);
+        sourceStatus.push({name:"SMHI reserv",ok:true,skipped:false,rows:smhiRows.length,error:""});
       }catch(reason){
-        if(String(reason?.message||"").includes("inga orter inom källans täckning"))return {status:"skipped",reason};
-        return {status:"rejected",reason};
+        sourceStatus.push({name:"SMHI reserv",ok:false,skipped:false,rows:0,error:reason?.message||"fel"});
       }
-    });
-    const settled=await Promise.all(sourcePromises);
-    const rows=settled.filter(x=>x.status==="fulfilled").flatMap(x=>x.value);
-    const sourceStatus=settled.map((result,i)=>({name:selectedModels[i][0],ok:result.status==="fulfilled",skipped:result.status==="skipped",rows:result.status==="fulfilled"?result.value.length:0,error:result.status!=="fulfilled"?result.reason?.message:""}));
+    }
+
     diagnostics.lastLoad=new Date().toISOString();diagnostics.sources=sourceStatus;diagnostics.placeCount=places.length;
     console.table(sourceStatus);
-    if(!rows.length)throw new Error(`Ingen väderkälla svarade. ${sourceStatus.filter(x=>!x.skipped).map(x=>`${x.name}: ${x.error||"fel"}`).join(" · ")}`);
+    if(!rows.length)throw new Error(`Ingen väderkälla svarade. ${sourceStatus.map(x=>`${x.name}: ${x.error||"fel"}`).join(" · ")}`);
 
-    // Visa vädret direkt. Havs- och snödata kompletterar därefter och får egna korta tidsgränser.
+    // Tilläggsdata hämtas endast när den valda aktiviteten använder den.
     let marineResult=[],snowResult=[];
-    const extras=await Promise.allSettled([
-      withDeadline(fetchMarine(places),EXTRA_TIMEOUT_MS,"Havsdata"),
-      withDeadline(fetchSnow(places),EXTRA_TIMEOUT_MS,"Snödata")
-    ]);
-    if(extras[0].status==="fulfilled")marineResult=extras[0].value;
-    if(extras[1].status==="fulfilled")snowResult=extras[1].value;
+    const needsMarine=["coast","surf","boat","fishing"].includes(settings.activity);
+    const needsSnow=settings.activity==="ski";
+    const extraJobs=[];
+    if(needsMarine)extraJobs.push(["marine",withDeadline(fetchMarine(places),EXTRA_TIMEOUT_MS,"Havsdata")]);
+    if(needsSnow)extraJobs.push(["snow",withDeadline(fetchSnow(places),EXTRA_TIMEOUT_MS,"Snödata")]);
+    if(extraJobs.length){
+      const extraResults=await Promise.allSettled(extraJobs.map(x=>x[1]));
+      extraResults.forEach((result,i)=>{
+        if(result.status!=="fulfilled")return;
+        if(extraJobs[i][0]==="marine")marineResult=result.value;
+        if(extraJobs[i][0]==="snow")snowResult=result.value;
+      });
+    }
 
     dailyResults=aggregate(rows,marineResult,snowResult);activeDate=Object.keys(dailyResults).sort()[0];
-    if(!activeDate)throw new Error("Väderkällorna svarade men prognosdata kunde inte tolkas.");
+    if(!activeDate)throw new Error("Väderkällan svarade men prognosdata kunde inte tolkas.");
     const ok=sourceStatus.filter(x=>x.ok).length;
-    const failed=sourceStatus.filter(x=>!x.ok&&!x.skipped);
-    $("modelCount").textContent=`${sourceLabel()} · ${ok}/${sourceStatus.length} svarade · ${places.length} orter${failed.length?` · Saknas: ${failed.map(x=>x.name).join(", ")}`:""}`;
+    const failed=sourceStatus.filter(x=>!x.ok);
+    $("modelCount").textContent=`Stabil prognos · ${ok}/${sourceStatus.length} svarade · ${places.length} valda orter`;
     $("modelCount").title=failed.map(x=>`${x.name}: ${x.error||"okänt fel"}`).join("\n");
     $("statusCard").classList.add("hidden");renderTabs();renderActivities();renderDay();
   }catch(e){showError(`${e.message} Kontrollera internetanslutningen.`)}

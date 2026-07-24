@@ -112,7 +112,7 @@ Ladda upp samtliga filer till en katalog på din webbserver. Ingen Python eller 
 - Frånlandsvind beräknas individuellt per kustort utifrån ortens och havspunktens koordinater.
 
 
-## v12.2.2
+## v12.2.3
 - Hårda tidsgränser per väderkälla.
 - Källor laddas oberoende och kan inte blockera hela appen.
 - Kortare och begränsad backoff vid HTTP 429.
