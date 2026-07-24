@@ -64,9 +64,13 @@ async function fetchModel(label, model, places){
     const d=item.daily||{};
     (d.time||[]).forEach((day,i)=>rows.push({
       place:places[pi][0], country:places[pi][1], lat:places[pi][2], lon:places[pi][3],
-      day, model:label, temp:+d.temperature_2m_max?.[i], min:+d.temperature_2m_min?.[i],
-      rain:+d.precipitation_sum?.[i], risk:+d.precipitation_probability_max?.[i],
-      sun:(+d.sunshine_duration?.[i]||0)/3600, wind:+d.wind_speed_10m_max?.[i]
+      day, model:label,
+      temp:Number.isFinite(Number(d.temperature_2m_max?.[i])) ? Number(d.temperature_2m_max[i]) : null,
+      min:Number.isFinite(Number(d.temperature_2m_min?.[i])) ? Number(d.temperature_2m_min[i]) : null,
+      rain:Number.isFinite(Number(d.precipitation_sum?.[i])) ? Number(d.precipitation_sum[i]) : null,
+      risk:Number.isFinite(Number(d.precipitation_probability_max?.[i])) ? Number(d.precipitation_probability_max[i]) : null,
+      sun:Number.isFinite(Number(d.sunshine_duration?.[i])) ? Number(d.sunshine_duration[i])/3600 : null,
+      wind:Number.isFinite(Number(d.wind_speed_10m_max?.[i])) ? Number(d.wind_speed_10m_max[i]) : null
     }));
   });
   return rows;
@@ -144,7 +148,7 @@ function renderDay(){
     card.querySelector("h3").textContent=`${r.place}, ${r.country}`;
     card.querySelector("p").textContent=r.score>=82?"Utmärkt":r.score>=68?"Bra":r.score>=52?"Okej":"Svagt";
     card.querySelector(".mini-metrics").innerHTML=
-      `<span>🌡️ ${fmt(r.temp,0)}°</span><span>🌧️ ${fmt(r.rain)} mm</span><span>☀️ ${fmt(r.sun)} h</span><span>🎯 ${r.confidence}%</span>`;
+      `<span>🌡️ Högst ${fmt(r.temp,0)}°</span><span>🌧️ ${fmt(r.rain)} mm</span><span>☀️ ${fmt(r.sun)} h</span><span>🎯 ${r.confidence}%</span>`;
     card.querySelector(".rank-score").textContent=r.score;
     ranking.appendChild(card);
   });
