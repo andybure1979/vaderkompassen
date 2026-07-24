@@ -430,7 +430,7 @@ function renderSourceChoices(){
 
 const BATCH_SIZE=80;
 const MAX_BATCH_CONCURRENCY=1;
-const SMHI_MAX_PLACES=8;
+const SMHI_MAX_PLACES=24;
 const REQUEST_TIMEOUT_MS=12000;
 const REQUEST_RETRIES=1;
 const SOURCE_TIMEOUT_MS=22000;
@@ -447,7 +447,7 @@ async function mapWithConcurrency(items,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
   return results;
 }
-const diagnostics={version:"12.2.4",lastLoad:null,sources:[]};
+const diagnostics={version:"12.2.5",lastLoad:null,sources:[]};
 window.vaderkompassenDiagnostics=diagnostics;
 async function resilientFetch(url,{timeout=REQUEST_TIMEOUT_MS,retries=REQUEST_RETRIES}={}){
   const cached=responseCache.get(url);
@@ -630,15 +630,35 @@ async function withDeadline(promise,ms,label){
     ]);
   }finally{clearTimeout(timer)}
 }
-function representativePlaces(places,maxPerCountry=6){
-  const groups={SE:[],NO:[],DK:[]};
-  places.forEach(p=>{const c=countryFor({region:p[2]});if(groups[c])groups[c].push(p)});
-  return Object.values(groups).flatMap(list=>{
+function balancedPlaces(places,maxPerCountry=18){
+  const countries={SE:[],NO:[],DK:[]};
+  places.forEach(p=>{const c=countryFor({region:p[2]});if(countries[c])countries[c].push(p)});
+  return Object.values(countries).flatMap(list=>{
     if(list.length<=maxPerCountry)return list;
-    const step=list.length/maxPerCountry;
-    return Array.from({length:maxPerCountry},(_,i)=>list[Math.floor(i*step)]);
+    const picked=[],used=new Set();
+    // Minst en ort från varje valt område så små områden inte försvinner ur prognosen.
+    const byArea=new Map();
+    list.forEach(p=>{if(!byArea.has(p[1]))byArea.set(p[1],[]);byArea.get(p[1]).push(p)});
+    for(const areaPlaces of byArea.values()){
+      if(picked.length>=maxPerCountry)break;
+      const p=areaPlaces[Math.floor((areaPlaces.length-1)/2)];
+      picked.push(p);used.add(p[0]+"|"+p[3]+"|"+p[4]);
+    }
+    // Fyll resten geografiskt jämnt över hela landets valda orter.
+    const remaining=list.filter(p=>!used.has(p[0]+"|"+p[3]+"|"+p[4]));
+    const slots=maxPerCountry-picked.length;
+    if(slots>0&&remaining.length){
+      const step=remaining.length/slots;
+      for(let i=0;i<slots;i++){
+        const p=remaining[Math.min(remaining.length-1,Math.floor(i*step))];
+        const key=p[0]+"|"+p[3]+"|"+p[4];
+        if(!used.has(key)){picked.push(p);used.add(key)}
+      }
+    }
+    return picked;
   });
 }
+function representativePlaces(places,maxPerCountry=18){return balancedPlaces(places,maxPerCountry)}
 function metNoDayKey(iso){return String(iso).slice(0,10)}
 async function fetchMetNoPlace(place){
   const [name,area,region,lat,lon]=place;
@@ -667,10 +687,10 @@ async function fetchMetNoPlace(place){
   }));
 }
 async function fetchMetNo(places){
-  const sampled=representativePlaces(places,6);
+  const sampled=balancedPlaces(places,18);
   if(!sampled.length)throw new Error("MET Norway: inga orter valda");
   const rows=[];
-  for(const batch of chunks(sampled,3)){
+  for(const batch of chunks(sampled,2)){
     const result=await Promise.allSettled(batch.map(fetchMetNoPlace));
     rows.push(...result.filter(x=>x.status==="fulfilled").flatMap(x=>x.value));
   }
@@ -716,8 +736,8 @@ async function load(){
     const needsMarine=["coast","surf","boat","fishing"].includes(settings.activity);
     const needsSnow=settings.activity==="ski";
     const extraJobs=[];
-    if(needsMarine)extraJobs.push(["marine",withDeadline(fetchMarine(representativePlaces(places,5)),EXTRA_TIMEOUT_MS,"Havsdata")]);
-    if(needsSnow)extraJobs.push(["snow",withDeadline(fetchSnow(representativePlaces(places,5)),EXTRA_TIMEOUT_MS,"Snödata")]);
+    if(needsMarine)extraJobs.push(["marine",withDeadline(fetchMarine(balancedPlaces(places,10)),EXTRA_TIMEOUT_MS,"Havsdata")]);
+    if(needsSnow)extraJobs.push(["snow",withDeadline(fetchSnow(balancedPlaces(places,10)),EXTRA_TIMEOUT_MS,"Snödata")]);
     if(extraJobs.length){
       const extraResults=await Promise.allSettled(extraJobs.map(x=>x[1]));
       extraResults.forEach((result,i)=>{if(result.status!=="fulfilled")return;if(extraJobs[i][0]==="marine")marineResult=result.value;if(extraJobs[i][0]==="snow")snowResult=result.value});
@@ -866,7 +886,7 @@ $("saveSettings").onclick=e=>{
   localStorage.setItem("vk-settings",JSON.stringify(settings));$("settingsDialog").close();load();
 };
 if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
-  const reg=await navigator.serviceWorker.register(`sw.js?v=12.2`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=12.2.5`);
   reg.update();
   reg.addEventListener("updatefound",()=>{const worker=reg.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller){$("updateBanner").classList.remove("hidden");}})});
   navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload());

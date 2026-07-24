@@ -117,3 +117,10 @@ Ladda upp samtliga filer till en katalog på din webbserver. Ingen Python eller 
 - Källor laddas oberoende och kan inte blockera hela appen.
 - Kortare och begränsad backoff vid HTTP 429.
 - Havs- och snödata har separata tidsgränser.
+
+
+## v12.2.5
+- Rätt versionsmärkning i sidfot, resurser och PWA-cache.
+- Områdesbalanserat ortsurval: minst en prognosort per valt område.
+- Upp till 24 svenska SMHI-orter och 18 MET Norway-orter per land.
+- Lägre parallellitet för MET Norway för stabilitet utan att minska täckningen till 1–3 orter.
