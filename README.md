@@ -30,7 +30,7 @@ Ladda upp samtliga filer till en katalog på din webbserver. Ingen Python eller 
 ## Funktioner
 
 - Anpassad för iPhone-skärm och säkra skärmkanter.
-- Jämför DMI, ECMWF, ICON, GFS och MET Norway.
+- Jämför SMHI, Yr/MET Norway, DMI, ECMWF, ICON och GFS.
 - Visar sju dagar, bästa platsen och en topplista.
 - Sparar dina val av temperatur, regn, sol, vind och länder.
 - Kan öppnas från hemskärmen som en fristående app.
@@ -81,3 +81,11 @@ Ladda upp samtliga filer till en katalog på din webbserver. Ingen Python eller 
 - Danska och norska landsdelar har regionala underfilter
 - Norska kust- och skidorter har havs- respektive snödata
 - Cache och service worker uppdaterade till v9
+
+
+## Version 10
+- SMHI återinfört som separat prognoskälla via SMHI Open Data PMP3G.
+- Automatläget prioriterar SMHI i Sverige, Yr/MET Norway i Norge och DMI i Danmark.
+- SMHI hämtas endast för svenska orter; övriga källor fortsätter via Open-Meteo.
+- Ikonvägar i manifest, HTML och service worker korrigerade för GitHub Pages.
+- Cache och versionsparametrar uppdaterade till v10.

@@ -96,8 +96,12 @@ const ACTIVITIES = {
   ski:{label:"Skidväder",icon:"⛷️"}
 };
 const MODELS = {
-  "DMI":"dmi_harmonie_arome_europe","ECMWF":"ecmwf_ifs025","ICON":"icon_seamless",
-  "GFS":"gfs_seamless","Yr / MET Norway":"metno_nordic"
+  "SMHI":{type:"smhi"},
+  "Yr / MET Norway":{type:"openMeteo",model:"metno_nordic"},
+  "DMI":{type:"openMeteo",model:"dmi_harmonie_arome_europe"},
+  "ECMWF":{type:"openMeteo",model:"ecmwf_ifs025"},
+  "ICON":{type:"openMeteo",model:"icon_seamless"},
+  "GFS":{type:"openMeteo",model:"gfs_seamless"}
 };
 const DAILY = "temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,sunshine_duration,wind_speed_10m_max";
 
@@ -140,7 +144,7 @@ settings.areas=[...new Set(settings.areas.filter(x=>ALL_AREAS.includes(x)))];
 if(!settings.areas.length)settings.areas=[...ALL_AREAS];
 if(!["auto","manual"].includes(settings.sourceMode))settings.sourceMode="auto";
 if(!Array.isArray(settings.sources))settings.sources=Object.keys(MODELS);
-settings.sources=[...new Set(settings.sources.filter(x=>MODELS[x]))];
+settings.sources=[...new Set(settings.sources.filter(x=>Object.hasOwn(MODELS,x)))];
 if(!settings.sources.length)settings.sources=Object.keys(MODELS);
 
 let dailyResults={}, activeDate=null, map=null, markerLayer=null;
@@ -159,7 +163,7 @@ function countryFor(item){
 function sourceWeight(model,item){
   if(settings.sourceMode==="manual")return 1;
   const country=countryFor(item);
-  if(country==="SE" && model==="Yr / MET Norway") return 3.5;
+  if(country==="SE" && model==="SMHI") return 3.5;
   if(country==="DK" && model==="DMI") return 3.5;
   if(country==="NO" && model==="Yr / MET Norway") return 3.5;
   if(model==="ECMWF") return 1.25;
@@ -173,7 +177,7 @@ function weightedMean(rows,key){
 }
 function activeModelEntries(){
   const names=settings.sourceMode==="auto"?Object.keys(MODELS):settings.sources;
-  return names.filter(name=>MODELS[name]).map(name=>[name,MODELS[name]]);
+  return names.filter(name=>Object.hasOwn(MODELS,name)).map(name=>[name,MODELS[name]]);
 }
 function dominantSource(rows,item){
   const available=[...new Set(rows.filter(r=>Number.isFinite(r.temp)).map(r=>r.model))];
@@ -283,14 +287,14 @@ function renderSourceChoices(){
     l.append(i,document.createTextNode(" "+name));box.appendChild(l);
   });
   $("sourceHint").textContent=$("sourceMode").value==="auto"
-    ?"Alla källor används. Nationell källa prioriteras: Yr/MET Norway i Norge och DMI i Danmark."
+    ?"Alla källor används. Nationell källa prioriteras: SMHI i Sverige, Yr/MET Norway i Norge och DMI i Danmark."
     :"Endast markerade källor används och de väger lika.";
 }
 
 const BATCH_SIZE=45;
 const chunks=(arr,size)=>Array.from({length:Math.ceil(arr.length/size)},(_,i)=>arr.slice(i*size,(i+1)*size));
 async function fetchModelBatch(label,model,places){
-  const params=new URLSearchParams({latitude:places.map(p=>p[3]).join(","),longitude:places.map(p=>p[4]).join(","),daily:DAILY,timezone:"auto",forecast_days:"7",models:model,wind_speed_unit:"ms"});
+  const params=new URLSearchParams({latitude:places.map(p=>p[3]).join(","),longitude:places.map(p=>p[4]).join(","),daily:DAILY,timezone:"auto",forecast_days:"7",models:model.model,wind_speed_unit:"ms"});
   const res=await fetch(`https://api.open-meteo.com/v1/forecast?${params}`);
   if(!res.ok)throw new Error(`${label}: ${res.status}`);
   let data=await res.json();if(!Array.isArray(data))data=[data];
@@ -298,11 +302,55 @@ async function fetchModelBatch(label,model,places){
   data.forEach((item,pi)=>{const d=item.daily||{};(d.time||[]).forEach((day,i)=>rows.push({place:places[pi][0],area:places[pi][1],region:places[pi][2],lat:places[pi][3],lon:places[pi][4],day,model:label,temp:validNumber(d.temperature_2m_max?.[i]),min:validNumber(d.temperature_2m_min?.[i]),rain:validNumber(d.precipitation_sum?.[i]),risk:validNumber(d.precipitation_probability_max?.[i]),sun:validNumber(d.sunshine_duration?.[i])===null?null:validNumber(d.sunshine_duration?.[i])/3600,wind:validNumber(d.wind_speed_10m_max?.[i])}));});
   return rows;
 }
-async function fetchModel(label,model,places){
+async function fetchOpenMeteo(label,model,places){
   const results=await Promise.allSettled(chunks(places,BATCH_SIZE).map(batch=>fetchModelBatch(label,model,batch)));
   const rows=results.filter(x=>x.status==="fulfilled").flatMap(x=>x.value);
   if(!rows.length)throw new Error(`${label}: inga data`);
   return rows;
+}
+
+function smhiParameter(step,name){
+  return validNumber((step.parameters||[]).find(p=>p.name===name)?.values?.[0]);
+}
+function smhiDayKey(iso){
+  return new Intl.DateTimeFormat("sv-SE",{timeZone:"Europe/Stockholm",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(iso));
+}
+async function fetchSmhiPlace(place){
+  const [name,area,region,lat,lon]=place;
+  const url=`https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${lon.toFixed(6)}/lat/${lat.toFixed(6)}/data.json`;
+  const res=await fetch(url);
+  if(!res.ok)throw new Error(`SMHI ${name}: ${res.status}`);
+  const data=await res.json(),days={};
+  (data.timeSeries||[]).forEach(step=>{
+    const day=smhiDayKey(step.validTime),hour=new Date(step.validTime).getUTCHours();
+    const t=smhiParameter(step,"t"),precip=smhiParameter(step,"pmean")??smhiParameter(step,"pmedian"),wind=smhiParameter(step,"ws"),cloud=smhiParameter(step,"tcc_mean")??smhiParameter(step,"tcc"),pcat=smhiParameter(step,"pcat");
+    const d=days[day]||={temps:[],rain:0,wetHours:0,sunHours:0,winds:[]};
+    if(Number.isFinite(t))d.temps.push(t);
+    if(Number.isFinite(precip))d.rain+=Math.max(0,precip);
+    if((Number.isFinite(precip)&&precip>.05)||(Number.isFinite(pcat)&&pcat>0))d.wetHours++;
+    if(Number.isFinite(wind))d.winds.push(wind);
+    if(hour>=4&&hour<=20&&Number.isFinite(cloud))d.sunHours+=clamp(100-(cloud/8*100))/100;
+  });
+  return Object.entries(days).slice(0,7).map(([day,d])=>({
+    place:name,area,region,lat,lon,day,model:"SMHI",
+    temp:d.temps.length?Math.max(...d.temps):null,min:d.temps.length?Math.min(...d.temps):null,
+    rain:d.rain,risk:clamp(d.wetHours/24*100),sun:d.sunHours,
+    wind:d.winds.length?Math.max(...d.winds):null
+  }));
+}
+async function fetchSmhi(places){
+  const swedish=places.filter(p=>countryFor({region:p[2]})==="SE");
+  if(!swedish.length)throw new Error("SMHI: inga svenska orter valda");
+  const rows=[];
+  for(const batch of chunks(swedish,8)){
+    const result=await Promise.allSettled(batch.map(fetchSmhiPlace));
+    rows.push(...result.filter(x=>x.status==="fulfilled").flatMap(x=>x.value));
+  }
+  if(!rows.length)throw new Error("SMHI: inga data");
+  return rows;
+}
+async function fetchSource(label,source,places){
+  return source.type==="smhi"?fetchSmhi(places):fetchOpenMeteo(label,source,places);
 }
 
 function hourlyDailyMean(times,values){
@@ -377,7 +425,7 @@ async function load(){
   try{
     const selectedModels=activeModelEntries();
     if(!selectedModels.length)throw new Error("Välj minst en prognoskälla.");
-    const weatherPromise=Promise.allSettled(selectedModels.map(([l,m])=>fetchModel(l,m,places)));
+    const weatherPromise=Promise.allSettled(selectedModels.map(([l,m])=>fetchSource(l,m,places)));
     const [settled,marineResult,snowResult]=await Promise.all([
       weatherPromise,fetchMarine(places).catch(()=>[]),fetchSnow(places).catch(()=>[])
     ]);
@@ -518,7 +566,7 @@ $("saveSettings").onclick=e=>{
   localStorage.setItem("vk-settings",JSON.stringify(settings));$("settingsDialog").close();load();
 };
 if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
-  const reg=await navigator.serviceWorker.register(`sw.js?v=9`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=10`);
   reg.update();
   reg.addEventListener("updatefound",()=>{const worker=reg.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller){$("updateBanner").classList.remove("hidden");}})});
   navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload());
