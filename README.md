@@ -132,3 +132,11 @@ Ladda upp samtliga filer till en katalog på din webbserver. Ingen Python eller 
 - Försöker uppdatera väderdata i bakgrunden var 30:e minut medan appen är aktiv.
 - Misslyckad bakgrundsuppdatering behåller den senast fungerande prognosen.
 - Ny hämtning sker direkt endast första gången eller när inställningarna ändras och ingen matchande cache finns.
+
+
+## v12.2.7
+- Alla valda orter hämtas åter från de nationella punktkällorna.
+- 30-minuterscachen behålls och sidladdning visar sparad prognos direkt.
+- Full uppdatering körs med högst fyra samtidiga punktanrop per källa.
+- Status visar uppdaterade prognosorter i förhållande till antal valda orter.
+- Havs- och snödata hämtas för alla relevanta valda orter.

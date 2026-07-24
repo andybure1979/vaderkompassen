@@ -430,7 +430,7 @@ function renderSourceChoices(){
 
 const BATCH_SIZE=80;
 const MAX_BATCH_CONCURRENCY=1;
-const SMHI_MAX_PLACES=24;
+const POINT_SOURCE_CONCURRENCY=4;
 const REQUEST_TIMEOUT_MS=12000;
 const REQUEST_RETRIES=1;
 const SOURCE_TIMEOUT_MS=22000;
@@ -447,7 +447,7 @@ async function mapWithConcurrency(items,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
   return results;
 }
-const diagnostics={version:"12.2.6",lastLoad:null,sources:[]};
+const diagnostics={version:"12.2.7",lastLoad:null,sources:[]};
 const WEATHER_CACHE_KEY="vk-weather-cache-v12.2.6";
 const BACKGROUND_REFRESH_MS=30*60*1000;
 let refreshTimer=null;
@@ -576,18 +576,11 @@ async function fetchSmhiPlace(place){
   }));
 }
 async function fetchSmhi(places){
-  let swedish=places.filter(p=>countryFor({region:p[2]})==="SE");
-  // SMHI har ett punkt-API. Vid stora urval används ett geografiskt jämnt urval för snabbare laddning.
-  if(swedish.length>SMHI_MAX_PLACES){
-    const step=swedish.length/SMHI_MAX_PLACES;
-    swedish=Array.from({length:SMHI_MAX_PLACES},(_,i)=>swedish[Math.floor(i*step)]);
-  }
+  const swedish=places.filter(p=>countryFor({region:p[2]})==="SE");
   if(!swedish.length)throw new Error("SMHI: inga svenska orter valda");
-  const rows=[];
-  for(const batch of chunks(swedish,8)){
-    const result=await Promise.allSettled(batch.map(fetchSmhiPlace));
-    rows.push(...result.filter(x=>x.status==="fulfilled").flatMap(x=>x.value));
-  }
+  // Alla valda svenska orter uppdateras. Låg parallellitet skyddar punkt-API:t.
+  const results=await mapWithConcurrency(swedish,POINT_SOURCE_CONCURRENCY,fetchSmhiPlace);
+  const rows=results.filter(x=>x.status==="fulfilled").flatMap(x=>x.value);
   if(!rows.length)throw new Error("SMHI: inga data");
   return rows;
 }
@@ -725,13 +718,10 @@ async function fetchMetNoPlace(place){
   }));
 }
 async function fetchMetNo(places){
-  const sampled=balancedPlaces(places,18);
-  if(!sampled.length)throw new Error("MET Norway: inga orter valda");
-  const rows=[];
-  for(const batch of chunks(sampled,2)){
-    const result=await Promise.allSettled(batch.map(fetchMetNoPlace));
-    rows.push(...result.filter(x=>x.status==="fulfilled").flatMap(x=>x.value));
-  }
+  if(!places.length)throw new Error("MET Norway: inga orter valda");
+  // Alla valda norska/danska orter uppdateras med kontrollerad parallellitet.
+  const results=await mapWithConcurrency(places,POINT_SOURCE_CONCURRENCY,fetchMetNoPlace);
+  const rows=results.filter(x=>x.status==="fulfilled").flatMap(x=>x.value);
   if(!rows.length)throw new Error("MET Norway: inga data");
   return rows;
 }
@@ -751,19 +741,19 @@ async function load({background=false}={}){
 
     if(swedish.length){
       try{
-        const smhiRows=await withDeadline(fetchSmhi(swedish),18000,"SMHI");
+        const smhiRows=await withDeadline(fetchSmhi(swedish),180000,"SMHI");
         rows.push(...smhiRows);sourceStatus.push({name:"SMHI",ok:true,rows:smhiRows.length,error:""});
       }catch(reason){
         sourceStatus.push({name:"SMHI",ok:false,rows:0,error:reason?.message||"fel"});
         try{
-          const metFallback=await withDeadline(fetchMetNo(swedish),22000,"MET Norway reserv");
+          const metFallback=await withDeadline(fetchMetNo(swedish),180000,"MET Norway reserv");
           rows.push(...metFallback);sourceStatus.push({name:"MET Norway reserv",ok:true,rows:metFallback.length,error:""});
         }catch(fallbackReason){sourceStatus.push({name:"MET Norway reserv",ok:false,rows:0,error:fallbackReason?.message||"fel"})}
       }
     }
     if(nordicOther.length){
       try{
-        const metRows=await withDeadline(fetchMetNo(nordicOther),24000,"MET Norway");
+        const metRows=await withDeadline(fetchMetNo(nordicOther),180000,"MET Norway");
         rows.push(...metRows);sourceStatus.push({name:"MET Norway",ok:true,rows:metRows.length,error:""});
       }catch(reason){sourceStatus.push({name:"MET Norway",ok:false,rows:0,error:reason?.message||"fel"})}
     }
@@ -776,8 +766,8 @@ async function load({background=false}={}){
     const needsMarine=["coast","surf","boat","fishing"].includes(settings.activity);
     const needsSnow=settings.activity==="ski";
     const extraJobs=[];
-    if(needsMarine)extraJobs.push(["marine",withDeadline(fetchMarine(balancedPlaces(places,10)),EXTRA_TIMEOUT_MS,"Havsdata")]);
-    if(needsSnow)extraJobs.push(["snow",withDeadline(fetchSnow(balancedPlaces(places,10)),EXTRA_TIMEOUT_MS,"Snödata")]);
+    if(needsMarine)extraJobs.push(["marine",withDeadline(fetchMarine(places),EXTRA_TIMEOUT_MS,"Havsdata")]);
+    if(needsSnow)extraJobs.push(["snow",withDeadline(fetchSnow(places),EXTRA_TIMEOUT_MS,"Snödata")]);
     if(extraJobs.length){
       const extraResults=await Promise.allSettled(extraJobs.map(x=>x[1]));
       extraResults.forEach((result,i)=>{if(result.status!=="fulfilled")return;if(extraJobs[i][0]==="marine")marineResult=result.value;if(extraJobs[i][0]==="snow")snowResult=result.value});
@@ -787,7 +777,7 @@ async function load({background=false}={}){
     if(!activeDate)throw new Error("Väderkällan svarade men prognosdata kunde inte tolkas.");
     const ok=sourceStatus.filter(x=>x.ok).length;
     const failed=sourceStatus.filter(x=>!x.ok);
-    $("modelCount").textContent=`Nationella källor · ${ok}/${sourceStatus.length} svarade · ${new Set(rows.map(r=>r.place)).size} prognosorter`;
+    $("modelCount").textContent=`Nationella källor · ${ok}/${sourceStatus.length} svarade · ${new Set(rows.map(r=>r.place)).size}/${places.length} prognosorter`;
     $("modelCount").title=failed.map(x=>`${x.name}: ${x.error||"okänt fel"}`).join("\n");
     $("statusCard").classList.add("hidden");renderTabs();renderActivities();renderDay();
     saveWeatherCache({sourceStatus});
@@ -935,7 +925,7 @@ $("saveSettings").onclick=e=>{
   localStorage.setItem("vk-settings",JSON.stringify(settings));$("settingsDialog").close();if(!restoreWeatherCache())load();
 };
 if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
-  const reg=await navigator.serviceWorker.register(`sw.js?v=12.2.6`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=12.2.7`);
   reg.update();
   reg.addEventListener("updatefound",()=>{const worker=reg.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller){$("updateBanner").classList.remove("hidden");}})});
   navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload());
