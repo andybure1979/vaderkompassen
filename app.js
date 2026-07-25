@@ -503,9 +503,9 @@ async function mapWithConcurrency(items,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
   return results;
 }
-const diagnostics={version:"12.2.9",lastLoad:null,sources:[]};
-const WEATHER_CACHE_KEY="vk-weather-cache-v12.2.9";
-const POINT_CACHE_KEY="vk-point-cache-v12.2.9";
+const diagnostics={version:"13.0.0",mode:"local",lastLoad:null,sources:[]};
+const WEATHER_CACHE_KEY="vk-weather-cache-v13.0.0";
+const POINT_CACHE_KEY="vk-point-cache-v13.0.0";
 const BACKGROUND_REFRESH_MS=30*60*1000;
 let refreshTimer=null;
 let loadInProgress=false;
@@ -562,6 +562,47 @@ async function fetchPlacesPersistently(source,places,worker){
     }
   });
   return {rows:results.filter(x=>x.status==="fulfilled").flatMap(x=>x.value),results};
+}
+
+
+const CLOUD_CONFIG=window.VK_CONFIG||{};
+function cloudApiEnabled(){return Boolean(CLOUD_CONFIG.preferCloud&&String(CLOUD_CONFIG.apiBaseUrl||"").trim())}
+async function fetchCloudSnapshot(places){
+  if(!cloudApiEnabled())return null;
+  const params=new URLSearchParams({
+    regions:[...settings.regions].sort().join(","),
+    areas:[...settings.areas].sort().join(","),
+    activity:settings.activity
+  });
+  const base=String(CLOUD_CONFIG.apiBaseUrl).replace(/\/$/,"");
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),Number(CLOUD_CONFIG.apiTimeoutMs)||10000);
+  try{
+    const response=await fetch(`${base}/v1/forecast?${params}`,{headers:{Accept:"application/json"},signal:controller.signal,cache:"no-store"});
+    if(response.status===404||response.status===204)return null;
+    if(!response.ok)throw new Error(`Moln-API HTTP ${response.status}`);
+    const payload=await response.json();
+    if(!payload?.dailyResults||!Object.keys(payload.dailyResults).length)throw new Error("Moln-API saknar prognosdata");
+    const allowed=new Set(places.map(p=>p[0]));
+    const filtered={};
+    for(const [day,rows] of Object.entries(payload.dailyResults)){
+      filtered[day]=(Array.isArray(rows)?rows:[]).filter(row=>allowed.has(row.place));
+      if(!filtered[day].length)delete filtered[day];
+    }
+    if(!Object.keys(filtered).length)return null;
+    return {...payload,dailyResults:filtered};
+  }finally{clearTimeout(timer)}
+}
+function applyCloudSnapshot(snapshot,places){
+  dailyResults=snapshot.dailyResults;
+  activeDate=snapshot.activeDate||Object.keys(dailyResults).sort()[0];
+  diagnostics.mode="cloud";diagnostics.lastLoad=new Date().toISOString();diagnostics.placeCount=places.length;
+  const updated=snapshot.generatedAt||snapshot.savedAt||Date.now();
+  $("modelCount").textContent=`Molnprognos · ${new Set(Object.values(dailyResults).flat().map(r=>r.place)).size}/${places.length} prognosorter · uppdaterad ${formatUpdatedAt(updated)}`;
+  $("modelCount").title="Centralt beräknad och cachad prognos";
+  $("statusCard").classList.add("hidden");renderTabs();renderActivities();renderDay();
+  saveWeatherCache({sourceStatus:snapshot.sourceStatus||[],cloud:true,generatedAt:updated});
+  scheduleBackgroundRefresh(updated);
 }
 
 window.vaderkompassenDiagnostics=diagnostics;
@@ -808,8 +849,19 @@ async function load({background=false}={}){
   const selected=new Set(settings.regions),selectedAreas=new Set(settings.areas);
   const places=PLACES.filter(p=>selected.has(p[2])&&selectedAreas.has(p[1]));
   if(!places.length){loadInProgress=false;showError("Välj minst en region i inställningarna.");return}
-  if(!background)showStatus(`Hämtar stabil prognos för ${places.length} valda orter…`);
+  if(!background)showStatus(cloudApiEnabled()?`Hämtar central prognos för ${places.length} valda orter…`:`Hämtar stabil prognos för ${places.length} valda orter…`);
   try{
+    if(cloudApiEnabled()){
+      try{
+        const snapshot=await fetchCloudSnapshot(places);
+        if(snapshot){applyCloudSnapshot(snapshot,places);return}
+      }catch(cloudError){
+        diagnostics.cloudError=cloudError.message;
+        if(!CLOUD_CONFIG.allowLocalFallback)throw cloudError;
+        console.warn("Moln-API otillgängligt – använder lokal reservmotor:",cloudError);
+      }
+    }
+    diagnostics.mode="local";
     let rows=[];
     const sourceStatus=[];
     const swedish=places.filter(p=>countryFor({region:p[2]})==="SE");
@@ -1001,7 +1053,7 @@ $("saveSettings").onclick=e=>{
   localStorage.setItem("vk-settings",JSON.stringify(settings));$("settingsDialog").close();if(!restoreWeatherCache())load();
 };
 if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
-  const reg=await navigator.serviceWorker.register(`sw.js?v=12.2.9`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=13.0.0`);
   reg.update();
   reg.addEventListener("updatefound",()=>{const worker=reg.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller){$("updateBanner").classList.remove("hidden");}})});
   navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload());
