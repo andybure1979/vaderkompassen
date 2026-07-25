@@ -147,3 +147,13 @@ Ladda upp samtliga filer till en katalog på din webbserver. Ingen Python eller 
 - Varje lyckad ort sparas separat, så partiella uppdateringar inte går förlorade.
 - Tidigare sparad punktprognos används om en enskild ort tillfälligt misslyckas.
 - 30-minuterscachen och direkt visning av senast fungerande resultat behålls.
+
+
+## v12.2.9
+
+- Kategorispecifika ortprofiler: varje aktivitet prioriterar destinationer som faktiskt passar aktiviteten.
+- Sol och bad visar badorter vid kust, sjöar och populära badområden.
+- Surf visar utpekade surfspots, båt och fiske visar vattennära destinationer.
+- Cykling prioriterar cykelvänliga resmål och vandring prioriterar fjäll- och naturområden.
+- Alla valda orter kan fortfarande hämtas och cachas; filtreringen sker i resultatlistan.
+- Sol- och badpoängen väger nu även in badvänlig temperatur, sol, regn, vind och tillgänglig vattentemperatur.

@@ -230,6 +230,57 @@ const MARINE_COORDS = {
   "Narvik":[68.43,17.30],"Svolvær":[68.23,14.45],"Tromsø":[69.65,18.82],"Hammerfest":[70.66,23.55]
 };
 const SKI_PLACES = new Set(["Sälen","Åre","Sveg","Funäsdalen","Vemdalen","Kiruna","Gällivare","Abisko","Arvidsjaur","Hemavan","Geilo","Trysil","Hemsedal","Voss","Røros","Oppdal","Narvik"]);
+
+// Kategorispecifika ortprofiler. Vädret hämtas fortfarande för alla valda orter,
+// men topplistan visar i första hand destinationer som faktiskt passar aktiviteten.
+const BATH_PLACES = new Set([
+  ...Object.keys(MARINE_COORDS),
+  "Åhus","Skanör","Trelleborg","Landskrona","Ängelholm","Höganäs","Kivik","Laholm","Kungsbacka",
+  "Lysekil","Kungshamn","Fjällbacka","Grebbestad","Marstrand","Karlshamn","Sölvesborg","Löttorp","Mörbylånga","Hemse","Slite",
+  "Motala","Vadstena","Askersund","Karlstad","Kristinehamn","Lidköping","Mariestad","Vänersborg","Åmål",
+  "Leksand","Rättvik","Mora","Trosa","Vaxholm","Nynäshamn","Östhammar","Sigtuna",
+  "Grimstad","Mandal","Drammen","Hamar","Lillehammer","Flåm","Alta",
+  "Blåvand","Ringkøbing"
+]);
+const SURF_PLACES = new Set([
+  "Varberg","Falkenberg","Halmstad","Båstad","Höganäs","Mölle","Kåseberga","Ystad","Skanör",
+  "Klitmøller","Løkken","Hvide Sande","Blåvand","Skagen","Esbjerg",
+  "Stavanger","Haugesund","Bergen","Kristiansand","Mandal","Svolvær","Bodø"
+]);
+const BOAT_PLACES = new Set([
+  ...Object.keys(MARINE_COORDS),
+  "Motala","Vadstena","Askersund","Karlstad","Kristinehamn","Lidköping","Mariestad","Vänersborg","Åmål",
+  "Leksand","Rättvik","Mora","Vaxholm","Nynäshamn","Trosa","Sigtuna","Flåm","Drammen","Hamar"
+]);
+const FISHING_PLACES = new Set([
+  ...BOAT_PLACES,
+  "Funäsdalen","Sveg","Vemdalen","Östersund","Åre","Hemavan","Arvidsjaur","Kiruna","Gällivare",
+  "Geilo","Trysil","Hemsedal","Voss","Røros","Oppdal","Narvik","Alta","Kirkenes"
+]);
+const CYCLING_PLACES = new Set([
+  "Malmö","Lund","Ystad","Simrishamn","Kivik","Båstad","Halmstad","Varberg","Falkenberg","Göteborg",
+  "Borgholm","Färjestaden","Löttorp","Mörbylånga","Visby","Fårösund","Hemse","Slite",
+  "Linköping","Motala","Vadstena","Nyköping","Trosa","Stockholm","Uppsala","Västerås","Örebro",
+  "Karlstad","Mora","Leksand","Rättvik","København","Odense","Aarhus","Skagen","Rønne/Bornholm",
+  "Oslo","Drammen","Kristiansand","Grimstad","Mandal","Trondheim"
+]);
+const HIKING_PLACES = new Set([
+  "Sälen","Mora","Rättvik","Åre","Östersund","Sveg","Funäsdalen","Vemdalen","Kiruna","Gällivare","Abisko",
+  "Arvidsjaur","Hemavan","Höga Kusten","Örnsköldsvik","Härnösand",
+  "Geilo","Trysil","Hemsedal","Voss","Flåm","Røros","Oppdal","Narvik","Svolvær","Tromsø","Alta",
+  "Bergen","Ålesund","Molde","Bodø","Lillehammer"
+]);
+const ACTIVITY_PLACE_SETS={
+  general:BATH_PLACES,coast:new Set(Object.keys(MARINE_COORDS)),surf:SURF_PLACES,boat:BOAT_PLACES,
+  fishing:FISHING_PLACES,cycling:CYCLING_PLACES,hiking:HIKING_PLACES,ski:SKI_PLACES
+};
+function activityPlaces(list){
+  const profile=ACTIVITY_PLACE_SETS[settings.activity];
+  if(!profile)return list;
+  const specialized=list.filter(x=>profile.has(x.place));
+  return specialized.length?specialized:list;
+}
+
 const MARINE_DAILY = "wave_height_max,wave_direction_dominant,wave_period_max,swell_wave_height_max,swell_wave_direction_dominant,swell_wave_period_max";
 const MARINE_HOURLY = "sea_surface_temperature";
 const SNOW_DAILY = "snowfall_sum";
@@ -333,6 +384,11 @@ function activityScore(r){
   const temp=r.temp??0, rain=r.rain??0, risk=r.risk??0, sun=r.sun??0, wind=r.wind??0, min=r.min??0;
   const dry=clamp(100-rain*18-risk*.45), sunny=clamp(sun/12*100);
   switch(settings.activity){
+    case "general":{
+      const sea=Number.isFinite(r.seaTemp)?bell(r.seaTemp,21,11):55;
+      const pleasantWind=bell(wind,2.5,6);
+      return .30*bell(temp,24,13)+.25*dry+.22*sunny+.13*pleasantWind+.10*sea;
+    }
     case "coast":{
       const sea=Number.isFinite(r.seaTemp)?bell(r.seaTemp,20,10):45;
       const waves=Number.isFinite(r.waveHeight)?bell(r.waveHeight,.6,1.5):45;
@@ -447,9 +503,9 @@ async function mapWithConcurrency(items,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
   return results;
 }
-const diagnostics={version:"12.2.8",lastLoad:null,sources:[]};
-const WEATHER_CACHE_KEY="vk-weather-cache-v12.2.8";
-const POINT_CACHE_KEY="vk-point-cache-v12.2.8";
+const diagnostics={version:"12.2.9",lastLoad:null,sources:[]};
+const WEATHER_CACHE_KEY="vk-weather-cache-v12.2.9";
+const POINT_CACHE_KEY="vk-point-cache-v12.2.9";
 const BACKGROUND_REFRESH_MS=30*60*1000;
 let refreshTimer=null;
 let loadInProgress=false;
@@ -783,7 +839,7 @@ async function load({background=false}={}){
     if(!rows.length)throw new Error(`Ingen väderkälla svarade. ${sourceStatus.map(x=>`${x.name}: ${x.error||"fel"}`).join(" · ")}`);
 
     let marineResult=[],snowResult=[];
-    const needsMarine=["coast","surf","boat","fishing"].includes(settings.activity);
+    const needsMarine=["general","coast","surf","boat","fishing"].includes(settings.activity);
     const needsSnow=settings.activity==="ski";
     const extraJobs=[];
     if(needsMarine)extraJobs.push(["marine",withDeadline(fetchMarine(places),EXTRA_TIMEOUT_MS,"Havsdata")]);
@@ -837,7 +893,7 @@ function aggregate(rows,marineRows=[],snowRows=[]){
   });return result;
 }
 function rankedList(){
-  let list=(dailyResults[activeDate]||[]);
+  let list=activityPlaces(dailyResults[activeDate]||[]);
   if(["coast","surf","boat","fishing"].includes(settings.activity)){
     const specialized=list.filter(x=>x.hasMarine);if(specialized.length)list=specialized;
   }
@@ -945,7 +1001,7 @@ $("saveSettings").onclick=e=>{
   localStorage.setItem("vk-settings",JSON.stringify(settings));$("settingsDialog").close();if(!restoreWeatherCache())load();
 };
 if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
-  const reg=await navigator.serviceWorker.register(`sw.js?v=12.2.8`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=12.2.9`);
   reg.update();
   reg.addEventListener("updatefound",()=>{const worker=reg.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller){$("updateBanner").classList.remove("hidden");}})});
   navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload());
