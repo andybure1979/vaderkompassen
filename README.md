@@ -179,3 +179,10 @@ Cloudflare Worker finns i `cloudflare/`, Supabase-migration i `supabase/migratio
 - Cron var 30:e minut med körlogg och automatisk städning.
 - Intern driftstatussida under `admin/`.
 - Lokal prognosmotor finns kvar som säker reserv tills hela beräkningsmotorn är serverporterad.
+
+## Version 13.2.0 – aktiv molnprognos
+- Cloudflare Cron hämtar sju dygns prognos för samtliga orter var 30:e minut.
+- Prognosen sparas som en gemensam snapshot i Supabase.
+- Appen hämtar molnprognosen och använder lokal motor som reserv.
+- `/v1/status` visar senaste snapshot och körlogg.
+- `/v1/admin/run` kan starta en manuell uppdatering med `ADMIN_TOKEN`.
