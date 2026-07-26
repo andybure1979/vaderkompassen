@@ -158,14 +158,14 @@ Ladda upp samtliga filer till en katalog på din webbserver. Ingen Python eller 
 - Alla valda orter kan fortfarande hämtas och cachas; filtreringen sker i resultatlistan.
 - Sol- och badpoängen väger nu även in badvänlig temperatur, sol, regn, vind och tillgänglig vattentemperatur.
 
-## v13.0.0 – molnförberedd grund
+## v13.1.0 – molnförberedd grund
 
 - Valfri central prognos-API via `config.js`.
 - Automatisk lokal reservmotor om molnet saknar data eller är otillgängligt.
 - Cloudflare Worker med hälsoendpoint, prognosendpoint, skyddad snapshot-inmatning och 30-minuters Cron.
 - Supabase-schema för prognossnapshots, användarprofiler, prenumerationsstatus, favoriter och notisinställningar.
 - Hemliga nycklar hålls helt utanför klientappen.
-- PWA-cache och versionsnummer uppdaterade till 13.0.0.
+- PWA-cache och versionsnummer uppdaterade till 13.1.0.
 - Se `docs/DRIFTSTART.md` för installation.
 
 
