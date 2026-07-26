@@ -167,3 +167,7 @@ Ladda upp samtliga filer till en katalog på din webbserver. Ingen Python eller 
 - Hemliga nycklar hålls helt utanför klientappen.
 - PWA-cache och versionsnummer uppdaterade till 13.0.0.
 - Se `docs/DRIFTSTART.md` för installation.
+
+
+## v13.1 – aktiv molnkoppling
+Cloudflare Worker finns i `cloudflare/`, Supabase-migration i `supabase/migrations/` och driftinstruktioner i `docs/DRIFTSTART_V13_1.md`.
