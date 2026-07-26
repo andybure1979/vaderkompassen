@@ -171,3 +171,11 @@ Ladda upp samtliga filer till en katalog på din webbserver. Ingen Python eller 
 
 ## v13.1 – aktiv molnkoppling
 Cloudflare Worker finns i `cloudflare/`, Supabase-migration i `supabase/migrations/` och driftinstruktioner i `docs/DRIFTSTART_V13_1.md`.
+
+## Version 13.1.1 – molnbackend
+- Cloudflare Worker med `/health`, `/v1/status` och `/v1/forecast`.
+- Skyddad snapshot-endpoint och manuell driftkörning.
+- Supabase-tabeller för prognossnapshots och Worker-körlogg.
+- Cron var 30:e minut med körlogg och automatisk städning.
+- Intern driftstatussida under `admin/`.
+- Lokal prognosmotor finns kvar som säker reserv tills hela beräkningsmotorn är serverporterad.
