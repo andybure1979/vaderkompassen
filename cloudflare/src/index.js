@@ -55,7 +55,7 @@ async function buildSnapshot(){
   if(!rows.length)throw new Error(`Ingen prognos kunde hämtas: ${failures.join(' · ')}`);
   const dailyResults={}; for(const row of rows)(dailyResults[row.day]||=[]).push(row);
   const days=Object.keys(dailyResults).sort();
-  return {ok:true,version:'13.2.0',generatedAt:new Date().toISOString(),activeDate:days[0]||null,dailyResults,
+  return {ok:true,version:'13.3.0',generatedAt:new Date().toISOString(),activeDate:days[0]||null,dailyResults,
     sourceStatus:[{name:'Open-Meteo',ok:failures.length<batches.length,rows:rows.length,error:failures.join(' · ')}],
     meta:{placesRequested:PLACES.length,placesUpdated:new Set(rows.map(r=>r.place)).size,days:days.length,batches:batches.length,failedBatches:failures.length}};
 }
@@ -76,7 +76,7 @@ async function status(env){
     sb(env,'worker_runs?select=started_at,finished_at,status,message,details&order=started_at.desc&limit=10')
   ]);
   const latest=snapshots?.[0]||null;
-  return {ok:true,service:'Väderkompassen API',version:env.APP_VERSION||'13.2.0',time:new Date().toISOString(),
+  return {ok:true,service:'Väderkompassen API',version:env.APP_VERSION||'13.3.0',time:new Date().toISOString(),
     latestSnapshot:latest?{id:latest.id,generated_at:latest.generated_at,activity:latest.activity,meta:latest.payload?.meta||null}:null,recentRuns:runs||[]};
 }
 async function saveSnapshot(req,env){
@@ -101,8 +101,12 @@ export default {
   async fetch(req,env){
     const c=cors(env); if(req.method==='OPTIONS')return new Response(null,{status:204,headers:c}); const url=new URL(req.url);
     try{
-      if(url.pathname==='/'||url.pathname==='/health')return json({ok:true,service:'Väderkompassen API',version:env.APP_VERSION||'13.2.0',time:new Date().toISOString()},200,c);
+      if(url.pathname==='/'||url.pathname==='/health')return json({ok:true,service:'Väderkompassen API',version:env.APP_VERSION||'13.3.0',time:new Date().toISOString()},200,c);
       if((url.pathname==='/v1/status'||url.pathname==='/status')&&req.method==='GET')return json(await status(env),200,c);
+      if(url.pathname==='/v1/verify'&&req.method==='GET'){
+        const state=await status(env);
+        return json({ok:Boolean(state.latestSnapshot),worker:true,database:true,forecast:Boolean(state.latestSnapshot),version:state.version,time:state.time,latestSnapshot:state.latestSnapshot},state.latestSnapshot?200:503,c);
+      }
       if((url.pathname==='/v1/forecast'||url.pathname==='/forecast')&&req.method==='GET'){
         const data=await latestSnapshot(env,url);return data?json(data,200,{...c,'cache-control':'public, max-age=300'}):json({ok:false,error:'Ingen molnprognos sparad ännu'},404,c);
       }
