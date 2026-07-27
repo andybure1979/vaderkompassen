@@ -503,9 +503,25 @@ async function mapWithConcurrency(items,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
   return results;
 }
-const diagnostics={version:"13.2.0",mode:"local",lastLoad:null,sources:[]};
-const WEATHER_CACHE_KEY="vk-weather-cache-v13.2.0";
-const POINT_CACHE_KEY="vk-point-cache-v13.2.0";
+const diagnostics={version:"13.3.0",mode:"checking",lastLoad:null,sources:[]};
+function setDataMode(mode,detail=""){
+  diagnostics.mode=mode;
+  const badge=$("dataModeBadge");
+  if(!badge)return;
+  const states={
+    cloud:{text:"☁️ Moln",title:"Prognosen hämtades från Väderkompassens molntjänst."},
+    local:{text:"📱 Lokal reserv",title:"Molntjänsten kunde inte användas. Prognosen beräknades lokalt i enheten."},
+    checking:{text:"Kontrollerar…",title:"Kontrollerar om molnprognosen är tillgänglig."},
+    cachedCloud:{text:"☁️ Molncache",title:"Visar senast sparade molnprognos medan en ny kontroll görs."},
+    cachedLocal:{text:"📱 Lokal cache",title:"Visar senast lokalt beräknade prognos medan en ny kontroll görs."}
+  };
+  const state=states[mode]||states.checking;
+  badge.textContent=state.text;
+  badge.className=`data-mode-badge ${mode}`;
+  badge.title=detail?`${state.title} ${detail}`:state.title;
+}
+const WEATHER_CACHE_KEY="vk-weather-cache-v13.3.0";
+const POINT_CACHE_KEY="vk-point-cache-v13.3.0";
 const BACKGROUND_REFRESH_MS=30*60*1000;
 let refreshTimer=null;
 let loadInProgress=false;
@@ -533,6 +549,7 @@ function restoreWeatherCache(){
   $("modelCount").textContent=`${cache.modelText||"Sparad prognos"} · uppdaterad ${formatUpdatedAt(cache.savedAt)}`;
   $("modelCount").title=cache.modelTitle||"";
   $("statusCard").classList.add("hidden");
+  setDataMode(cache.cloud?"cachedCloud":"cachedLocal",`Sparad ${formatUpdatedAt(cache.savedAt)}.`);
   renderTabs();renderActivities();renderDay();
   scheduleBackgroundRefresh(cache.savedAt);
   return true;
@@ -596,7 +613,7 @@ async function fetchCloudSnapshot(places){
 function applyCloudSnapshot(snapshot,places){
   dailyResults=snapshot.dailyResults;
   activeDate=snapshot.activeDate||Object.keys(dailyResults).sort()[0];
-  diagnostics.mode="cloud";diagnostics.lastLoad=new Date().toISOString();diagnostics.placeCount=places.length;
+  setDataMode("cloud",`Uppdaterad ${formatUpdatedAt(snapshot.generatedAt||snapshot.savedAt||Date.now())}.`);diagnostics.lastLoad=new Date().toISOString();diagnostics.placeCount=places.length;
   const updated=snapshot.generatedAt||snapshot.savedAt||Date.now();
   $("modelCount").textContent=`Molnprognos · ${new Set(Object.values(dailyResults).flat().map(r=>r.place)).size}/${places.length} prognosorter · uppdaterad ${formatUpdatedAt(updated)}`;
   $("modelCount").title="Centralt beräknad och cachad prognos";
@@ -849,6 +866,7 @@ async function load({background=false}={}){
   const selected=new Set(settings.regions),selectedAreas=new Set(settings.areas);
   const places=PLACES.filter(p=>selected.has(p[2])&&selectedAreas.has(p[1]));
   if(!places.length){loadInProgress=false;showError("Välj minst en region i inställningarna.");return}
+  setDataMode("checking");
   if(!background)showStatus(cloudApiEnabled()?`Hämtar central prognos för ${places.length} valda orter…`:`Hämtar stabil prognos för ${places.length} valda orter…`);
   try{
     if(cloudApiEnabled()){
@@ -861,7 +879,7 @@ async function load({background=false}={}){
         console.warn("Moln-API otillgängligt – använder lokal reservmotor:",cloudError);
       }
     }
-    diagnostics.mode="local";
+    setDataMode("local",diagnostics.cloudError?`Molnfel: ${diagnostics.cloudError}`:"Molnläge är inte aktiverat.");
     let rows=[];
     const sourceStatus=[];
     const swedish=places.filter(p=>countryFor({region:p[2]})==="SE");
@@ -914,7 +932,10 @@ async function load({background=false}={}){
     if(background){
       console.warn("Bakgrundsuppdateringen misslyckades:",e);
       const cache=readWeatherCache();
-      if(cache){$("modelCount").textContent=`${cache.modelText||"Sparad prognos"} · senast uppdaterad ${formatUpdatedAt(cache.savedAt)} · bakgrundsuppdatering misslyckades`;}
+      if(cache){
+        $("modelCount").textContent=`${cache.modelText||"Sparad prognos"} · senast uppdaterad ${formatUpdatedAt(cache.savedAt)} · bakgrundsuppdatering misslyckades`;
+        setDataMode(cache.cloud?"cachedCloud":"cachedLocal","Bakgrundsuppdateringen misslyckades.");
+      }
       scheduleBackgroundRefresh(Date.now());
     }else showError(`${e.message} Kontrollera internetanslutningen.`)
   }finally{loadInProgress=false}
@@ -1053,13 +1074,14 @@ $("saveSettings").onclick=e=>{
   localStorage.setItem("vk-settings",JSON.stringify(settings));$("settingsDialog").close();if(!restoreWeatherCache())load();
 };
 if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
-  const reg=await navigator.serviceWorker.register(`sw.js?v=13.2.0`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=13.3.0`);
   reg.update();
   reg.addEventListener("updatefound",()=>{const worker=reg.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller){$("updateBanner").classList.remove("hidden");}})});
   navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload());
 });
 $("updateNow").onclick=()=>navigator.serviceWorker.getRegistration().then(r=>r?.waiting?.postMessage({type:"SKIP_WAITING"}));
 renderActivities();
+setDataMode("checking");
 if(!restoreWeatherCache())load();
 document.addEventListener("visibilitychange",()=>{
   if(document.visibilityState!=="visible")return;
