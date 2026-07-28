@@ -3,13 +3,21 @@ import { PLACES } from './places.js';
 const JSON_HEADERS={"content-type":"application/json; charset=utf-8","cache-control":"no-store"};
 const json=(data,status=200,extra={})=>new Response(JSON.stringify(data),{status,headers:{...JSON_HEADERS,...extra}});
 const cors=env=>({"access-control-allow-origin":env.ALLOWED_ORIGIN||"*","access-control-allow-methods":"GET,POST,OPTIONS","access-control-allow-headers":"content-type,authorization,x-admin-token"});
-const sbHeaders=env=>({apikey:env.SUPABASE_SERVICE_ROLE_KEY,authorization:`Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,"content-type":"application/json"});
+const supabaseKeyType=env=>String(env.SUPABASE_SERVICE_ROLE_KEY||'').startsWith('sb_secret_')?'secret':'legacy-service-role';
+const sbHeaders=env=>{
+  const key=String(env.SUPABASE_SERVICE_ROLE_KEY||'').trim();
+  const headers={apikey:key,"content-type":"application/json"};
+  // Nya sb_secret-nycklar är inte JWT och ska inte skickas som Bearer-token.
+  if(!key.startsWith('sb_secret_'))headers.authorization=`Bearer ${key}`;
+  return headers;
+};
 
 async function sb(env,path,init={}){
   if(!env.SUPABASE_URL||!env.SUPABASE_SERVICE_ROLE_KEY)throw new Error("Supabase secrets saknas");
-  const r=await fetch(`${env.SUPABASE_URL}/rest/v1/${path}`,{...init,headers:{...sbHeaders(env),...(init.headers||{})}});
+  const base=String(env.SUPABASE_URL).trim().replace(/\/+$/,'');
+  const r=await fetch(`${base}/rest/v1/${path}`,{...init,headers:{...sbHeaders(env),...(init.headers||{})}});
   const text=await r.text();let body=null;try{body=text?JSON.parse(text):null}catch{body=text}
-  if(!r.ok)throw new Error(`Supabase ${r.status}: ${typeof body==='string'?body:JSON.stringify(body)}`);
+  if(!r.ok){const detail=typeof body==='string'?body:JSON.stringify(body);throw new Error(`Supabase ${r.status} (${supabaseKeyType(env)}): ${detail}`);}
   return body;
 }
 function authorized(req,env){const h=req.headers.get("x-admin-token")||req.headers.get("authorization")?.replace(/^Bearer\s+/i,"");return Boolean(env.ADMIN_TOKEN&&h===env.ADMIN_TOKEN)}
@@ -55,7 +63,7 @@ async function buildSnapshot(){
   if(!rows.length)throw new Error(`Ingen prognos kunde hämtas: ${failures.join(' · ')}`);
   const dailyResults={}; for(const row of rows)(dailyResults[row.day]||=[]).push(row);
   const days=Object.keys(dailyResults).sort();
-  return {ok:true,version:'13.3.1',generatedAt:new Date().toISOString(),activeDate:days[0]||null,dailyResults,
+  return {ok:true,version:'13.3.2',generatedAt:new Date().toISOString(),activeDate:days[0]||null,dailyResults,
     sourceStatus:[{name:'Open-Meteo',ok:failures.length<batches.length,rows:rows.length,error:failures.join(' · ')}],
     meta:{placesRequested:PLACES.length,placesUpdated:new Set(rows.map(r=>r.place)).size,days:days.length,batches:batches.length,failedBatches:failures.length}};
 }
@@ -76,7 +84,7 @@ async function status(env){
     sb(env,'worker_runs?select=started_at,finished_at,status,message,details&order=started_at.desc&limit=10')
   ]);
   const latest=snapshots?.[0]||null;
-  return {ok:true,service:'Väderkompassen API',version:env.APP_VERSION||'13.3.1',time:new Date().toISOString(),
+  return {ok:true,service:'Väderkompassen API',version:env.APP_VERSION||'13.3.2',time:new Date().toISOString(),
     latestSnapshot:latest?{id:latest.id,generated_at:latest.generated_at,activity:latest.activity,meta:latest.payload?.meta||null}:null,recentRuns:runs||[]};
 }
 async function saveSnapshot(req,env){
@@ -101,11 +109,11 @@ export default {
   async fetch(req,env){
     const c=cors(env); if(req.method==='OPTIONS')return new Response(null,{status:204,headers:c}); const url=new URL(req.url);
     try{
-      if(url.pathname==='/'||url.pathname==='/health')return json({ok:true,service:'Väderkompassen API',version:env.APP_VERSION||'13.3.1',time:new Date().toISOString()},200,c);
+      if(url.pathname==='/'||url.pathname==='/health')return json({ok:true,service:'Väderkompassen API',version:env.APP_VERSION||'13.3.2',time:new Date().toISOString()},200,c);
       if((url.pathname==='/v1/status'||url.pathname==='/status')&&req.method==='GET')return json(await status(env),200,c);
       if(url.pathname==='/v1/verify'&&req.method==='GET'){
         const state=await status(env);
-        return json({ok:Boolean(state.latestSnapshot),worker:true,database:true,forecast:Boolean(state.latestSnapshot),version:state.version,time:state.time,latestSnapshot:state.latestSnapshot},state.latestSnapshot?200:503,c);
+        return json({ok:Boolean(state.latestSnapshot),worker:true,database:true,forecast:Boolean(state.latestSnapshot),version:state.version,time:state.time,latestSnapshot:state.latestSnapshot,supabase:{configured:Boolean(env.SUPABASE_URL&&env.SUPABASE_SERVICE_ROLE_KEY),keyType:supabaseKeyType(env),host:(()=>{try{return new URL(env.SUPABASE_URL).host}catch{return null}})()}},state.latestSnapshot?200:503,c);
       }
       if((url.pathname==='/v1/forecast'||url.pathname==='/forecast')&&req.method==='GET'){
         const data=await latestSnapshot(env,url);return data?json(data,200,{...c,'cache-control':'public, max-age=300'}):json({ok:false,error:'Ingen molnprognos sparad ännu'},404,c);
