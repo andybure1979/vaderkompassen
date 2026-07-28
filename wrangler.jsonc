@@ -3,18 +3,8 @@
   "name": "vaderkompassen",
   "main": "cloudflare/src/index.js",
   "compatibility_date": "2026-07-26",
-  "observability": {
-    "enabled": true
-  },
-  "assets": {
-    "directory": ".",
-    "binding": "ASSETS"
-  },
-  "triggers": {
-    "crons": ["*/30 * * * *"]
-  },
-  "vars": {
-    "APP_VERSION": "13.3.1",
-    "ALLOWED_ORIGIN": "*"
-  }
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  "triggers": { "crons": ["*/30 * * * *"] },
+  "vars": { "APP_VERSION": "13.3.2" }
 }

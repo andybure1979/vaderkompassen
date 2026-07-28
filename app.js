@@ -503,7 +503,7 @@ async function mapWithConcurrency(items,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
   return results;
 }
-const diagnostics={version:"13.3.1",mode:"checking",lastLoad:null,sources:[]};
+const diagnostics={version:"13.3.2",mode:"checking",lastLoad:null,sources:[]};
 function setDataMode(mode,detail=""){
   diagnostics.mode=mode;
   const badge=$("dataModeBadge");
@@ -518,19 +518,10 @@ function setDataMode(mode,detail=""){
   const state=states[mode]||states.checking;
   badge.textContent=state.text;
   badge.className=`data-mode-badge ${mode}`;
-  const fullDetail=detail?`${state.title} ${detail}`:state.title;
-  badge.title=fullDetail;
-  badge.dataset.detail=fullDetail;
-  badge.setAttribute("tabindex","0");
-  badge.setAttribute("role","button");
-  badge.setAttribute("aria-label",`${state.text}. Tryck för teknisk information.`);
+  badge.title=detail?`${state.title} ${detail}`:state.title;
 }
-function showDataModeDetails(){
-  const badge=$("dataModeBadge");
-  if(badge)alert(badge.dataset.detail||badge.title||"Ingen ytterligare information finns.");
-}
-const WEATHER_CACHE_KEY="vk-weather-cache-v13.3.1";
-const POINT_CACHE_KEY="vk-point-cache-v13.3.1";
+const WEATHER_CACHE_KEY="vk-weather-cache-v13.3.2";
+const POINT_CACHE_KEY="vk-point-cache-v13.3.2";
 const BACKGROUND_REFRESH_MS=30*60*1000;
 let refreshTimer=null;
 let loadInProgress=false;
@@ -1082,13 +1073,8 @@ $("saveSettings").onclick=e=>{
     areas:[...document.querySelectorAll('#regionChoices input[data-kind="area"]:checked')].map(x=>x.value)};
   localStorage.setItem("vk-settings",JSON.stringify(settings));$("settingsDialog").close();if(!restoreWeatherCache())load();
 };
-const dataModeBadge=$("dataModeBadge");
-if(dataModeBadge){
-  dataModeBadge.addEventListener("click",showDataModeDetails);
-  dataModeBadge.addEventListener("keydown",event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();showDataModeDetails();}});
-}
 if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
-  const reg=await navigator.serviceWorker.register(`sw.js?v=13.3.1`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=13.3.2`);
   reg.update();
   reg.addEventListener("updatefound",()=>{const worker=reg.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller){$("updateBanner").classList.remove("hidden");}})});
   navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload());
