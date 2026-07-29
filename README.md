@@ -1,4 +1,4 @@
-## Version 13.7.0
+## Version 13.8.0 – kartdesign
 
 500 prognosorter med bibehållna aktivitetsfilter.
 

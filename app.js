@@ -332,7 +332,7 @@ async function mapWithConcurrency(items,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
   return results;
 }
-const diagnostics={version:"13.7.0",mode:"checking",lastLoad:null,sources:[]};
+const diagnostics={version:"13.8.0",mode:"checking",lastLoad:null,sources:[]};
 function setDataMode(mode,detail=""){
   diagnostics.mode=mode;
   const badge=$("dataModeBadge");
@@ -350,8 +350,8 @@ function setDataMode(mode,detail=""){
   badge.className=`data-mode-badge ${mode}`;
   badge.title=detail?`${state.title} ${detail}`:state.title;
 }
-const WEATHER_CACHE_KEY="vk-weather-cache-v13.7.0";
-const POINT_CACHE_KEY="vk-point-cache-v13.7.0";
+const WEATHER_CACHE_KEY="vk-weather-cache-v13.8.0";
+const POINT_CACHE_KEY="vk-point-cache-v13.8.0";
 const BACKGROUND_REFRESH_MS=30*60*1000;
 let refreshTimer=null;
 let loadInProgress=false;
@@ -856,20 +856,30 @@ function specialMetricHtml(r){
   }
   return "";
 }
-function scoreColor(score){return score>=80?"#16803c":score>=70?"#d6a700":score>=60?"#e67e22":"#c92a2a";}
+function scoreColor(score){return score>=90?"#29974a":score>=80?"#78bd8a":score>=70?"#e4bd3d":score>=60?"#ed9653":"#e66b69";}
+function scoreClass(score){return score>=90?"perfect":score>=80?"great":score>=70?"good":score>=60?"okay":"poor";}
 function ensureMap(){
   if(map||!window.L)return;
-  map=L.map("weatherMap",{zoomControl:true}).setView([60.2,15.4],5);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18,attribution:'&copy; OpenStreetMap'}).addTo(map);
+  map=L.map("weatherMap",{zoomControl:false,attributionControl:true}).setView([60.2,15.4],5);
+  L.control.zoom({position:"bottomright"}).addTo(map);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18,attribution:'&copy; OpenStreetMap',className:"pastel-map-tiles"}).addTo(map);
   markerLayer=L.layerGroup().addTo(map);
+}
+function mapPopupHtml(r,position){
+  const activity=ACTIVITIES[settings.activity];
+  return `<article class="map-popup-card"><div class="map-popup-top"><span class="map-popup-rank">${position}</span><div><strong>${placeLabel(r)}</strong><small>${r.area} · ${r.region}</small></div><b class="map-popup-score ${scoreClass(r.score)}">${r.score}</b></div><p>${activitySummary(r.score)} för ${activity.label.toLowerCase()}</p><div class="map-popup-metrics"><span>🌡️ <b>${fmt(r.temp,0)}°</b></span><span>💨 <b>${fmt(r.wind)} m/s</b></span>${settings.activity==="surf"?`<span>🌊 <b>${fmt(r.waveHeight)} m</b></span>`:`<span>☀️ <b>${fmt(r.sun)} h</b></span>`}</div><a href="https://maps.apple.com/?q=${encodeURIComponent(placeLabel(r))}&ll=${r.lat},${r.lon}" target="_blank" rel="noopener">Visa vägen →</a></article>`;
 }
 function renderMap(list){
   ensureMap();if(!map||!markerLayer)return;
   markerLayer.clearLayers();
-  list.forEach(r=>{const color=scoreColor(r.score);const m=L.circleMarker([r.lat,r.lon],{radius:8,fillColor:color,color:"#fff",weight:2,fillOpacity:.92});m.bindPopup(`<strong>${placeLabel(r)}</strong><br>${r.area} · ${r.region}<br><b>${r.score}/100</b> · ${activitySummary(r.score)}<br>🌡️ ${fmt(r.temp,0)}° · 🌧️ ${fmt(r.rain)} mm · 💨 ${fmt(r.wind)} m/s`);m.addTo(markerLayer);});
-  if(list.length){const bounds=L.latLngBounds(list.map(r=>[r.lat,r.lon]));map.fitBounds(bounds,{padding:[24,24],maxZoom:7});}
+  list.slice(0,75).forEach((r,i)=>{
+    const cls=scoreClass(r.score),icon=L.divIcon({className:"score-marker-wrap",html:`<div class="score-marker ${cls}${i===0?" winner":""}"><span>${r.score}</span></div>`,iconSize:[48,48],iconAnchor:[24,24],popupAnchor:[0,-23]});
+    const m=L.marker([r.lat,r.lon],{icon,zIndexOffset:i===0?1000:Math.max(0,500-i)});
+    m.bindPopup(mapPopupHtml(r,i+1),{className:"vk-map-popup",maxWidth:290,minWidth:240,closeButton:true});m.addTo(markerLayer);
+  });
+  if(list.length){const bounds=L.latLngBounds(list.map(r=>[r.lat,r.lon]));map.fitBounds(bounds,{padding:[30,30],maxZoom:7});}
 }
-function toggleMap(){const section=$("mapSection");section.classList.toggle("hidden");if(!section.classList.contains("hidden")){renderMap(rankedList());setTimeout(()=>map?.invalidateSize(),50);}}
+function toggleMap(){const section=$("mapSection"),button=$("showMapBtn");section.classList.toggle("hidden");const open=!section.classList.contains("hidden");button.textContent=open?"✕ Dölj kartan":"🗺 Visa topplistan på karta";button.setAttribute("aria-expanded",String(open));if(open){renderMap(rankedList());setTimeout(()=>map?.invalidateSize(),80);section.scrollIntoView({behavior:"smooth",block:"nearest"});}}
 function renderDay(){
   const list=rankedList();if(!list.length)return;
   if(!$("mapSection").classList.contains("hidden"))renderMap(list);
@@ -932,7 +942,7 @@ $("saveSettings").onclick=e=>{
   localStorage.setItem("vk-settings",JSON.stringify(settings));$("settingsDialog").close();if(!restoreWeatherCache())load();
 };
 if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
-  const reg=await navigator.serviceWorker.register(`sw.js?v=13.7.0`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=13.8.0`);
   reg.update();
   reg.addEventListener("updatefound",()=>{const worker=reg.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller){$("updateBanner").classList.remove("hidden");}})});
   navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload());
