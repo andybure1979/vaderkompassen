@@ -242,11 +242,16 @@ const BATH_PLACES = new Set([
   "Grimstad","Mandal","Drammen","Hamar","Lillehammer","Flåm","Alta",
   "Blåvand","Ringkøbing"
 ]);
-const SURF_PLACES = new Set([
-  "Varberg","Falkenberg","Halmstad","Båstad","Höganäs","Mölle","Kåseberga","Ystad","Skanör",
-  "Klitmøller","Løkken","Hvide Sande","Blåvand","Skagen","Esbjerg",
-  "Stavanger","Haugesund","Bergen","Kristiansand","Mandal","Svolvær","Bodø"
-]);
+const SURF_PROFILES = {
+  "Varberg":{spotName:"Apelviken",offshore:90},"Falkenberg":{spotName:"Olofsbo",offshore:90},"Halmstad":{spotName:"Ringenäs",offshore:90},
+  "Båstad":{spotName:"Mellbystrand",offshore:90},"Höganäs":{spotName:"Viken",offshore:120},"Ystad":{spotName:"Kåseberga",offshore:330},
+  "Skanör":{spotName:"Höllviken",offshore:90},"Klitmøller":{spotName:"Klitmøller",offshore:90},"Løkken":{spotName:"Løkken",offshore:90},
+  "Hvide Sande":{spotName:"Hvide Sande",offshore:90},"Blåvand":{spotName:"Blåvand",offshore:90},"Skagen":{spotName:"Skagen",offshore:180},
+  "Esbjerg":{spotName:"Fanø",offshore:90},"Stavanger":{spotName:"Jæren",offshore:90},"Haugesund":{spotName:"Karmøy",offshore:90},
+  "Bergen":{spotName:"Øygarden",offshore:90},"Kristiansand":{spotName:"Lista",offshore:30},"Mandal":{spotName:"Lista",offshore:30},
+  "Svolvær":{spotName:"Unstad",offshore:120},"Bodø":{spotName:"Mørkved",offshore:120}
+};
+const SURF_PLACES = new Set(Object.keys(SURF_PROFILES));
 const BOAT_PLACES = new Set([
   ...Object.keys(MARINE_COORDS),
   "Motala","Vadstena","Askersund","Karlstad","Kristinehamn","Lidköping","Mariestad","Vänersborg","Åmål",
@@ -271,7 +276,7 @@ const HIKING_PLACES = new Set([
   "Bergen","Ålesund","Molde","Bodø","Lillehammer"
 ]);
 const ACTIVITY_PLACE_SETS={
-  general:BATH_PLACES,coast:new Set(Object.keys(MARINE_COORDS)),surf:SURF_PLACES,boat:BOAT_PLACES,
+  general:null,coast:new Set(Object.keys(MARINE_COORDS)),surf:SURF_PLACES,boat:BOAT_PLACES,
   fishing:FISHING_PLACES,cycling:CYCLING_PLACES,hiking:HIKING_PLACES,ski:SKI_PLACES
 };
 function activityPlaces(list){
@@ -365,9 +370,12 @@ function bearing(fromLat,fromLon,toLat,toLon){
   return normalizeAngle(Math.atan2(Math.sin(λ)*Math.cos(φ2),Math.cos(φ1)*Math.sin(φ2)-Math.sin(φ1)*Math.cos(φ2)*Math.cos(λ))*180/Math.PI);
 }
 function offshoreWindFromDirection(r){
+  const profile=SURF_PROFILES[r.place];
+  if(profile)return profile.offshore;
   const sea=MARINE_COORDS[r.place];
   return sea?bearing(sea[0],sea[1],r.lat,r.lon):null;
 }
+function placeLabel(r){return settings.activity==="surf"?(r.spotName||SURF_PROFILES[r.place]?.spotName||r.place):r.place;}
 function compassDirection(deg){
   if(!Number.isFinite(deg))return "–";
   return ["N","NÖ","Ö","SÖ","S","SV","V","NV"][Math.round(normalizeAngle(deg)/45)%8];
@@ -385,9 +393,8 @@ function activityScore(r){
   const dry=clamp(100-rain*18-risk*.45), sunny=clamp(sun/12*100);
   switch(settings.activity){
     case "general":{
-      const sea=Number.isFinite(r.seaTemp)?bell(r.seaTemp,21,11):55;
-      const pleasantWind=bell(wind,2.5,6);
-      return .30*bell(temp,24,13)+.25*dry+.22*sunny+.13*pleasantWind+.10*sea;
+      const pleasantWind=bell(wind,2.5,7);
+      return .34*bell(temp,25,15)+.30*dry+.24*sunny+.12*pleasantWind;
     }
     case "coast":{
       const sea=Number.isFinite(r.seaTemp)?bell(r.seaTemp,20,10):45;
@@ -400,7 +407,7 @@ function activityScore(r){
       const offshore=surfOffshoreScore(r);
       const period=Number.isFinite(r.wavePeriod)?clamp((r.wavePeriod-4)/10*100):0;
       const swell=Number.isFinite(r.swellHeight)?clamp((r.swellHeight-.15)/2.85*100):0;
-      return .55*wave+.30*offshore+.10*period+.05*swell;
+      return .38*wave+.25*offshore+.27*period+.10*swell;
     }
     case "boat":{
       const waves=Number.isFinite(r.waveHeight)?clamp(100-r.waveHeight*45):0;
@@ -520,8 +527,8 @@ function setDataMode(mode,detail=""){
   badge.className=`data-mode-badge ${mode}`;
   badge.title=detail?`${state.title} ${detail}`:state.title;
 }
-const WEATHER_CACHE_KEY="vk-weather-cache-v13.4.1";
-const POINT_CACHE_KEY="vk-point-cache-v13.4.1";
+const WEATHER_CACHE_KEY="vk-weather-cache-v13.5.0";
+const POINT_CACHE_KEY="vk-point-cache-v13.5.0";
 const BACKGROUND_REFRESH_MS=30*60*1000;
 let refreshTimer=null;
 let loadInProgress=false;
@@ -1023,7 +1030,7 @@ function ensureMap(){
 function renderMap(list){
   ensureMap();if(!map||!markerLayer)return;
   markerLayer.clearLayers();
-  list.forEach(r=>{const color=scoreColor(r.score);const m=L.circleMarker([r.lat,r.lon],{radius:8,fillColor:color,color:"#fff",weight:2,fillOpacity:.92});m.bindPopup(`<strong>${r.place}</strong><br>${r.area} · ${r.region}<br><b>${r.score}/100</b> · ${activitySummary(r.score)}<br>🌡️ ${fmt(r.temp,0)}° · 🌧️ ${fmt(r.rain)} mm · 💨 ${fmt(r.wind)} m/s`);m.addTo(markerLayer);});
+  list.forEach(r=>{const color=scoreColor(r.score);const m=L.circleMarker([r.lat,r.lon],{radius:8,fillColor:color,color:"#fff",weight:2,fillOpacity:.92});m.bindPopup(`<strong>${placeLabel(r)}</strong><br>${r.area} · ${r.region}<br><b>${r.score}/100</b> · ${activitySummary(r.score)}<br>🌡️ ${fmt(r.temp,0)}° · 🌧️ ${fmt(r.rain)} mm · 💨 ${fmt(r.wind)} m/s`);m.addTo(markerLayer);});
   if(list.length){const bounds=L.latLngBounds(list.map(r=>[r.lat,r.lon]));map.fitBounds(bounds,{padding:[24,24],maxZoom:7});}
 }
 function toggleMap(){const section=$("mapSection");section.classList.toggle("hidden");if(!section.classList.contains("hidden")){renderMap(rankedList());setTimeout(()=>map?.invalidateSize(),50);}}
@@ -1032,7 +1039,7 @@ function renderDay(){
   if(!$("mapSection").classList.contains("hidden"))renderMap(list);
   const best=list[0],activity=ACTIVITIES[settings.activity];
   $("bestEyebrow").textContent=`BÄST ${activity.label.toUpperCase()}`;
-  $("bestPlace").textContent=best.place;
+  $("bestPlace").textContent=placeLabel(best);
   $("bestRegion").textContent=settings.sourceMode==="auto"
     ? `${best.area} · ${best.region} · Tyngst: ${best.primarySource}`
     : `${best.area} · ${best.region} · ${best.usedSources.length} valda källor`;
@@ -1041,13 +1048,13 @@ function renderDay(){
   $("bestRain").textContent=`${fmt(best.rain)} mm`;$("bestSun").textContent=`${fmt(best.sun)} h`;
   $("bestWind").textContent=`${fmt(best.wind)} m/s`;$("bestConfidence").textContent=`${best.confidence}%`;
   $("specialMetrics").innerHTML=specialMetricHtml(best);$("specialMetrics").classList.toggle("hidden",!$("specialMetrics").innerHTML);
-  $("mapLink").href=`https://maps.apple.com/?q=${encodeURIComponent(best.place)}&ll=${best.lat},${best.lon}`;
+  $("mapLink").href=`https://maps.apple.com/?q=${encodeURIComponent(placeLabel(best))}&ll=${best.lat},${best.lon}`;
   ["hero","metrics","mapLink"].forEach(id=>$(id).classList.remove("hidden"));
   const ranking=$("ranking");ranking.innerHTML="";
   list.slice(0,15).forEach((r,i)=>{
     const card=$("rankTemplate").content.cloneNode(true);
     card.querySelector(".rank-number").textContent=i+1;
-    card.querySelector("h3").textContent=r.place;
+    card.querySelector("h3").textContent=placeLabel(r);
     card.querySelector("p").textContent=settings.sourceMode==="auto"
       ? `${r.area} · ${r.region} · ${activitySummary(r.score)} · Tyngst: ${r.primarySource}`
       : `${r.area} · ${r.region} · ${activitySummary(r.score)} · ${r.usedSources.join(", ")}`;
