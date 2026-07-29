@@ -503,7 +503,7 @@ async function mapWithConcurrency(items,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
   return results;
 }
-const diagnostics={version:"13.3.2",mode:"checking",lastLoad:null,sources:[]};
+const diagnostics={version:"13.3.3",mode:"checking",lastLoad:null,sources:[]};
 function setDataMode(mode,detail=""){
   diagnostics.mode=mode;
   const badge=$("dataModeBadge");
@@ -520,8 +520,8 @@ function setDataMode(mode,detail=""){
   badge.className=`data-mode-badge ${mode}`;
   badge.title=detail?`${state.title} ${detail}`:state.title;
 }
-const WEATHER_CACHE_KEY="vk-weather-cache-v13.3.2";
-const POINT_CACHE_KEY="vk-point-cache-v13.3.2";
+const WEATHER_CACHE_KEY="vk-weather-cache-v13.3.3";
+const POINT_CACHE_KEY="vk-point-cache-v13.3.3";
 const BACKGROUND_REFRESH_MS=30*60*1000;
 let refreshTimer=null;
 let loadInProgress=false;
@@ -551,7 +551,14 @@ function restoreWeatherCache(){
   $("statusCard").classList.add("hidden");
   setDataMode(cache.cloud?"cachedCloud":"cachedLocal",`Sparad ${formatUpdatedAt(cache.savedAt)}.`);
   renderTabs();renderActivities();renderDay();
-  scheduleBackgroundRefresh(cache.savedAt);
+  // Lokal cache är bara en startvy. När molnläget är aktivt kontrolleras
+  // Worker-API:t direkt i stället för att vänta upp till 30 minuter.
+  if(cloudApiEnabled()&&!cache.cloud){
+    clearTimeout(refreshTimer);
+    refreshTimer=setTimeout(()=>load({background:true}),300);
+  }else{
+    scheduleBackgroundRefresh(cache.savedAt);
+  }
   return true;
 }
 function scheduleBackgroundRefresh(lastSaved=Date.now()){
@@ -1074,7 +1081,7 @@ $("saveSettings").onclick=e=>{
   localStorage.setItem("vk-settings",JSON.stringify(settings));$("settingsDialog").close();if(!restoreWeatherCache())load();
 };
 if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
-  const reg=await navigator.serviceWorker.register(`sw.js?v=13.3.2`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=13.3.3`);
   reg.update();
   reg.addEventListener("updatefound",()=>{const worker=reg.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller){$("updateBanner").classList.remove("hidden");}})});
   navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload());
