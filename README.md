@@ -1,4 +1,4 @@
-## Version 13.8.0 – kartdesign
+## Version 13.8.1 – kartzoom och UX-finputsning
 
 500 prognosorter med bibehållna aktivitetsfilter.
 

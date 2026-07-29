@@ -332,7 +332,7 @@ async function mapWithConcurrency(items,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
   return results;
 }
-const diagnostics={version:"13.8.0",mode:"checking",lastLoad:null,sources:[]};
+const diagnostics={version:"13.8.1",mode:"checking",lastLoad:null,sources:[]};
 function setDataMode(mode,detail=""){
   diagnostics.mode=mode;
   const badge=$("dataModeBadge");
@@ -350,8 +350,8 @@ function setDataMode(mode,detail=""){
   badge.className=`data-mode-badge ${mode}`;
   badge.title=detail?`${state.title} ${detail}`:state.title;
 }
-const WEATHER_CACHE_KEY="vk-weather-cache-v13.8.0";
-const POINT_CACHE_KEY="vk-point-cache-v13.8.0";
+const WEATHER_CACHE_KEY="vk-weather-cache-v13.8.1";
+const POINT_CACHE_KEY="vk-point-cache-v13.8.1";
 const BACKGROUND_REFRESH_MS=30*60*1000;
 let refreshTimer=null;
 let loadInProgress=false;
@@ -860,7 +860,17 @@ function scoreColor(score){return score>=90?"#29974a":score>=80?"#78bd8a":score>
 function scoreClass(score){return score>=90?"perfect":score>=80?"great":score>=70?"good":score>=60?"okay":"poor";}
 function ensureMap(){
   if(map||!window.L)return;
-  map=L.map("weatherMap",{zoomControl:false,attributionControl:true}).setView([60.2,15.4],5);
+  map=L.map("weatherMap",{
+    zoomControl:false,
+    attributionControl:true,
+    dragging:true,
+    touchZoom:true,
+    scrollWheelZoom:true,
+    doubleClickZoom:true,
+    boxZoom:true,
+    keyboard:true,
+    tap:true
+  }).setView([60.2,15.4],5);
   L.control.zoom({position:"bottomright"}).addTo(map);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18,attribution:'&copy; OpenStreetMap',className:"pastel-map-tiles"}).addTo(map);
   markerLayer=L.layerGroup().addTo(map);
@@ -942,7 +952,7 @@ $("saveSettings").onclick=e=>{
   localStorage.setItem("vk-settings",JSON.stringify(settings));$("settingsDialog").close();if(!restoreWeatherCache())load();
 };
 if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
-  const reg=await navigator.serviceWorker.register(`sw.js?v=13.8.0`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=13.8.1`);
   reg.update();
   reg.addEventListener("updatefound",()=>{const worker=reg.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller){$("updateBanner").classList.remove("hidden");}})});
   navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload());
