@@ -1,3 +1,7 @@
+## Version 13.6.0
+
+500 prognosorter med bibehållna aktivitetsfilter.
+
 # Väderkompassen för iPhone
 
 Detta är en mobilanpassad PWA (Progressive Web App). Den öppnas i Safari och kan läggas på iPhones hemskärm.
