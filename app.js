@@ -304,7 +304,7 @@ if(!Array.isArray(settings.sources))settings.sources=Object.keys(MODELS);
 settings.sources=[...new Set(settings.sources.filter(x=>Object.hasOwn(MODELS,x)))];
 if(!settings.sources.length)settings.sources=Object.keys(MODELS);
 
-let dailyResults={}, activeDate=null, map=null, markerLayer=null;
+let dailyResults={}, cloudRankings={}, activeDate=null, map=null, markerLayer=null;
 const $=id=>document.getElementById(id);
 const clamp=n=>Math.max(0,Math.min(100,n));
 const mean=a=>{const b=a.filter(Number.isFinite);return b.length?b.reduce((x,y)=>x+y,0)/b.length:null};
@@ -503,7 +503,7 @@ async function mapWithConcurrency(items,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
   return results;
 }
-const diagnostics={version:"13.3.3",mode:"checking",lastLoad:null,sources:[]};
+const diagnostics={version:"13.4.0",mode:"checking",lastLoad:null,sources:[]};
 function setDataMode(mode,detail=""){
   diagnostics.mode=mode;
   const badge=$("dataModeBadge");
@@ -520,8 +520,8 @@ function setDataMode(mode,detail=""){
   badge.className=`data-mode-badge ${mode}`;
   badge.title=detail?`${state.title} ${detail}`:state.title;
 }
-const WEATHER_CACHE_KEY="vk-weather-cache-v13.3.3";
-const POINT_CACHE_KEY="vk-point-cache-v13.3.3";
+const WEATHER_CACHE_KEY="vk-weather-cache-v13.4.0";
+const POINT_CACHE_KEY="vk-point-cache-v13.4.0";
 const BACKGROUND_REFRESH_MS=30*60*1000;
 let refreshTimer=null;
 let loadInProgress=false;
@@ -619,10 +619,13 @@ async function fetchCloudSnapshot(places){
 }
 function applyCloudSnapshot(snapshot,places){
   dailyResults=snapshot.dailyResults;
+  cloudRankings=snapshot.rankedResults||{};
   activeDate=snapshot.activeDate||Object.keys(dailyResults).sort()[0];
   setDataMode("cloud",`Uppdaterad ${formatUpdatedAt(snapshot.generatedAt||snapshot.savedAt||Date.now())}.`);diagnostics.lastLoad=new Date().toISOString();diagnostics.placeCount=places.length;
   const updated=snapshot.generatedAt||snapshot.savedAt||Date.now();
-  $("modelCount").textContent=`Molnprognos · ${new Set(Object.values(dailyResults).flat().map(r=>r.place)).size}/${places.length} prognosorter · uppdaterad ${formatUpdatedAt(updated)}`;
+  const meta=snapshot.meta||{},available=meta.placesAvailable??new Set(Object.values(dailyResults).flat().map(r=>r.place)).size;
+  const fresh=meta.placesFresh??meta.placesUpdated??available,fallback=meta.placesFallback??Math.max(0,available-fresh);
+  $("modelCount").textContent=`Moln · uppdaterad ${formatUpdatedAt(updated)} · ${available}/${meta.placesRequested||places.length} orter${fallback?` (${fresh} färska, ${fallback} reserv)`:""}`;
   $("modelCount").title="Centralt beräknad och cachad prognos";
   $("statusCard").classList.add("hidden");renderTabs();renderActivities();renderDay();
   saveWeatherCache({sourceStatus:snapshot.sourceStatus||[],cloud:true,generatedAt:updated});
@@ -973,14 +976,16 @@ function aggregate(rows,marineRows=[],snowRows=[]){
   });return result;
 }
 function rankedList(){
-  let list=activityPlaces(dailyResults[activeDate]||[]);
+  const serverRanked=cloudRankings[activeDate];
+  let list=activityPlaces((serverRanked?.length?serverRanked:dailyResults[activeDate])||[]);
   if(["coast","surf","boat","fishing"].includes(settings.activity)){
     const specialized=list.filter(x=>x.hasMarine);if(specialized.length)list=specialized;
   }
   if(settings.activity==="ski"){
     const specialized=list.filter(x=>x.hasSnow);if(specialized.length)list=specialized;
   }
-  list=list.map(x=>({...x,score:Math.round(activityScore(x))}));
+  if(serverRanked?.length)return list.map(x=>({...x,score:Number.isFinite(x.score)?x.score:(x.serverScores?.[settings.activity]??Math.round(activityScore(x)))}));
+  list=list.map(x=>({...x,score:x.serverScores?.[settings.activity]??Math.round(activityScore(x))}));
   return list.sort((a,b)=>b.score-a.score||b.confidence-a.confidence);
 }
 function renderTabs(){
@@ -1081,7 +1086,7 @@ $("saveSettings").onclick=e=>{
   localStorage.setItem("vk-settings",JSON.stringify(settings));$("settingsDialog").close();if(!restoreWeatherCache())load();
 };
 if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
-  const reg=await navigator.serviceWorker.register(`sw.js?v=13.3.3`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=13.4.0`);
   reg.update();
   reg.addEventListener("updatefound",()=>{const worker=reg.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller){$("updateBanner").classList.remove("hidden");}})});
   navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload());
