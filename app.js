@@ -255,13 +255,15 @@ function activityScore(r){
   }
 }
 function activitySummary(score){
-  if(score>=84)return "Utmärkta förhållanden";
-  if(score>=70)return "Bra förhållanden";
-  if(score>=55)return "Okej förhållanden";
-  return "Mindre gynnsamt";
+  if(score>=90)return "Perfekt idag";
+  if(score>=80)return "Mycket bra idag";
+  if(score>=65)return "Bra idag";
+  if(score>=50)return "Okej idag";
+  return "Välj hellre en annan plats";
 }
 function renderActivities(){
   const box=$("activityChoices");box.innerHTML="";
+  document.body.dataset.activity=settings.activity;
   Object.entries(ACTIVITIES).forEach(([key,a])=>{
     const b=document.createElement("button");
     b.type="button";b.className="activity-chip"+(settings.activity===key?" active":"");
@@ -330,7 +332,7 @@ async function mapWithConcurrency(items,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
   return results;
 }
-const diagnostics={version:"13.6.2",mode:"checking",lastLoad:null,sources:[]};
+const diagnostics={version:"13.7.0",mode:"checking",lastLoad:null,sources:[]};
 function setDataMode(mode,detail=""){
   diagnostics.mode=mode;
   const badge=$("dataModeBadge");
@@ -348,8 +350,8 @@ function setDataMode(mode,detail=""){
   badge.className=`data-mode-badge ${mode}`;
   badge.title=detail?`${state.title} ${detail}`:state.title;
 }
-const WEATHER_CACHE_KEY="vk-weather-cache-v13.6.2";
-const POINT_CACHE_KEY="vk-point-cache-v13.6.2";
+const WEATHER_CACHE_KEY="vk-weather-cache-v13.7.0";
+const POINT_CACHE_KEY="vk-point-cache-v13.7.0";
 const BACKGROUND_REFRESH_MS=30*60*1000;
 let refreshTimer=null;
 let loadInProgress=false;
@@ -878,7 +880,7 @@ function renderDay(){
     ? `${best.area} · ${best.region} · Tyngst: ${best.primarySource}`
     : `${best.area} · ${best.region} · ${best.usedSources.length} valda källor`;
   $("bestSummary").textContent=activitySummary(best.score);
-  $("bestScore").textContent=best.score;$("bestTemp").textContent=`${fmt(best.temp,0)}°`;
+  $("bestScore").textContent=best.score;$("hero").dataset.score=best.score;$("bestTemp").textContent=`${fmt(best.temp,0)}°`;
   $("bestRain").textContent=`${fmt(best.rain)} mm`;$("bestSun").textContent=`${fmt(best.sun)} h`;
   $("bestWind").textContent=`${fmt(best.wind)} m/s`;$("bestConfidence").textContent=`${best.confidence}%`;
   $("specialMetrics").innerHTML=specialMetricHtml(best);$("specialMetrics").classList.toggle("hidden",!$("specialMetrics").innerHTML);
@@ -887,6 +889,7 @@ function renderDay(){
   const ranking=$("ranking");ranking.innerHTML="";
   list.slice(0,15).forEach((r,i)=>{
     const card=$("rankTemplate").content.cloneNode(true);
+    card.querySelector(".rank-card").dataset.score=r.score;
     card.querySelector(".rank-number").textContent=i+1;
     card.querySelector("h3").textContent=placeLabel(r);
     card.querySelector("p").textContent=settings.sourceMode==="auto"
@@ -929,7 +932,7 @@ $("saveSettings").onclick=e=>{
   localStorage.setItem("vk-settings",JSON.stringify(settings));$("settingsDialog").close();if(!restoreWeatherCache())load();
 };
 if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
-  const reg=await navigator.serviceWorker.register(`sw.js?v=13.6.2`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=13.7.0`);
   reg.update();
   reg.addEventListener("updatefound",()=>{const worker=reg.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller){$("updateBanner").classList.remove("hidden");}})});
   navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload());

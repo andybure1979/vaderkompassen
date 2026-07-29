@@ -1,4 +1,4 @@
-## Version 13.6.2
+## Version 13.7.0
 
 500 prognosorter med bibehållna aktivitetsfilter.
 
