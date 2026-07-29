@@ -1,4 +1,4 @@
-# Väderkompassen v13.6.1
+# Väderkompassen v13.6.2
 
 ## Korrigering
 
