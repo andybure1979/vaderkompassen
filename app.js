@@ -515,6 +515,7 @@ function setDataMode(mode,detail=""){
   diagnostics.mode=mode;
   const badge=$("dataModeBadge");
   if(!badge)return;
+  if(!badge)return;
   const states={
     cloud:{text:"☁️ Moln",title:"Prognosen hämtades från Väderkompassens molntjänst."},
     local:{text:"📱 Lokal reserv",title:"Molntjänsten kunde inte användas. Prognosen beräknades lokalt i enheten."},
@@ -527,8 +528,8 @@ function setDataMode(mode,detail=""){
   badge.className=`data-mode-badge ${mode}`;
   badge.title=detail?`${state.title} ${detail}`:state.title;
 }
-const WEATHER_CACHE_KEY="vk-weather-cache-v13.5.0";
-const POINT_CACHE_KEY="vk-point-cache-v13.5.0";
+const WEATHER_CACHE_KEY="vk-weather-cache-v13.5.1";
+const POINT_CACHE_KEY="vk-point-cache-v13.5.1";
 const BACKGROUND_REFRESH_MS=30*60*1000;
 let refreshTimer=null;
 let loadInProgress=false;
@@ -627,9 +628,13 @@ async function fetchCloudSnapshot(places){
   }finally{clearTimeout(timer)}
 }
 function applyCloudSnapshot(snapshot,places){
+  const previouslySelectedDate=activeDate;
   dailyResults=snapshot.dailyResults;
   cloudRankings=snapshot.rankedResults||{};
-  activeDate=snapshot.activeDate||Object.keys(dailyResults).sort()[0];
+  const availableDates=Object.keys(dailyResults).sort();
+  activeDate=previouslySelectedDate&&dailyResults[previouslySelectedDate]
+    ?previouslySelectedDate
+    :(snapshot.activeDate&&dailyResults[snapshot.activeDate]?snapshot.activeDate:availableDates[0]);
   setDataMode("cloud",`Uppdaterad ${formatUpdatedAt(snapshot.generatedAt||snapshot.savedAt||Date.now())}.`);diagnostics.lastLoad=new Date().toISOString();diagnostics.placeCount=places.length;
   const updated=snapshot.generatedAt||snapshot.savedAt||Date.now();
   const meta=snapshot.meta||{},available=meta.placesAvailable??new Set(Object.values(dailyResults).flat().map(r=>r.place)).size;
@@ -1001,8 +1006,17 @@ function renderTabs(){
   const nav=$("dayTabs");nav.innerHTML="";
   Object.keys(dailyResults).sort().forEach((day,i)=>{
     const d=new Date(day+"T12:00:00"),b=document.createElement("button");
+    b.type="button";
     b.innerHTML=`${i===0?"Idag":d.toLocaleDateString("sv-SE",{weekday:"short"})}<small>${d.toLocaleDateString("sv-SE",{day:"numeric",month:"numeric"})}</small>`;
-    b.className=day===activeDate?"active":"";b.onclick=()=>{activeDate=day;renderTabs();renderDay()};nav.appendChild(b);
+    b.className=day===activeDate?"active":"";
+    b.setAttribute("aria-pressed",day===activeDate?"true":"false");
+    b.onclick=()=>{
+      activeDate=day;
+      saveWeatherCache({cloud:cloudApiEnabled()});
+      renderTabs();
+      renderDay();
+    };
+    nav.appendChild(b);
   });
 }
 function specialMetricHtml(r){
@@ -1095,7 +1109,7 @@ $("saveSettings").onclick=e=>{
   localStorage.setItem("vk-settings",JSON.stringify(settings));$("settingsDialog").close();if(!restoreWeatherCache())load();
 };
 if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
-  const reg=await navigator.serviceWorker.register(`sw.js?v=13.4.1`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=13.5.1`);
   reg.update();
   reg.addEventListener("updatefound",()=>{const worker=reg.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller){$("updateBanner").classList.remove("hidden");}})});
   navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload());
