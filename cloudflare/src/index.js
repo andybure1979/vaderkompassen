@@ -24,46 +24,54 @@ function authorized(req,env){const h=req.headers.get("x-admin-token")||req.heade
 const chunks=(a,n)=>Array.from({length:Math.ceil(a.length/n)},(_,i)=>a.slice(i*n,(i+1)*n));
 const finite=v=>Number.isFinite(Number(v))?Number(v):null;
 
-async function fetchWeatherBatch(batch){
+async function fetchWeatherBatch(batch,attempt=0){
   const q=new URLSearchParams({
     latitude:batch.map(p=>p[3]).join(','),longitude:batch.map(p=>p[4]).join(','),
     daily:'temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,sunshine_duration,wind_speed_10m_max,wind_direction_10m_dominant,snowfall_sum',
     hourly:'snow_depth,freezing_level_height',timezone:'auto',forecast_days:'7',wind_speed_unit:'ms'
   });
-  const r=await fetch(`https://api.open-meteo.com/v1/forecast?${q}`,{headers:{accept:'application/json'}});
-  if(!r.ok)throw new Error(`Open-Meteo HTTP ${r.status}`);
-  const payload=await r.json();
-  const list=Array.isArray(payload)?payload:[payload];
-  return list.flatMap((data,i)=>{
-    const p=batch[i]; if(!p||!data?.daily?.time)return [];
-    return data.daily.time.map((day,d)=>{
-      const hourlyTimes=data.hourly?.time||[];
-      const dayPrefix=`${day}T`; const idxs=[];
-      hourlyTimes.forEach((t,idx)=>{if(String(t).startsWith(dayPrefix))idxs.push(idx)});
-      const snowDepth=Math.max(0,...idxs.map(idx=>finite(data.hourly?.snow_depth?.[idx])||0));
-      const freezingVals=idxs.map(idx=>finite(data.hourly?.freezing_level_height?.[idx])).filter(Number.isFinite);
-      return {day,place:p[0],area:p[1],region:p[2],lat:p[3],lon:p[4],
-        temp:finite(data.daily.temperature_2m_max?.[d]),min:finite(data.daily.temperature_2m_min?.[d]),
-        rain:finite(data.daily.precipitation_sum?.[d]),risk:finite(data.daily.precipitation_probability_max?.[d]),
-        sun:finite(data.daily.sunshine_duration?.[d])!=null?finite(data.daily.sunshine_duration[d])/3600:null,
-        wind:finite(data.daily.wind_speed_10m_max?.[d]),windDirection:finite(data.daily.wind_direction_10m_dominant?.[d]),
-        models:1,usedSources:['Open-Meteo'],primarySource:'Open-Meteo',confidence:82,
-        waveHeight:null,waveDirection:null,wavePeriod:null,swellHeight:null,swellDirection:null,swellPeriod:null,seaTemp:null,
-        snowDepth:snowDepth||null,newSnow:finite(data.daily.snowfall_sum?.[d]),
-        freezingLevel:freezingVals.length?freezingVals.reduce((a,b)=>a+b,0)/freezingVals.length:null,
-        hasMarine:false,hasSnow:Boolean(snowDepth||finite(data.daily.snowfall_sum?.[d]))};
+  try{
+    const r=await fetch(`https://api.open-meteo.com/v1/forecast?${q}`,{headers:{accept:'application/json'}});
+    if(!r.ok)throw new Error(`Open-Meteo HTTP ${r.status}`);
+    const payload=await r.json();
+    const list=Array.isArray(payload)?payload:[payload];
+    return list.flatMap((data,i)=>{
+      const p=batch[i]; if(!p||!data?.daily?.time)return [];
+      return data.daily.time.map((day,d)=>{
+        const hourlyTimes=data.hourly?.time||[];
+        const dayPrefix=`${day}T`; const idxs=[];
+        hourlyTimes.forEach((t,idx)=>{if(String(t).startsWith(dayPrefix))idxs.push(idx)});
+        const snowDepth=Math.max(0,...idxs.map(idx=>finite(data.hourly?.snow_depth?.[idx])||0));
+        const freezingVals=idxs.map(idx=>finite(data.hourly?.freezing_level_height?.[idx])).filter(Number.isFinite);
+        return {day,place:p[0],area:p[1],region:p[2],lat:p[3],lon:p[4],
+          temp:finite(data.daily.temperature_2m_max?.[d]),min:finite(data.daily.temperature_2m_min?.[d]),
+          rain:finite(data.daily.precipitation_sum?.[d]),risk:finite(data.daily.precipitation_probability_max?.[d]),
+          sun:finite(data.daily.sunshine_duration?.[d])!=null?finite(data.daily.sunshine_duration[d])/3600:null,
+          wind:finite(data.daily.wind_speed_10m_max?.[d]),windDirection:finite(data.daily.wind_direction_10m_dominant?.[d]),
+          models:1,usedSources:['Open-Meteo'],primarySource:'Open-Meteo',confidence:82,
+          waveHeight:null,waveDirection:null,wavePeriod:null,swellHeight:null,swellDirection:null,swellPeriod:null,seaTemp:null,
+          snowDepth:snowDepth||null,newSnow:finite(data.daily.snowfall_sum?.[d]),
+          freezingLevel:freezingVals.length?freezingVals.reduce((a,b)=>a+b,0)/freezingVals.length:null,
+          hasMarine:false,hasSnow:Boolean(snowDepth||finite(data.daily.snowfall_sum?.[d]))};
+      });
     });
-  });
+  }catch(error){
+    if(attempt<2){
+      await new Promise(resolve=>setTimeout(resolve,500*(attempt+1)));
+      return fetchWeatherBatch(batch,attempt+1);
+    }
+    throw error;
+  }
 }
 
 async function buildSnapshot(){
-  const batches=chunks(PLACES,35); const settled=await Promise.allSettled(batches.map(fetchWeatherBatch));
+  const batches=chunks(PLACES,20); const settled=await Promise.allSettled(batches.map(fetchWeatherBatch));
   const rows=settled.filter(x=>x.status==='fulfilled').flatMap(x=>x.value);
   const failures=settled.filter(x=>x.status==='rejected').map(x=>x.reason?.message||'Okänt fel');
   if(!rows.length)throw new Error(`Ingen prognos kunde hämtas: ${failures.join(' · ')}`);
   const dailyResults={}; for(const row of rows)(dailyResults[row.day]||=[]).push(row);
   const days=Object.keys(dailyResults).sort();
-  return {ok:true,version:'13.3.2',generatedAt:new Date().toISOString(),activeDate:days[0]||null,dailyResults,
+  return {ok:true,version:'13.3.3',generatedAt:new Date().toISOString(),activeDate:days[0]||null,dailyResults,
     sourceStatus:[{name:'Open-Meteo',ok:failures.length<batches.length,rows:rows.length,error:failures.join(' · ')}],
     meta:{placesRequested:PLACES.length,placesUpdated:new Set(rows.map(r=>r.place)).size,days:days.length,batches:batches.length,failedBatches:failures.length}};
 }
@@ -84,7 +92,7 @@ async function status(env){
     sb(env,'worker_runs?select=started_at,finished_at,status,message,details&order=started_at.desc&limit=10')
   ]);
   const latest=snapshots?.[0]||null;
-  return {ok:true,service:'Väderkompassen API',version:env.APP_VERSION||'13.3.2',time:new Date().toISOString(),
+  return {ok:true,service:'Väderkompassen API',version:env.APP_VERSION||'13.3.3',time:new Date().toISOString(),
     latestSnapshot:latest?{id:latest.id,generated_at:latest.generated_at,activity:latest.activity,meta:latest.payload?.meta||null}:null,recentRuns:runs||[]};
 }
 async function saveSnapshot(req,env){
@@ -109,7 +117,7 @@ export default {
   async fetch(req,env){
     const c=cors(env); if(req.method==='OPTIONS')return new Response(null,{status:204,headers:c}); const url=new URL(req.url);
     try{
-      if(url.pathname==='/'||url.pathname==='/health')return json({ok:true,service:'Väderkompassen API',version:env.APP_VERSION||'13.3.2',time:new Date().toISOString()},200,c);
+      if(url.pathname==='/'||url.pathname==='/health')return json({ok:true,service:'Väderkompassen API',version:env.APP_VERSION||'13.3.3',time:new Date().toISOString()},200,c);
       if((url.pathname==='/v1/status'||url.pathname==='/status')&&req.method==='GET')return json(await status(env),200,c);
       if(url.pathname==='/v1/verify'&&req.method==='GET'){
         const state=await status(env);
