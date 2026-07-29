@@ -35,11 +35,11 @@ async function fetchWeatherBatch(batch,attempt=0){
     if(!r.ok)throw new Error(`Open-Meteo HTTP ${r.status}`);
     const payload=await r.json();
     const list=Array.isArray(payload)?payload:[payload];
+    if(list.length!==batch.length)throw new Error(`Open-Meteo returnerade ${list.length}/${batch.length} orter`);
     return list.flatMap((data,i)=>{
       const p=batch[i]; if(!p||!data?.daily?.time)return [];
       return data.daily.time.map((day,d)=>{
-        const hourlyTimes=data.hourly?.time||[];
-        const dayPrefix=`${day}T`; const idxs=[];
+        const hourlyTimes=data.hourly?.time||[],dayPrefix=`${day}T`,idxs=[];
         hourlyTimes.forEach((t,idx)=>{if(String(t).startsWith(dayPrefix))idxs.push(idx)});
         const snowDepth=Math.max(0,...idxs.map(idx=>finite(data.hourly?.snow_depth?.[idx])||0));
         const freezingVals=idxs.map(idx=>finite(data.hourly?.freezing_level_height?.[idx])).filter(Number.isFinite);
@@ -52,39 +52,92 @@ async function fetchWeatherBatch(batch,attempt=0){
           waveHeight:null,waveDirection:null,wavePeriod:null,swellHeight:null,swellDirection:null,swellPeriod:null,seaTemp:null,
           snowDepth:snowDepth||null,newSnow:finite(data.daily.snowfall_sum?.[d]),
           freezingLevel:freezingVals.length?freezingVals.reduce((a,b)=>a+b,0)/freezingVals.length:null,
-          hasMarine:false,hasSnow:Boolean(snowDepth||finite(data.daily.snowfall_sum?.[d]))};
+          hasMarine:false,hasSnow:Boolean(snowDepth||finite(data.daily.snowfall_sum?.[d])),stale:false};
       });
     });
   }catch(error){
-    if(attempt<2){
-      await new Promise(resolve=>setTimeout(resolve,500*(attempt+1)));
-      return fetchWeatherBatch(batch,attempt+1);
-    }
+    if(attempt<2){await new Promise(resolve=>setTimeout(resolve,700*(attempt+1)));return fetchWeatherBatch(batch,attempt+1)}
     throw error;
   }
 }
 
-async function buildSnapshot(){
-  const batches=chunks(PLACES,20); const settled=await Promise.allSettled(batches.map(fetchWeatherBatch));
-  const rows=settled.filter(x=>x.status==='fulfilled').flatMap(x=>x.value);
-  const failures=settled.filter(x=>x.status==='rejected').map(x=>x.reason?.message||'Okänt fel');
-  if(!rows.length)throw new Error(`Ingen prognos kunde hämtas: ${failures.join(' · ')}`);
-  const dailyResults={}; for(const row of rows)(dailyResults[row.day]||=[]).push(row);
-  const days=Object.keys(dailyResults).sort();
-  return {ok:true,version:'13.3.3',generatedAt:new Date().toISOString(),activeDate:days[0]||null,dailyResults,
-    sourceStatus:[{name:'Open-Meteo',ok:failures.length<batches.length,rows:rows.length,error:failures.join(' · ')}],
-    meta:{placesRequested:PLACES.length,placesUpdated:new Set(rows.map(r=>r.place)).size,days:days.length,batches:batches.length,failedBatches:failures.length}};
+async function fetchAdaptive(batch,depth=0){
+  try{return {rows:await fetchWeatherBatch(batch),failures:[]}}
+  catch(error){
+    if(batch.length===1)return {rows:[],failures:[{place:batch[0][0],error:error.message}]};
+    const mid=Math.ceil(batch.length/2);
+    await new Promise(resolve=>setTimeout(resolve,250*(depth+1)));
+    const [a,b]=await Promise.all([fetchAdaptive(batch.slice(0,mid),depth+1),fetchAdaptive(batch.slice(mid),depth+1)]);
+    return {rows:[...a.rows,...b.rows],failures:[...a.failures,...b.failures]};
+  }
+}
+async function mapLimit(items,limit,fn){
+  const out=new Array(items.length);let cursor=0;
+  async function runner(){while(cursor<items.length){const i=cursor++;out[i]=await fn(items[i],i)}}
+  await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));return out;
+}
+async function previousSnapshot(env){
+  try{
+    const rows=await sb(env,'forecast_snapshots?select=payload,generated_at&order=generated_at.desc&limit=1');
+    return rows?.[0]?.payload||null;
+  }catch{return null}
+}
+const clamp=n=>Math.max(0,Math.min(100,n));
+const bell=(value,target,width)=>clamp(100-Math.abs(value-target)*(100/width));
+function serverScore(r,activity='general'){
+  const temp=r.temp??0,rain=r.rain??0,risk=r.risk??0,sun=r.sun??0,wind=r.wind??0;
+  const dry=clamp(100-rain*18-risk*.45),sunny=clamp(sun/12*100);
+  switch(activity){
+    case 'general': return .30*bell(temp,24,13)+.25*dry+.22*sunny+.13*bell(wind,2.5,6)+.10*(Number.isFinite(r.seaTemp)?bell(r.seaTemp,21,11):55);
+    case 'coast': return .20*bell(temp,22,12)+.20*dry+.18*sunny+.14*bell(wind,5,6)+.18*(Number.isFinite(r.seaTemp)?bell(r.seaTemp,20,10):45)+.10*(Number.isFinite(r.waveHeight)?bell(r.waveHeight,.6,1.5):45);
+    case 'surf': return .55*(Number.isFinite(r.waveHeight)?clamp((r.waveHeight-.25)/3.25*100):0)+.10*(Number.isFinite(r.wavePeriod)?clamp((r.wavePeriod-4)/10*100):0)+.05*(Number.isFinite(r.swellHeight)?clamp((r.swellHeight-.15)/2.85*100):0);
+    case 'boat': return .16*bell(temp,19,13)+.24*dry+.10*sunny+.30*bell(wind,4,5)+.20*(Number.isFinite(r.waveHeight)?clamp(100-r.waveHeight*45):0);
+    case 'fishing': return .18*bell(temp,16,14)+.25*dry+.10*sunny+.27*bell(wind,3.5,5)+.20*(Number.isFinite(r.waveHeight)?bell(r.waveHeight,.5,1.5):50);
+    case 'cycling': return .30*bell(temp,19,11)+.35*dry+.15*sunny+.20*bell(wind,2.5,5);
+    case 'hiking': return .30*bell(temp,17,12)+.35*dry+.15*sunny+.20*bell(wind,3,6);
+    case 'ski': return .32*(Number.isFinite(r.snowDepth)?clamp(r.snowDepth/80*100):0)+.25*(Number.isFinite(r.newSnow)?clamp(r.newSnow/15*100):0)+.18*bell(temp,-3,12)+.15*bell(wind,3,7)+.10*(Number.isFinite(r.freezingLevel)?clamp(100-r.freezingLevel/18):50);
+    default:return .30*bell(temp,24,13)+.25*dry+.22*sunny+.13*bell(wind,2.5,6)+5.5;
+  }
+}
+const ACTIVITIES=['general','coast','surf','boat','fishing','cycling','hiking','ski'];
+function addServerScores(row){
+  const serverScores=Object.fromEntries(ACTIVITIES.map(a=>[a,Math.round(serverScore(row,a))]));
+  return {...row,serverScores};
+}
+async function buildSnapshot(env){
+  const previous=await previousSnapshot(env),batches=chunks(PLACES,12);
+  const parts=await mapLimit(batches,5,b=>fetchAdaptive(b));
+  const freshRows=parts.flatMap(x=>x.rows),failures=parts.flatMap(x=>x.failures);
+  if(!freshRows.length&&!previous?.dailyResults)throw new Error(`Ingen prognos kunde hämtas: ${failures.map(x=>x.error).join(' · ')}`);
+  const freshPlaces=new Set(freshRows.map(r=>r.place)),missing=PLACES.filter(p=>!freshPlaces.has(p[0])).map(p=>p[0]);
+  const fallbackRows=[];
+  if(previous?.dailyResults&&missing.length){
+    const missingSet=new Set(missing);
+    for(const rows of Object.values(previous.dailyResults))for(const row of rows||[])if(missingSet.has(row.place))fallbackRows.push({...row,stale:true,fallbackFrom:previous.generatedAt||null});
+  }
+  const rows=[...freshRows,...fallbackRows].map(addServerScores),dailyResults={};
+  for(const row of rows)(dailyResults[row.day]||=[]).push(row);
+  const days=Object.keys(dailyResults).sort(),availablePlaces=new Set(rows.map(r=>r.place));
+  return {ok:true,version:'13.4.0',generatedAt:new Date().toISOString(),activeDate:days[0]||null,dailyResults,
+    sourceStatus:[{name:'Open-Meteo',ok:freshPlaces.size>0,rows:freshRows.length,error:failures.map(x=>`${x.place}: ${x.error}`).join(' · ')}],
+    meta:{placesRequested:PLACES.length,placesUpdated:freshPlaces.size,placesFresh:freshPlaces.size,placesFallback:availablePlaces.size-freshPlaces.size,placesAvailable:availablePlaces.size,days:days.length,batches:batches.length,failedBatches:failures.length,failedPlaces:failures.map(x=>x.place)}};
 }
 async function saveBuiltSnapshot(env,snapshot){
   const row={activity:'all',regions:[],areas:[],payload:snapshot,source_status:snapshot.sourceStatus,generated_at:snapshot.generatedAt};
   await sb(env,'forecast_snapshots',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify(row)});
 }
 async function latestSnapshot(env,url){
-  const requested=url.searchParams.get('activity')||'all';
+  const requested=url.searchParams.get('activity')||'general';
   const q=new URLSearchParams({select:'payload,generated_at,source_status,activity,regions,areas',order:'generated_at.desc',limit:'1'});
-  q.set('activity',`in.(${requested},all)`);
+  q.set('activity','in.(all)');
   const rows=await sb(env,`forecast_snapshots?${q}`); if(!rows?.length)return null;
-  return {...rows[0].payload,generatedAt:rows[0].generated_at,sourceStatus:rows[0].source_status||[],activity:rows[0].activity};
+  const payload=rows[0].payload||{},regions=new Set((url.searchParams.get('regions')||'').split(',').filter(Boolean)),areas=new Set((url.searchParams.get('areas')||'').split(',').filter(Boolean));
+  const dailyResults={},rankedResults={};
+  for(const [day,dayRows] of Object.entries(payload.dailyResults||{})){
+    const filtered=(dayRows||[]).filter(r=>(!regions.size||regions.has(r.region))&&(!areas.size||areas.has(r.area))).map(r=>({...r,score:r.serverScores?.[requested]??Math.round(serverScore(r,requested))}));
+    if(filtered.length){dailyResults[day]=filtered;rankedResults[day]=[...filtered].sort((a,b)=>b.score-a.score||(b.confidence||0)-(a.confidence||0));}
+  }
+  return {...payload,dailyResults,rankedResults,generatedAt:rows[0].generated_at,sourceStatus:rows[0].source_status||[],activity:requested,rankingEngine:'cloud-v1'};
 }
 async function status(env){
   const [snapshots,runs]=await Promise.all([
@@ -92,7 +145,7 @@ async function status(env){
     sb(env,'worker_runs?select=started_at,finished_at,status,message,details&order=started_at.desc&limit=10')
   ]);
   const latest=snapshots?.[0]||null;
-  return {ok:true,service:'Väderkompassen API',version:env.APP_VERSION||'13.3.3',time:new Date().toISOString(),
+  return {ok:true,service:'Väderkompassen API',version:env.APP_VERSION||'13.4.0',time:new Date().toISOString(),
     latestSnapshot:latest?{id:latest.id,generated_at:latest.generated_at,activity:latest.activity,meta:latest.payload?.meta||null}:null,recentRuns:runs||[]};
 }
 async function saveSnapshot(req,env){
@@ -105,7 +158,7 @@ async function recordRun(env,statusValue,message,details={},startedAt=new Date()
 async function runUpdate(env,reason='scheduled'){
   const startedAt=new Date().toISOString(),started=Date.now();
   try{
-    const snapshot=await buildSnapshot(); await saveBuiltSnapshot(env,snapshot);
+    const snapshot=await buildSnapshot(env); await saveBuiltSnapshot(env,snapshot);
     const cutoff=new Date(Date.now()-14*864e5).toISOString();
     await sb(env,`forecast_snapshots?generated_at=lt.${encodeURIComponent(cutoff)}`,{method:'DELETE',headers:{Prefer:'return=minimal'}});
     await recordRun(env,'success',`Prognosen uppdaterades (${reason})`,{durationMs:Date.now()-started,...snapshot.meta},startedAt);
@@ -117,7 +170,7 @@ export default {
   async fetch(req,env){
     const c=cors(env); if(req.method==='OPTIONS')return new Response(null,{status:204,headers:c}); const url=new URL(req.url);
     try{
-      if(url.pathname==='/'||url.pathname==='/health')return json({ok:true,service:'Väderkompassen API',version:env.APP_VERSION||'13.3.3',time:new Date().toISOString()},200,c);
+      if(url.pathname==='/'||url.pathname==='/health')return json({ok:true,service:'Väderkompassen API',version:env.APP_VERSION||'13.4.0',time:new Date().toISOString()},200,c);
       if((url.pathname==='/v1/status'||url.pathname==='/status')&&req.method==='GET')return json(await status(env),200,c);
       if(url.pathname==='/v1/verify'&&req.method==='GET'){
         const state=await status(env);
