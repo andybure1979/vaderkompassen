@@ -1,5 +1,23 @@
 import { PLACES } from './places.js';
 
+const COAST_PLACES = new Set([
+  'Malmö','Ystad','Simrishamn','Helsingborg','Båstad','Halmstad','Varberg','Falkenberg','Göteborg','Strömstad','Uddevalla','Smögen',
+  'Kalmar','Västervik','Karlskrona','Ronneby','Borgholm','Färjestaden','Visby','Fårösund','Nyköping','Stockholm','Norrtälje','Gävle',
+  'Hudiksvall','Söderhamn','Sundsvall','Härnösand','Örnsköldsvik','Umeå','Skellefteå','Luleå','Piteå','Haparanda',
+  'Skagen','Løkken','Klitmøller','Esbjerg','Hvide Sande','København','Rønne/Bornholm','Fredrikstad','Kristiansand','Arendal',
+  'Stavanger','Haugesund','Bergen','Ålesund','Molde','Kristiansund','Trondheim','Bodø','Narvik','Svolvær','Tromsø','Hammerfest'
+]);
+const SURF_PROFILES = {
+  'Varberg':{spotName:'Apelviken',offshore:90},'Falkenberg':{spotName:'Olofsbo',offshore:90},'Halmstad':{spotName:'Ringenäs',offshore:90},
+  'Båstad':{spotName:'Mellbystrand',offshore:90},'Höganäs':{spotName:'Viken',offshore:120},'Ystad':{spotName:'Kåseberga',offshore:330},
+  'Skanör':{spotName:'Höllviken',offshore:90},'Klitmøller':{spotName:'Klitmøller',offshore:90},'Løkken':{spotName:'Løkken',offshore:90},
+  'Hvide Sande':{spotName:'Hvide Sande',offshore:90},'Blåvand':{spotName:'Blåvand',offshore:90},'Skagen':{spotName:'Skagen',offshore:180},
+  'Esbjerg':{spotName:'Fanø',offshore:90},'Stavanger':{spotName:'Jæren',offshore:90},'Haugesund':{spotName:'Karmøy',offshore:90},
+  'Bergen':{spotName:'Øygarden',offshore:90},'Kristiansand':{spotName:'Lista',offshore:30},'Mandal':{spotName:'Lista',offshore:30},
+  'Svolvær':{spotName:'Unstad',offshore:120},'Bodø':{spotName:'Mørkved',offshore:120}
+};
+const SURF_PLACES = new Set(Object.keys(SURF_PROFILES));
+
 const JSON_HEADERS={"content-type":"application/json; charset=utf-8","cache-control":"no-store"};
 const json=(data,status=200,extra={})=>new Response(JSON.stringify(data),{status,headers:{...JSON_HEADERS,...extra}});
 const cors=env=>({"access-control-allow-origin":env.ALLOWED_ORIGIN||"*","access-control-allow-methods":"GET,POST,OPTIONS","access-control-allow-headers":"content-type,authorization,x-admin-token"});
@@ -61,6 +79,34 @@ async function fetchWeatherBatch(batch,attempt=0){
   }
 }
 
+
+async function fetchMarineBatch(batch,attempt=0){
+  const q=new URLSearchParams({
+    latitude:batch.map(p=>p[3]).join(','),longitude:batch.map(p=>p[4]).join(','),
+    daily:'wave_height_max,wave_direction_dominant,wave_period_max,swell_wave_height_max,swell_wave_direction_dominant,swell_wave_period_max',
+    hourly:'sea_surface_temperature',timezone:'auto',forecast_days:'7',cell_selection:'sea'
+  });
+  try{
+    const r=await fetch(`https://marine-api.open-meteo.com/v1/marine?${q}`,{headers:{accept:'application/json'}});
+    if(!r.ok)throw new Error(`Marine API HTTP ${r.status}`);
+    const payload=await r.json(),list=Array.isArray(payload)?payload:[payload];
+    if(list.length!==batch.length)throw new Error(`Marine API returnerade ${list.length}/${batch.length} orter`);
+    return list.flatMap((data,i)=>{
+      const p=batch[i]; if(!p||!data?.daily?.time)return [];
+      return data.daily.time.map((day,d)=>{
+        const vals=(data.hourly?.time||[]).map((t,idx)=>String(t).startsWith(`${day}T`)?finite(data.hourly?.sea_surface_temperature?.[idx]):null).filter(Number.isFinite);
+        return {day,place:p[0],waveHeight:finite(data.daily.wave_height_max?.[d]),waveDirection:finite(data.daily.wave_direction_dominant?.[d]),
+          wavePeriod:finite(data.daily.wave_period_max?.[d]),swellHeight:finite(data.daily.swell_wave_height_max?.[d]),
+          swellDirection:finite(data.daily.swell_wave_direction_dominant?.[d]),swellPeriod:finite(data.daily.swell_wave_period_max?.[d]),
+          seaTemp:vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null};
+      });
+    });
+  }catch(error){
+    if(attempt<2){await new Promise(resolve=>setTimeout(resolve,700*(attempt+1)));return fetchMarineBatch(batch,attempt+1)}
+    return [];
+  }
+}
+
 async function fetchAdaptive(batch,depth=0){
   try{return {rows:await fetchWeatherBatch(batch),failures:[]}}
   catch(error){
@@ -84,13 +130,15 @@ async function previousSnapshot(env){
 }
 const clamp=n=>Math.max(0,Math.min(100,n));
 const bell=(value,target,width)=>clamp(100-Math.abs(value-target)*(100/width));
+const angleDiff=(a,b)=>Math.abs(((a-b+540)%360)-180);
+function offshoreScore(r){const p=SURF_PROFILES[r.place];if(!p||!Number.isFinite(r.windDirection))return 0;const alignment=clamp(100-angleDiff(r.windDirection,p.offshore)/90*100);const strength=bell(r.wind??0,4.5,7);return alignment*(.65+.35*strength/100);}
 function serverScore(r,activity='general'){
   const temp=r.temp??0,rain=r.rain??0,risk=r.risk??0,sun=r.sun??0,wind=r.wind??0;
   const dry=clamp(100-rain*18-risk*.45),sunny=clamp(sun/12*100);
   switch(activity){
-    case 'general': return .30*bell(temp,24,13)+.25*dry+.22*sunny+.13*bell(wind,2.5,6)+.10*(Number.isFinite(r.seaTemp)?bell(r.seaTemp,21,11):55);
+    case 'general': return .34*bell(temp,25,15)+.30*dry+.24*sunny+.12*bell(wind,2.5,7);
     case 'coast': return .20*bell(temp,22,12)+.20*dry+.18*sunny+.14*bell(wind,5,6)+.18*(Number.isFinite(r.seaTemp)?bell(r.seaTemp,20,10):45)+.10*(Number.isFinite(r.waveHeight)?bell(r.waveHeight,.6,1.5):45);
-    case 'surf': return .55*(Number.isFinite(r.waveHeight)?clamp((r.waveHeight-.25)/3.25*100):0)+.10*(Number.isFinite(r.wavePeriod)?clamp((r.wavePeriod-4)/10*100):0)+.05*(Number.isFinite(r.swellHeight)?clamp((r.swellHeight-.15)/2.85*100):0);
+    case 'surf': {const wave=Number.isFinite(r.waveHeight)?clamp((r.waveHeight-.3)/2.7*100):0;const period=Number.isFinite(r.wavePeriod)?clamp((r.wavePeriod-4)/10*100):0;const swell=Number.isFinite(r.swellHeight)?clamp((r.swellHeight-.2)/2.8*100):0;return .38*wave+.27*period+.25*offshoreScore(r)+.10*swell;}
     case 'boat': return .16*bell(temp,19,13)+.24*dry+.10*sunny+.30*bell(wind,4,5)+.20*(Number.isFinite(r.waveHeight)?clamp(100-r.waveHeight*45):0);
     case 'fishing': return .18*bell(temp,16,14)+.25*dry+.10*sunny+.27*bell(wind,3.5,5)+.20*(Number.isFinite(r.waveHeight)?bell(r.waveHeight,.5,1.5):50);
     case 'cycling': return .30*bell(temp,19,11)+.35*dry+.15*sunny+.20*bell(wind,2.5,5);
@@ -107,7 +155,11 @@ function addServerScores(row){
 async function buildSnapshot(env){
   const previous=await previousSnapshot(env),batches=chunks(PLACES,12);
   const parts=await mapLimit(batches,5,b=>fetchAdaptive(b));
-  const freshRows=parts.flatMap(x=>x.rows),failures=parts.flatMap(x=>x.failures);
+  let freshRows=parts.flatMap(x=>x.rows);const failures=parts.flatMap(x=>x.failures);
+  const marinePlaces=PLACES.filter(p=>COAST_PLACES.has(p[0])||SURF_PLACES.has(p[0]));
+  const marineParts=await mapLimit(chunks(marinePlaces,12),4,b=>fetchMarineBatch(b));
+  const marineMap=new Map(marineParts.flat().map(m=>[`${m.day}|${m.place}`,m]));
+  freshRows=freshRows.map(row=>{const m=marineMap.get(`${row.day}|${row.place}`);return m?{...row,...m,hasMarine:Number.isFinite(m.waveHeight)||Number.isFinite(m.seaTemp),spotName:SURF_PROFILES[row.place]?.spotName||null,offshoreDirection:SURF_PROFILES[row.place]?.offshore??null}:row});
   if(!freshRows.length&&!previous?.dailyResults)throw new Error(`Ingen prognos kunde hämtas: ${failures.map(x=>x.error).join(' · ')}`);
   const freshPlaces=new Set(freshRows.map(r=>r.place)),missing=PLACES.filter(p=>!freshPlaces.has(p[0])).map(p=>p[0]);
   const fallbackRows=[];
@@ -134,7 +186,7 @@ async function latestSnapshot(env,url){
   const payload=rows[0].payload||{},regions=new Set((url.searchParams.get('regions')||'').split(',').filter(Boolean)),areas=new Set((url.searchParams.get('areas')||'').split(',').filter(Boolean));
   const dailyResults={},rankedResults={};
   for(const [day,dayRows] of Object.entries(payload.dailyResults||{})){
-    const filtered=(dayRows||[]).filter(r=>(!regions.size||regions.has(r.region))&&(!areas.size||areas.has(r.area))).map(r=>({...r,score:r.serverScores?.[requested]??Math.round(serverScore(r,requested))}));
+    const filtered=(dayRows||[]).filter(r=>(!regions.size||regions.has(r.region))&&(!areas.size||areas.has(r.area))&&(requested!=='coast'||COAST_PLACES.has(r.place))&&(requested!=='surf'||SURF_PLACES.has(r.place))).map(r=>({...r,score:r.serverScores?.[requested]??Math.round(serverScore(r,requested))}));
     if(filtered.length){dailyResults[day]=filtered;rankedResults[day]=[...filtered].sort((a,b)=>b.score-a.score||(b.confidence||0)-(a.confidence||0));}
   }
   return {...payload,dailyResults,rankedResults,generatedAt:rows[0].generated_at,sourceStatus:rows[0].source_status||[],activity:requested,rankingEngine:'cloud-v1'};
