@@ -92,3 +92,13 @@ dialog{width:min(520px,calc(100% - 24px));border:0;border-radius:25px;padding:0;
 .winner-details dd{margin:0;color:var(--text);font-size:12px;font-weight:850;text-align:right;overflow-wrap:anywhere}
 @keyframes winnerDetailsIn{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:none}}
 @media(max-width:480px){.winner-details{padding:6px 13px}.winner-details dl>div{gap:10px;padding:9px 0}.winner-details dt,.winner-details dd{font-size:11px}}
+
+/* v13.9.3 – 4–12 kategori-anpassade vinnarmått direkt i kortet */
+.metrics.metrics-four{grid-template-columns:repeat(4,minmax(0,1fr))}
+.metrics.metrics-four article{min-width:0}
+.metrics.metrics-four strong{overflow-wrap:anywhere}
+@media(max-width:480px){
+  .metrics.metrics-four{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+  .metrics.metrics-four article{min-height:88px}
+}
+@media(max-width:350px){.metrics.metrics-four{grid-template-columns:repeat(2,minmax(0,1fr))}}

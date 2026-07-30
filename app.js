@@ -891,31 +891,60 @@ function specialMetricHtml(r){
   return "";
 }
 function winnerMetricCards(r){
-  const card=(icon,value,label,detail="")=>`<article><span>${icon}</span><strong>${value}</strong><small>${label}</small>${detail?`<em>${detail}</em>`:""}</article>`;
-  if(settings.activity==="surf")return [
-    card("🌊",`${fmt(r.waveHeight)} m`,"vågor",`${fmt(r.wavePeriod,0)} s`),
-    card("💨",`${fmt(r.wind)} m/s`,"vind",Number.isFinite(r.windDirection)?compassDirection(r.windDirection):""),
-    card("☀️",`${fmt(r.sun)} h`,"sol"),
-    card("🌡️",`${fmt(r.temp,0)}°`,"temperatur")
-  ].join("");
-  if(["coast","boat","fishing"].includes(settings.activity))return [
-    card("🌊",`${fmt(r.waveHeight)} m`,"vågor",`${fmt(r.wavePeriod,0)} s`),
-    card("💨",`${fmt(r.wind)} m/s`,"vind",Number.isFinite(r.windDirection)?compassDirection(r.windDirection):""),
-    card("🌡️",`${fmt(r.seaTemp,0)}°`,"hav"),
-    card("🌡️",`${fmt(r.temp,0)}°`,"temperatur")
-  ].join("");
-  if(settings.activity==="ski")return [
-    card("❄️",`${fmt(r.snowDepth,0)} cm`,"snödjup"),
-    card("🌨️",`${fmt(r.newSnow)} cm`,"nysnö"),
-    card("🌡️",`${fmt(r.temp,0)}°`,"temperatur"),
-    card("💨",`${fmt(r.wind)} m/s`,"vind")
-  ].join("");
-  return [
-    card("🌡️",`${fmt(r.temp,0)}°`,"temperatur"),
-    card("🌧️",`${fmt(r.rain)} mm`,"regn"),
-    card("☀️",`${fmt(r.sun)} h`,"sol"),
-    card("💨",`${fmt(r.wind)} m/s`,"vind")
-  ].join("");
+  const cards=[];
+  const add=(icon,value,label,detail="",valid=true)=>{if(valid)cards.push({icon,value,label,detail})};
+  const dir=Number.isFinite(r.windDirection)?`${compassDirection(r.windDirection)} ${Math.round(r.windDirection)}°`:"";
+  const waveDir=Number.isFinite(r.waveDirection)?`${compassDirection(r.waveDirection)} ${Math.round(r.waveDirection)}°`:"";
+
+  if(settings.activity==="surf"){
+    add("🌊",`${fmt(r.waveHeight)} m`,"våghöjd",`${fmt(r.wavePeriod,0)} s`,Number.isFinite(r.waveHeight));
+    add("🧭",waveDir,"vågriktning","",Number.isFinite(r.waveDirection));
+    add("🏄",`${fmt(r.swellHeight)} m`,"dyning",`${fmt(r.swellPeriod,0)} s`,Number.isFinite(r.swellHeight));
+    add("💨",`${fmt(r.wind)} m/s`,"vind",dir);
+    add("🏖️",`${Math.round(surfOffshoreScore(r))}/100`,"frånlandsvind","",Number.isFinite(r.windDirection));
+    add("🌡️",`${fmt(r.seaTemp,0)}°`,"hav", "",Number.isFinite(r.seaTemp));
+    add("🌡️",`${fmt(r.temp,0)}°`,"luft");
+    add("🌧️",`${fmt(r.rain)} mm`,"regn");
+    add("☀️",`${fmt(r.sun)} h`,"sol");
+    add("☔",`${fmt(r.risk,0)} %`,"regnrisk");
+    add("🎯",`${fmt(r.confidence,0)} %`,"säkerhet");
+  }else if(["coast","boat","fishing"].includes(settings.activity)){
+    add("🌊",`${fmt(r.waveHeight)} m`,"våghöjd",`${fmt(r.wavePeriod,0)} s`,Number.isFinite(r.waveHeight));
+    add("🧭",waveDir,"vågriktning","",Number.isFinite(r.waveDirection));
+    add("💨",`${fmt(r.wind)} m/s`,"vind",dir);
+    add("🌡️",`${fmt(r.seaTemp,0)}°`,"hav", "",Number.isFinite(r.seaTemp));
+    add("🌡️",`${fmt(r.temp,0)}°`,"luft");
+    add("🌧️",`${fmt(r.rain)} mm`,"regn");
+    add("☔",`${fmt(r.risk,0)} %`,"regnrisk");
+    add("☀️",`${fmt(r.sun)} h`,"sol");
+    add("🎯",`${fmt(r.confidence,0)} %`,"säkerhet");
+  }else if(settings.activity==="ski"){
+    add("❄️",`${fmt(r.snowDepth,0)} cm`,"snödjup","",Number.isFinite(r.snowDepth));
+    add("🌨️",`${fmt(r.newSnow)} cm`,"nysnö","",Number.isFinite(r.newSnow));
+    add("🏔️",`${fmt(r.freezingLevel,0)} m`,"nollgradersnivå","",Number.isFinite(r.freezingLevel));
+    add("🌡️",`${fmt(r.temp,0)}°`,"max");
+    add("🥶",`${fmt(r.min,0)}°`,"min");
+    add("💨",`${fmt(r.wind)} m/s`,"vind",dir);
+    add("🌧️",`${fmt(r.rain)} mm`,"nederbörd");
+    add("☀️",`${fmt(r.sun)} h`,"sol");
+    add("🎯",`${fmt(r.confidence,0)} %`,"säkerhet");
+  }else if(settings.activity==="cycling"){
+    add("🌡️",`${fmt(r.temp,0)}°`,"max");add("🥶",`${fmt(r.min,0)}°`,"min");
+    add("🌧️",`${fmt(r.rain)} mm`,"regn");add("☔",`${fmt(r.risk,0)} %`,"regnrisk");
+    add("💨",`${fmt(r.wind)} m/s`,"vind",dir);add("☀️",`${fmt(r.sun)} h`,"sol");
+    add("🎯",`${fmt(r.confidence,0)} %`,"säkerhet");
+  }else if(settings.activity==="hiking"){
+    add("🌡️",`${fmt(r.temp,0)}°`,"max");add("🥶",`${fmt(r.min,0)}°`,"min");
+    add("🌧️",`${fmt(r.rain)} mm`,"regn");add("☔",`${fmt(r.risk,0)} %`,"regnrisk");
+    add("☀️",`${fmt(r.sun)} h`,"sol");add("💨",`${fmt(r.wind)} m/s`,"vind",dir);
+    add("🎯",`${fmt(r.confidence,0)} %`,"säkerhet");
+  }else{
+    add("🌡️",`${fmt(r.temp,0)}°`,"max");add("🥶",`${fmt(r.min,0)}°`,"min");
+    add("☀️",`${fmt(r.sun)} h`,"sol");add("🌧️",`${fmt(r.rain)} mm`,"regn");
+    add("☔",`${fmt(r.risk,0)} %`,"regnrisk");add("💨",`${fmt(r.wind)} m/s`,"vind",dir);
+    add("🎯",`${fmt(r.confidence,0)} %`,"säkerhet");
+  }
+  return cards.slice(0,12).map(({icon,value,label,detail})=>`<article><span>${icon}</span><strong>${value}</strong><small>${label}</small>${detail?`<em>${detail}</em>`:""}</article>`).join("");
 }
 function winnerDetailsHtml(r){
   const rows=[];
@@ -947,10 +976,14 @@ function winnerDetailsHtml(r){
   add("Position",`${Number(r.lat).toFixed(4)}, ${Number(r.lon).toFixed(4)}`);
   return `<dl>${rows.join("")}</dl>`;
 }
+let winnerDetailsKey="";
 function setWinnerDetails(r){
   const wrap=$("winnerDetailsWrap"),details=$("winnerDetails"),more=$("winnerMore");
+  const key=`${r.day}|${r.place}|${settings.activity}`;
+  const keepOpen=key===winnerDetailsKey&&!details.hidden;
   details.innerHTML=winnerDetailsHtml(r);
-  details.hidden=true;more.textContent="Visa mer";more.setAttribute("aria-expanded","false");
+  details.hidden=!keepOpen;more.textContent=keepOpen?"Visa mindre":"Visa mer";more.setAttribute("aria-expanded",String(keepOpen));
+  winnerDetailsKey=key;
   wrap.classList.remove("hidden");
 }
 function toggleWinnerDetails(){

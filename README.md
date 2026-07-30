@@ -1,4 +1,4 @@
-## Version 13.9.2 – all vinnardata via ”Visa mer”
+## Version 13.9.3 – kategori-anpassade vinnarmått
 
 - Vinnaren har nu en ren textlänk **Visa mer** under faktakorten.
 - Texten expanderar samma vy och visar all metadata som faktiskt finns i prognosresultatet.
