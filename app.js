@@ -366,7 +366,7 @@ async function mapWithConcurrency(items,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
   return results;
 }
-const diagnostics={version:"13.10.0",mode:"checking",lastLoad:null,sources:[]};
+const diagnostics={version:"13.10.1",mode:"checking",lastLoad:null,sources:[]};
 function setDataMode(mode,detail=""){
   diagnostics.mode=mode;
   const badge=$("dataModeBadge");
@@ -384,8 +384,8 @@ function setDataMode(mode,detail=""){
   badge.className=`data-mode-badge ${mode}`;
   badge.title=detail?`${state.title} ${detail}`:state.title;
 }
-const WEATHER_CACHE_KEY="vk-weather-cache-v13.10.0";
-const POINT_CACHE_KEY="vk-point-cache-v13.10.0";
+const WEATHER_CACHE_KEY="vk-weather-cache-v13.10.1";
+const POINT_CACHE_KEY="vk-point-cache-v13.10.1";
 const BACKGROUND_REFRESH_MS=30*60*1000;
 let refreshTimer=null;
 let loadInProgress=false;
@@ -870,7 +870,7 @@ function renderTabs(){
       activeDate=day;
       saveWeatherCache({cloud:cloudApiEnabled()});
       renderTabs();
-      renderDay();
+      if(detailPlace) renderDetail(); else renderDay();
     };
     nav.appendChild(b);
   });
@@ -976,35 +976,20 @@ function winnerDetailsHtml(r){
   add("Position",`${Number(r.lat).toFixed(4)}, ${Number(r.lon).toFixed(4)}`);
   return `<dl>${rows.join("")}</dl>`;
 }
-let detailResult=null;
-function allDaysForPlace(r){
-  return Object.keys(dailyResults).sort().map(day=>(dailyResults[day]||[]).find(x=>x.place===r.place)).filter(Boolean);
+let winnerDetailsKey="";
+function setWinnerDetails(r){
+  const wrap=$("winnerDetailsWrap"),details=$("winnerDetails"),more=$("winnerMore");
+  const key=`${r.day}|${r.place}|${settings.activity}`;
+  const keepOpen=key===winnerDetailsKey&&!details.hidden;
+  details.innerHTML=winnerDetailsHtml(r);
+  details.hidden=!keepOpen;more.textContent=keepOpen?"Visa mindre":"Visa mer";more.setAttribute("aria-expanded",String(keepOpen));
+  winnerDetailsKey=key;
+  wrap.classList.remove("hidden");
 }
-function detailDecisionText(r){
-  const activity=ACTIVITIES[settings.activity];
-  return `${decisionSentence(r)} Aktivitetsbetyget ${r.score}/100 bygger på de vädervärden som är viktigast för ${activity.label.toLowerCase()}.`;
+function toggleWinnerDetails(){
+  const details=$("winnerDetails"),more=$("winnerMore"),open=details.hidden;
+  details.hidden=!open;more.textContent=open?"Visa mindre":"Visa mer";more.setAttribute("aria-expanded",String(open));
 }
-function renderDetailDayCard(r){
-  const date=new Date(r.day+"T12:00:00");
-  return `<button type="button" class="detail-day${r.day===detailResult.day?" active":""}" data-day="${r.day}"><span>${date.toLocaleDateString("sv-SE",{weekday:"short"})}</span><strong>${r.score}</strong><small>${fmt(r.temp,0)}° · ${fmt(r.wind)} m/s</small><em>${activitySummary(r.score)}</em></button>`;
-}
-function openDetails(r){
-  if(!r)return;detailResult=r;
-  const dialog=$("detailDialog"),activity=ACTIVITIES[settings.activity];
-  $("detailTitle").textContent=placeLabel(r);$("detailLocation").textContent=`${r.area} · ${r.region}`;
-  const route=`https://maps.apple.com/?q=${encodeURIComponent(placeLabel(r))}&ll=${r.lat},${r.lon}`;
-  $("detailNavigate").href=route;$("detailRouteButton").href=route;
-  $("detailHero").innerHTML=`<div><span class="eyebrow">${activity.icon} ${activity.label.toUpperCase()}</span><h3>${activitySummary(r.score)}</h3><p>${decisionSentence(r)}</p></div><div class="score-ring"><strong>${r.score}</strong><span>/100</span></div>`;
-  $("detailMetrics").innerHTML=winnerMetricCards(r);
-  $("detailMetricCount").textContent=`${$("detailMetrics").children.length} värden`;
-  $("detailDays").innerHTML=allDaysForPlace(r).map(renderDetailDayCard).join("");
-  $("detailExplanation").textContent=detailDecisionText(r);
-  $("detailAllData").innerHTML=winnerDetailsHtml(r);
-  $("detailDays").querySelectorAll(".detail-day").forEach(b=>b.onclick=()=>{const next=allDaysForPlace(r).find(x=>x.day===b.dataset.day);if(next)openDetails(next)});
-  if(!dialog.open)dialog.showModal();
-  dialog.scrollTop=0;
-}
-function closeDetails(){if($("detailDialog").open)$("detailDialog").close()}
 function scoreColor(score){return score>=90?"#29974a":score>=80?"#78bd8a":score>=70?"#e4bd3d":score>=60?"#ed9653":"#e66b69";}
 function scoreClass(score){return score>=90?"perfect":score>=80?"great":score>=70?"good":score>=60?"okay":"poor";}
 function ensureMap(){
@@ -1050,6 +1035,43 @@ function renderMap(list){
   if(list.length){const bounds=L.latLngBounds(list.map(r=>[r.lat,r.lon]));map.fitBounds(bounds,{padding:[30,30],maxZoom:7});}
 }
 function toggleMap(){const section=$("mapSection"),button=$("showMapBtn");section.classList.toggle("hidden");const open=!section.classList.contains("hidden");button.textContent=open?"✕ Dölj kartan":"🗺 Visa topplistan på karta";button.setAttribute("aria-expanded",String(open));if(open){renderMap(rankedList());setTimeout(()=>map?.invalidateSize(),80);section.scrollIntoView({behavior:"smooth",block:"nearest"});}}
+let detailPlace="";
+function detailRow(){
+  const list=rankedList();
+  return list.find(r=>r.place===detailPlace)||list[0]||null;
+}
+function setMainViewHidden(hidden){
+  ["hero","metrics","winnerDetailsWrap","mapSection","rankingSection","aboutSection"].forEach(id=>$(id)?.classList.toggle("hidden",hidden));
+  document.querySelector(".map-actions")?.classList.toggle("hidden",hidden);
+}
+function openDetail(r){
+  detailPlace=r.place;
+  setMainViewHidden(true);
+  $("detailPage").classList.remove("hidden");
+  renderDetail();
+  window.scrollTo({top:Math.max(0,$("dayTabs").offsetTop-12),behavior:"smooth"});
+}
+function closeDetail(){
+  detailPlace="";
+  $("detailPage").classList.add("hidden");
+  setMainViewHidden(false);
+  renderDay();
+  window.scrollTo({top:Math.max(0,$("dayTabs").offsetTop-12),behavior:"smooth"});
+}
+function renderDetail(){
+  const r=detailRow();if(!r)return;
+  const activity=ACTIVITIES[settings.activity];
+  $("detailEyebrow").textContent=`${activity.label.toUpperCase()} · ${new Date(r.day+"T12:00:00").toLocaleDateString("sv-SE",{weekday:"long"}).toUpperCase()}`;
+  $("detailPlace").textContent=placeLabel(r);
+  $("detailRegion").textContent=`${r.area} · ${r.region}`;
+  $("detailSummary").textContent=activitySummary(r.score);
+  $("detailReason").textContent=decisionSentence(r);
+  $("detailScore").textContent=r.score;
+  $("detailMetrics").innerHTML=winnerMetricCards(r);
+  $("detailData").innerHTML=winnerDetailsHtml(r);
+  $("detailMapLink").href=`https://maps.apple.com/?q=${encodeURIComponent(placeLabel(r))}&ll=${r.lat},${r.lon}`;
+  $("detailPage").dataset.score=r.score;
+}
 function renderDay(){
   const list=rankedList();if(!list.length)return;
   if(!$("mapSection").classList.contains("hidden"))renderMap(list);
@@ -1063,9 +1085,9 @@ function renderDay(){
   $("bestReason").textContent=decisionSentence(best);
   $("bestScore").textContent=best.score;$("hero").dataset.score=best.score;
   $("metrics").innerHTML=winnerMetricCards(best);
-  detailResult=best;
+  setWinnerDetails(best);
   $("mapLink").href=`https://maps.apple.com/?q=${encodeURIComponent(placeLabel(best))}&ll=${best.lat},${best.lon}`;
-  ["hero","metrics","mapLink","winnerActions"].forEach(id=>$(id).classList.remove("hidden"));
+  ["hero","metrics","mapLink"].forEach(id=>$(id).classList.remove("hidden"));
   const ranking=$("ranking");ranking.innerHTML="";
   list.slice(0,15).forEach((r,i)=>{
     const card=$("rankTemplate").content.cloneNode(true);
@@ -1075,8 +1097,9 @@ function renderDay(){
     card.querySelector("p").textContent=`${r.area} · ${r.region} · ${activitySummary(r.score)}`;
     card.querySelector(".mini-metrics").innerHTML=`<span>🌡️ ${fmt(r.temp,0)}°</span><span>🌧️ ${fmt(r.rain)} mm</span><span>☀️ ${fmt(r.sun)} h</span><span>💨 ${fmt(r.wind)} m/s</span>${specialMetricHtml(r)}<span>🎯 ${r.confidence}%</span>`;
     card.querySelector(".rank-score").textContent=r.score;
-    const rankCard=card.querySelector(".rank-card");rankCard.tabIndex=0;rankCard.setAttribute("role","button");rankCard.setAttribute("aria-label",`Visa detaljer för ${placeLabel(r)}`);
-    rankCard.onclick=()=>openDetails(r);rankCard.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openDetails(r)}};
+    const rankCard=card.querySelector(".rank-card");
+    rankCard.tabIndex=0;rankCard.setAttribute("role","button");rankCard.setAttribute("aria-label",`Visa detaljer för ${placeLabel(r)}`);
+    rankCard.onclick=()=>openDetail(r);rankCard.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openDetail(r)}};
     ranking.appendChild(card);
   });
 }
@@ -1088,10 +1111,9 @@ function syncSettings(){
   $("sourceMode").value=settings.sourceMode;renderRegionChoices();renderSourceChoices();
 }
 $("showMapBtn").onclick=toggleMap;
-$("openBestDetails").onclick=()=>openDetails(rankedList()[0]);
-$("closeDetails").onclick=closeDetails;
-$("detailCloseBottom").onclick=closeDetails;
-$("detailDialog").addEventListener("click",e=>{if(e.target===$("detailDialog"))closeDetails()});
+$("winnerMore").onclick=toggleWinnerDetails;
+$("openWinnerDetail").onclick=()=>{const r=rankedList()[0];if(r)openDetail(r)};
+$("detailBack").onclick=closeDetail;
 $("settingsBtn").onclick=()=>{syncSettings();$("settingsDialog").showModal()};
 $("tempTarget").oninput=e=>$("tempOut").textContent=`${e.target.value} °C`;
 $("sourceMode").onchange=renderSourceChoices;
@@ -1117,7 +1139,7 @@ $("saveSettings").onclick=e=>{
   localStorage.setItem("vk-settings",JSON.stringify(settings));$("settingsDialog").close();if(!restoreWeatherCache())load();
 };
 if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
-  const reg=await navigator.serviceWorker.register(`sw.js?v=13.9.0`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=13.10.1`);
   reg.update();
   reg.addEventListener("updatefound",()=>{const worker=reg.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller){$("updateBanner").classList.remove("hidden");}})});
   navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload());

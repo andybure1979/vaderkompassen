@@ -101,21 +101,18 @@ dialog{width:min(520px,calc(100% - 24px));border:0;border-radius:25px;padding:0;
   .metrics.metrics-four{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
   .metrics.metrics-four article{min-height:88px}
 }
-@media(max-width:350px){.metrics.metrics-four{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}.metrics.metrics-four article{padding-inline:2px}.metrics.metrics-four strong{font-size:12px}}
+@media(max-width:350px){.metrics.metrics-four{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}.metrics.metrics-four article{padding-left:2px;padding-right:2px}.metrics.metrics-four strong{font-size:12px}}
 
 
-/* v13.10.0 – upp till 12 mått i fyrkolumnsrader och riktig detaljsida */
-.winner-actions{display:flex;justify-content:center;margin:-4px 0 18px}.detail-primary{width:min(360px,100%);border:0;cursor:pointer}
-.rank-card[role="button"]{cursor:pointer}.rank-card[role="button"]:focus-visible{outline:3px solid color-mix(in srgb,var(--activity) 55%,white);outline-offset:2px}
-.detail-dialog{width:min(760px,100%);max-width:760px;height:min(94dvh,980px);max-height:94dvh;margin:auto;padding:0;border:0;border-radius:26px;background:var(--surface);box-shadow:0 24px 90px #17343c55;overflow:auto}
-.detail-dialog::backdrop{background:#19333b88;backdrop-filter:blur(5px)}.detail-shell{padding:0 18px calc(88px + env(safe-area-inset-bottom))}
-.detail-header{position:sticky;top:0;z-index:10;margin:0 -18px;padding:14px 18px;display:grid;grid-template-columns:42px 1fr 42px;align-items:center;gap:8px;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(14px);border-bottom:1px solid var(--border)}
-.detail-header h2{margin:0;font-size:20px}.detail-header p{margin:2px 0 0;color:var(--muted);font-size:12px}.detail-back,.detail-nav{width:38px;height:38px;border:1px solid var(--border);border-radius:50%;display:grid;place-items:center;background:#fff;color:var(--text);font-size:21px;text-decoration:none;cursor:pointer}
-.detail-hero{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin:18px 0 14px;padding:20px;background:linear-gradient(145deg,color-mix(in srgb,var(--activity) 14%,white),#fff);border:1px solid color-mix(in srgb,var(--activity) 24%,var(--border));border-radius:22px;box-shadow:var(--shadow-soft)}
-.detail-hero h3{margin:8px 0 4px;font-size:22px}.detail-hero p{margin:0;color:var(--muted);line-height:1.5;font-size:13px}.detail-hero .score-ring{flex:0 0 84px;width:84px;height:84px}
-.detail-section-head{display:flex;align-items:end;justify-content:space-between;gap:10px;margin:20px 1px 9px}.detail-section-head h3{margin:0;font-size:17px}.detail-section-head span{color:var(--muted);font-size:11px;font-weight:750}
-.detail-metrics{margin:0!important}.detail-panel{margin-top:18px;padding:15px;background:var(--card);border:1px solid var(--border);border-radius:20px;box-shadow:var(--shadow-soft)}.detail-panel .detail-section-head{margin:0 0 11px}
-.detail-days{display:grid;grid-template-columns:repeat(4,minmax(112px,1fr));gap:8px;overflow-x:auto;padding-bottom:3px}.detail-day{appearance:none;border:1px solid var(--border);border-radius:15px;background:#fff;padding:11px 8px;text-align:left;display:grid;gap:3px;cursor:pointer;min-width:112px}.detail-day.active{border-color:var(--activity);background:color-mix(in srgb,var(--activity) 9%,white)}.detail-day span{text-transform:capitalize;color:var(--muted);font-size:11px;font-weight:750}.detail-day strong{font-size:24px;color:var(--activity-deep,var(--primary-deep))}.detail-day small{font-size:11px;font-weight:700}.detail-day em{font-size:10px;color:var(--muted);font-style:normal}
-.detail-panel details summary{font-weight:850;cursor:pointer}.detail-panel details p{color:var(--muted);font-size:13px;line-height:1.55}.detail-panel .winner-details{box-shadow:none;border:0;padding:5px 0 0;margin:0;background:transparent}
-.detail-sticky-actions{position:fixed;z-index:11;left:50%;bottom:max(12px,env(safe-area-inset-bottom));transform:translateX(-50%);width:min(720px,calc(100% - 36px));display:grid;grid-template-columns:2fr 1fr;gap:8px;padding:9px;background:rgba(255,255,255,.9);border:1px solid var(--border);border-radius:18px;box-shadow:0 12px 38px #17343c28;backdrop-filter:blur(14px)}.detail-sticky-actions a,.detail-sticky-actions button{min-height:46px;border-radius:13px;display:grid;place-items:center;text-decoration:none;font-weight:850}.detail-sticky-actions button{border:1px solid var(--border);background:#fff;color:var(--text)}
-@media(max-width:560px){.detail-dialog{width:100%;height:100dvh;max-height:100dvh;border-radius:0}.detail-shell{padding-inline:12px}.detail-header{margin-inline:-12px;padding-inline:12px}.detail-hero{padding:16px}.detail-hero .score-ring{flex-basis:72px;width:72px;height:72px}.detail-days{grid-template-columns:repeat(4,112px)}.detail-sticky-actions{width:calc(100% - 20px)}.detail-metrics article{min-height:88px}}
+/* v13.10.1 – riktig detaljsida med synligt betyg och global dagväljare */
+.winner-detail-actions{display:flex;justify-content:center;align-items:center;gap:8px;flex-wrap:wrap}
+.detail-primary{appearance:none;border:0;border-radius:999px;background:var(--activity);color:#fff;padding:10px 15px;font:inherit;font-size:13px;font-weight:850;box-shadow:var(--shadow-soft);cursor:pointer}
+.rank-card{cursor:pointer}
+.detail-page{margin-top:3px;animation:detailIn .2s ease-out}
+.detail-back{appearance:none;border:0;background:transparent;color:var(--activity-deep,var(--primary-deep));padding:7px 2px 13px;font:inherit;font-size:13px;font-weight:850;cursor:pointer}
+.detail-hero{display:flex;justify-content:space-between;align-items:center;gap:17px;background:linear-gradient(145deg,var(--activity-soft),#fff);border:1px solid color-mix(in srgb,var(--activity) 18%,var(--border));border-radius:25px;padding:21px;box-shadow:var(--shadow);margin-bottom:12px}
+.detail-hero h2{font-size:28px;line-height:1.05;margin:5px 0 4px;letter-spacing:-.035em}.detail-hero p{margin:3px 0}.detail-score-ring{flex:0 0 92px;width:92px;height:92px}.detail-score-ring strong{font-size:34px}
+.detail-data-card{margin-top:16px}.detail-data-card .section-heading{margin-bottom:8px}.detail-data-card .winner-details{margin-top:0}
+.detail-actions{margin:15px 0 22px}.detail-actions .primary{text-decoration:none}
+@keyframes detailIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+@media(max-width:480px){.detail-hero{padding:18px 15px}.detail-hero h2{font-size:24px}.detail-score-ring{flex-basis:78px;width:78px;height:78px}.detail-score-ring strong{font-size:29px}}
