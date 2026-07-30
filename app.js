@@ -1038,7 +1038,7 @@ function toggleMap(){const section=$("mapSection"),button=$("showMapBtn");sectio
 let detailPlace="";
 let mainListScrollY=0;
 let mainViewState=null;
-const MAIN_VIEW_IDS=["hero","metrics","winnerDetailsWrap","mapSection","rankingSection","aboutSection"];
+const MAIN_VIEW_IDS=["hero","metrics","mapSection","rankingSection","aboutSection"];
 function detailRow(){
   const list=rankedList();
   return list.find(r=>r.place===detailPlace)||null;
@@ -1089,7 +1089,8 @@ function closeDetail(){
   requestAnimationFrame(()=>requestAnimationFrame(()=>window.scrollTo({top:restoreY,behavior:"auto"})));
 }
 function renderDetail(){
-  const r=detailRow();if(!r)return;
+  const r=detailRow();
+  if(!r){ closeDetail(); return; }
   const activity=ACTIVITIES[settings.activity];
   $("detailEyebrow").textContent=`${activity.label.toUpperCase()} · ${new Date(r.day+"T12:00:00").toLocaleDateString("sv-SE",{weekday:"long"}).toUpperCase()}`;
   $("detailPlace").textContent=placeLabel(r);
@@ -1103,14 +1104,8 @@ function renderDetail(){
   $("detailPage").dataset.score=r.score;
 }
 function renderDay(){
-  // Ett sent prognossvar eller en omrendering får aldrig återvisa vinnaren
-  // ovanför en öppen detaljsida. Detaljläget har alltid företräde.
-  if(detailPlace){
-    hideMainView();
-    $("detailPage").classList.remove("hidden");
-    renderDetail();
-    return;
-  }
+  // Sena prognossvar får inte återställa vinnarkortet medan detaljsidan är öppen.
+  if(detailPlace){ renderDetail(); return; }
   const list=rankedList();if(!list.length)return;
   if(!$("mapSection").classList.contains("hidden"))renderMap(list);
   const best=list[0],activity=ACTIVITIES[settings.activity];
@@ -1123,9 +1118,12 @@ function renderDay(){
   $("bestReason").textContent=decisionSentence(best);
   $("bestScore").textContent=best.score;$("hero").dataset.score=best.score;
   $("metrics").innerHTML=winnerMetricCards(best);
-  $("winnerDetailsWrap").classList.remove("hidden");
   $("mapLink").href=`https://maps.apple.com/?q=${encodeURIComponent(placeLabel(best))}&ll=${best.lat},${best.lon}`;
   ["hero","metrics","mapLink"].forEach(id=>$(id).classList.remove("hidden"));
+  const hero=$("hero");
+  hero.tabIndex=0;
+  hero.setAttribute("role","button");
+  hero.setAttribute("aria-label",`Visa detaljer för ${placeLabel(best)}`);
   const ranking=$("ranking");ranking.innerHTML="";
   list.slice(0,15).forEach((r,i)=>{
     const card=$("rankTemplate").content.cloneNode(true);
@@ -1149,7 +1147,8 @@ function syncSettings(){
   $("sourceMode").value=settings.sourceMode;renderRegionChoices();renderSourceChoices();
 }
 $("showMapBtn").onclick=toggleMap;
-$("openWinnerDetail").onclick=()=>{const r=rankedList()[0];if(r)openDetail(r)};
+$("hero").onclick=()=>{const r=rankedList()[0];if(r&&!detailPlace)openDetail(r)};
+$("hero").onkeydown=e=>{if((e.key==="Enter"||e.key===" ")&&!detailPlace){e.preventDefault();const r=rankedList()[0];if(r)openDetail(r)}};
 $("detailBack").onclick=closeDetail;
 $("settingsBtn").onclick=()=>{syncSettings();$("settingsDialog").showModal()};
 $("settingsClose").onclick=()=>$("settingsDialog").close();

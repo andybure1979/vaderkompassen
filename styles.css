@@ -119,3 +119,9 @@ dialog{width:min(520px,calc(100% - 24px));border:0;border-radius:25px;padding:0;
 
 /* v13.10.4 */
 #winnerDetailsWrap{display:flex;justify-content:center;margin:-7px 0 17px}
+
+
+/* v13.10.6 – hela vinnarkortet öppnar detaljsidan */
+#hero[role="button"]{cursor:pointer}
+#hero[role="button"]:focus-visible{outline:3px solid var(--activity);outline-offset:4px}
+#hero[role="button"]:active{transform:scale(.992)}
