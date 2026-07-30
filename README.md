@@ -1,3 +1,7 @@
+## Version 13.9.0 – tydligare beslut och rekommendationer
+
+Den högst rankade platsen förklaras nu med en kort mänsklig motivering och tre aktivitetsrelevanta nyckelfaktorer. Topplistan är enklare att skanna och visar plats, område, omdöme och väderdata utan teknisk källtext. Ingen ranking-, filter-, kart- eller backendlogik har ändrats.
+
 ## Version 13.8.3 – regional snapshot och CPU-korrigering
 
 Den här versionen minskar CPU-belastningen i `GET /v1/forecast`. Workern sparar prognosen både som komplett snapshot och som regionala del-snapshots. Prognosanrop läser bara de regioner användaren har valt i stället för hela databasen med 500 orter.

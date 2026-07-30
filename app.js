@@ -261,6 +261,40 @@ function activitySummary(score){
   if(score>=50)return "Okej idag";
   return "Välj hellre en annan plats";
 }
+function decisionReasons(r){
+  const reasons=[];
+  const add=(icon,label,value)=>reasons.push({icon,label,value});
+  const a=settings.activity;
+  if(a==="surf"){
+    if(Number.isFinite(r.waveHeight))add("🌊","Vågor",`${fmt(r.waveHeight)} m`);
+    if(Number.isFinite(r.wavePeriod))add("↔️","Period",`${fmt(r.wavePeriod,0)} s`);
+    add("💨","Vind",`${fmt(r.wind)} m/s ${Number.isFinite(r.windDirection)?compassDirection(r.windDirection):""}`.trim());
+  }else if(a==="ski"){
+    if(Number.isFinite(r.snowDepth))add("❄️","Snö",`${fmt(r.snowDepth,0)} cm`);
+    if(Number.isFinite(r.newSnow))add("🌨️","Nysnö",`${fmt(r.newSnow)} cm`);
+    add("🌡️","Temperatur",`${fmt(r.temp,0)}°`);
+  }else if(["coast","boat","fishing"].includes(a)){
+    add("💨","Vind",`${fmt(r.wind)} m/s`);
+    if(Number.isFinite(r.waveHeight))add("🌊","Vågor",`${fmt(r.waveHeight)} m`);
+    add("☀️","Sol",`${fmt(r.sun)} h`);
+  }else{
+    add("☀️","Sol",`${fmt(r.sun)} h`);
+    add("🌧️","Regn",`${fmt(r.rain)} mm`);
+    add("🌡️","Temperatur",`${fmt(r.temp,0)}°`);
+  }
+  return reasons.slice(0,3);
+}
+function decisionSentence(r){
+  const a=settings.activity;
+  if(a==="surf")return `Bäst kombination av vågor, period och vind bland de valda platserna.`;
+  if(a==="ski")return `Bäst kombination av snö, temperatur och prognossäkerhet.`;
+  if(a==="coast")return `Bäst kustläge utifrån vind, vågor och väder.`;
+  if(a==="boat")return `Bäst båtläge utifrån vind, vågor och nederbörd.`;
+  if(a==="fishing")return `Bäst fiskeläge utifrån vind, nederbörd och temperatur.`;
+  if(a==="cycling")return `Bäst cykelläge utifrån vind, regn och temperatur.`;
+  if(a==="hiking")return `Bäst vandringsläge utifrån regn, vind och temperatur.`;
+  return `Bäst helhetsläge bland de platser och områden du valt.`;
+}
 function renderActivities(){
   const box=$("activityChoices");box.innerHTML="";
   document.body.dataset.activity=settings.activity;
@@ -332,7 +366,7 @@ async function mapWithConcurrency(items,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
   return results;
 }
-const diagnostics={version:"13.8.3",mode:"checking",lastLoad:null,sources:[]};
+const diagnostics={version:"13.9.0",mode:"checking",lastLoad:null,sources:[]};
 function setDataMode(mode,detail=""){
   diagnostics.mode=mode;
   const badge=$("dataModeBadge");
@@ -350,8 +384,8 @@ function setDataMode(mode,detail=""){
   badge.className=`data-mode-badge ${mode}`;
   badge.title=detail?`${state.title} ${detail}`:state.title;
 }
-const WEATHER_CACHE_KEY="vk-weather-cache-v13.8.3";
-const POINT_CACHE_KEY="vk-point-cache-v13.8.3";
+const WEATHER_CACHE_KEY="vk-weather-cache-v13.9.0";
+const POINT_CACHE_KEY="vk-point-cache-v13.9.0";
 const BACKGROUND_REFRESH_MS=30*60*1000;
 let refreshTimer=null;
 let loadInProgress=false;
@@ -900,6 +934,8 @@ function renderDay(){
     ? `${best.area} · ${best.region} · Tyngst: ${best.primarySource}`
     : `${best.area} · ${best.region} · ${best.usedSources.length} valda källor`;
   $("bestSummary").textContent=activitySummary(best.score);
+  $("bestReason").textContent=decisionSentence(best);
+  $("bestReasons").innerHTML=decisionReasons(best).map(x=>`<span><b>${x.icon} ${x.value}</b><small>${x.label}</small></span>`).join("");
   $("bestScore").textContent=best.score;$("hero").dataset.score=best.score;$("bestTemp").textContent=`${fmt(best.temp,0)}°`;
   $("bestRain").textContent=`${fmt(best.rain)} mm`;$("bestSun").textContent=`${fmt(best.sun)} h`;
   $("bestWind").textContent=`${fmt(best.wind)} m/s`;$("bestConfidence").textContent=`${best.confidence}%`;
@@ -912,9 +948,7 @@ function renderDay(){
     card.querySelector(".rank-card").dataset.score=r.score;
     card.querySelector(".rank-number").textContent=i+1;
     card.querySelector("h3").textContent=placeLabel(r);
-    card.querySelector("p").textContent=settings.sourceMode==="auto"
-      ? `${r.area} · ${r.region} · ${activitySummary(r.score)} · Tyngst: ${r.primarySource}`
-      : `${r.area} · ${r.region} · ${activitySummary(r.score)} · ${r.usedSources.join(", ")}`;
+    card.querySelector("p").textContent=`${r.area} · ${r.region} · ${activitySummary(r.score)}`;
     card.querySelector(".mini-metrics").innerHTML=`<span>🌡️ ${fmt(r.temp,0)}°</span><span>🌧️ ${fmt(r.rain)} mm</span><span>☀️ ${fmt(r.sun)} h</span><span>💨 ${fmt(r.wind)} m/s</span>${specialMetricHtml(r)}<span>🎯 ${r.confidence}%</span>`;
     card.querySelector(".rank-score").textContent=r.score;ranking.appendChild(card);
   });
@@ -952,7 +986,7 @@ $("saveSettings").onclick=e=>{
   localStorage.setItem("vk-settings",JSON.stringify(settings));$("settingsDialog").close();if(!restoreWeatherCache())load();
 };
 if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
-  const reg=await navigator.serviceWorker.register(`sw.js?v=13.8.3`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=13.9.0`);
   reg.update();
   reg.addEventListener("updatefound",()=>{const worker=reg.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller){$("updateBanner").classList.remove("hidden");}})});
   navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload());
