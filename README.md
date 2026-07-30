@@ -1,3 +1,11 @@
+## Version 13.10.0 – detaljsida och kategori-anpassad metadata
+
+- Vinnaren visar 4–12 relevanta vädermått beroende på aktivitet.
+- Måtten ligger alltid fyra per rad, även på mobil.
+- Ny detaljsida för vinnaren och alla platser i topplistan.
+- Detaljsidan visar beslut, aktivitetsmått, kommande dagar, full prognosdata, källor och navigering.
+- Ingen databasändring krävs.
+
 ## Version 13.9.3 – kategori-anpassade vinnarmått
 
 - Vinnaren har nu en ren textlänk **Visa mer** under faktakorten.
