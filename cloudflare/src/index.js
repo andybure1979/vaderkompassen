@@ -170,7 +170,7 @@ async function buildSnapshot(env){
   const rows=[...freshRows,...fallbackRows].map(addServerScores),dailyResults={};
   for(const row of rows)(dailyResults[row.day]||=[]).push(row);
   const days=Object.keys(dailyResults).sort(),availablePlaces=new Set(rows.map(r=>r.place));
-  return {ok:true,version:'13.8.3',generatedAt:new Date().toISOString(),activeDate:days[0]||null,dailyResults,
+  return {ok:true,version:'13.9.0',generatedAt:new Date().toISOString(),activeDate:days[0]||null,dailyResults,
     sourceStatus:[{name:'Open-Meteo',ok:freshPlaces.size>0,rows:freshRows.length,error:failures.map(x=>`${x.place}: ${x.error}`).join(' · ')}],
     meta:{placesRequested:PLACES.length,placesUpdated:freshPlaces.size,placesFresh:freshPlaces.size,placesFallback:availablePlaces.size-freshPlaces.size,placesAvailable:availablePlaces.size,days:days.length,batches:batches.length,failedBatches:failures.length,failedPlaces:failures.map(x=>x.place)}};
 }
@@ -220,7 +220,7 @@ async function latestSnapshot(env,url){
     storedRows=(storedRows||[]).filter(stored=>Array.isArray(stored.regions)&&stored.regions.some(region=>requestedRegions.has(region)));
   }
 
-  // Bakåtkompatibel reserv innan första 13.8.3-snapshoten har skapats.
+  // Bakåtkompatibel reserv innan första 13.9.0-snapshoten har skapats.
   if(!storedRows?.length){
     const fallbackQ=new URLSearchParams({select:'payload,generated_at,source_status',activity:'eq.all',order:'generated_at.desc',limit:'1'});
     storedRows=await sb(env,`forecast_snapshots?${fallbackQ}`);
@@ -252,7 +252,7 @@ async function latestSnapshot(env,url){
     if(!dailyResults[day].length)delete dailyResults[day];
   }
   const firstPayload=storedRows[0].payload||{};
-  return {ok:firstPayload.ok!==false,version:firstPayload.version||'13.8.3',generatedAt,
+  return {ok:firstPayload.ok!==false,version:firstPayload.version||'13.9.0',generatedAt,
     activeDate:firstPayload.activeDate||Object.keys(dailyResults).sort()[0]||null,dailyResults,
     sourceStatus,meta:payloadMeta||{},activity:requested,
     rankingEngine:'cloud-v3-regional-jsonb-safe',resultLimitPerDay:FORECAST_ROWS_PER_DAY};
@@ -263,7 +263,7 @@ async function status(env){
     sb(env,'worker_runs?select=started_at,finished_at,status,message,details&order=started_at.desc&limit=10')
   ]);
   const latest=snapshots?.[0]||null;
-  return {ok:true,service:'Väderkompassen API',version:env.APP_VERSION||'13.8.3',time:new Date().toISOString(),
+  return {ok:true,service:'Väderkompassen API',version:env.APP_VERSION||'13.9.0',time:new Date().toISOString(),
     latestSnapshot:latest?{id:latest.id,generated_at:latest.generated_at,activity:latest.activity,meta:latest.payload?.meta||null}:null,recentRuns:runs||[]};
 }
 async function saveSnapshot(req,env){
@@ -292,7 +292,7 @@ export default {
   async fetch(req,env){
     const c=cors(env); if(req.method==='OPTIONS')return new Response(null,{status:204,headers:c}); const url=new URL(req.url);
     try{
-      if(url.pathname==='/'||url.pathname==='/health')return json({ok:true,service:'Väderkompassen API',version:env.APP_VERSION||'13.8.3',time:new Date().toISOString()},200,c);
+      if(url.pathname==='/'||url.pathname==='/health')return json({ok:true,service:'Väderkompassen API',version:env.APP_VERSION||'13.9.0',time:new Date().toISOString()},200,c);
       if((url.pathname==='/v1/status'||url.pathname==='/status')&&req.method==='GET')return json(await status(env),200,c);
       if(url.pathname==='/v1/verify'&&req.method==='GET'){
         const state=await status(env);
