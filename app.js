@@ -366,7 +366,7 @@ async function mapWithConcurrency(items,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
   return results;
 }
-const diagnostics={version:"13.10.2",mode:"checking",lastLoad:null,sources:[]};
+const diagnostics={version:"13.10.3",mode:"checking",lastLoad:null,sources:[]};
 function setDataMode(mode,detail=""){
   diagnostics.mode=mode;
   const badge=$("dataModeBadge");
@@ -384,8 +384,8 @@ function setDataMode(mode,detail=""){
   badge.className=`data-mode-badge ${mode}`;
   badge.title=detail?`${state.title} ${detail}`:state.title;
 }
-const WEATHER_CACHE_KEY="vk-weather-cache-v13.10.2";
-const POINT_CACHE_KEY="vk-point-cache-v13.10.2";
+const WEATHER_CACHE_KEY="vk-weather-cache-v13.10.3";
+const POINT_CACHE_KEY="vk-point-cache-v13.10.3";
 const BACKGROUND_REFRESH_MS=30*60*1000;
 let refreshTimer=null;
 let loadInProgress=false;
@@ -1023,31 +1023,45 @@ function renderMap(list){
 function toggleMap(){const section=$("mapSection"),button=$("showMapBtn");section.classList.toggle("hidden");const open=!section.classList.contains("hidden");button.textContent=open?"✕ Dölj kartan":"🗺 Visa topplistan på karta";button.setAttribute("aria-expanded",String(open));if(open){renderMap(rankedList());setTimeout(()=>map?.invalidateSize(),80);section.scrollIntoView({behavior:"smooth",block:"nearest"});}}
 let detailPlace="";
 let mainListScrollY=0;
+let mainViewState=null;
+const MAIN_VIEW_IDS=["hero","metrics","winnerDetailsWrap","mapSection","rankingSection","aboutSection"];
 function detailRow(){
   const list=rankedList();
   return list.find(r=>r.place===detailPlace)||list[0]||null;
 }
-function setMainViewHidden(hidden){
-  ["hero","metrics","winnerDetailsWrap","mapSection","rankingSection","aboutSection"].forEach(id=>{
+function captureMainViewState(){
+  const state=Object.fromEntries(MAIN_VIEW_IDS.map(id=>[id,$(id)?.classList.contains("hidden")??true]));
+  state.mapActions=document.querySelector(".map-actions")?.classList.contains("hidden")??false;
+  return state;
+}
+function hideMainView(){
+  MAIN_VIEW_IDS.forEach(id=>$(id)?.classList.add("hidden"));
+  document.querySelector(".map-actions")?.classList.add("hidden");
+}
+function restoreMainView(state){
+  MAIN_VIEW_IDS.forEach(id=>{
     const el=$(id);
-    if(el) el.classList.toggle("hidden",hidden);
+    if(el)el.classList.toggle("hidden",state?.[id]??false);
   });
-  document.querySelector(".map-actions")?.classList.toggle("hidden",hidden);
+  document.querySelector(".map-actions")?.classList.toggle("hidden",state?.mapActions??false);
 }
 function openDetail(r){
   mainListScrollY=window.scrollY;
+  mainViewState=captureMainViewState();
   detailPlace=r.place;
-  setMainViewHidden(true);
+  hideMainView();
   $("detailPage").classList.remove("hidden");
   renderDetail();
   window.scrollTo({top:Math.max(0,$("dayTabs").offsetTop-12),behavior:"smooth"});
 }
 function closeDetail(){
   const restoreY=mainListScrollY;
+  const restoreState=mainViewState;
   detailPlace="";
+  mainViewState=null;
   $("detailPage").classList.add("hidden");
-  setMainViewHidden(false);
   renderDay();
+  restoreMainView(restoreState);
   requestAnimationFrame(()=>requestAnimationFrame(()=>window.scrollTo({top:restoreY,behavior:"auto"})));
 }
 function renderDetail(){
@@ -1130,7 +1144,7 @@ $("saveSettings").onclick=e=>{
   localStorage.setItem("vk-settings",JSON.stringify(settings));$("settingsDialog").close();if(!restoreWeatherCache())load();
 };
 if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
-  const reg=await navigator.serviceWorker.register(`sw.js?v=13.10.2`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=13.10.3`);
   reg.update();
   reg.addEventListener("updatefound",()=>{const worker=reg.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller){$("updateBanner").classList.remove("hidden");}})});
   navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload());
