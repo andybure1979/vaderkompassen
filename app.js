@@ -380,7 +380,7 @@ async function mapWithConcurrency(items,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
   return results;
 }
-const diagnostics={version:"13.10.6",mode:"checking",lastLoad:null,sources:[]};
+const diagnostics={version:"13.10.8",mode:"checking",lastLoad:null,sources:[]};
 function setDataMode(mode,detail=""){
   diagnostics.mode=mode;
   const badge=$("dataModeBadge");
@@ -398,8 +398,8 @@ function setDataMode(mode,detail=""){
   badge.className=`data-mode-badge ${mode}`;
   badge.title=detail?`${state.title} ${detail}`:state.title;
 }
-const WEATHER_CACHE_KEY="vk-weather-cache-v13.10.6";
-const POINT_CACHE_KEY="vk-point-cache-v13.10.6";
+const WEATHER_CACHE_KEY="vk-weather-cache-v13.10.8";
+const POINT_CACHE_KEY="vk-point-cache-v13.10.8";
 const BACKGROUND_REFRESH_MS=30*60*1000;
 let refreshTimer=null;
 let loadInProgress=false;
@@ -1159,36 +1159,44 @@ $("clearRegions").onclick=()=>{document.querySelectorAll("#regionChoices input")
 $("filterSweden").onclick=()=>selectCountry("Sverige");
 $("filterDenmark").onclick=()=>selectCountry("Danmark");
 $("filterNorway").onclick=()=>selectCountry("Norge");
+function showSettingsError(message){
+  const error=$("settingsError");
+  error.textContent=message;
+  error.classList.toggle("hidden",!message);
+  if(message)error.scrollIntoView({block:"nearest"});
+}
 function saveSettingsFromDialog(){
+  showSettingsError("");
+  $("sourceError").classList.add("hidden");
   const sourceMode=$("sourceMode").value;
-  const sources=[...document.querySelectorAll("#sourceChoices input:checked")].map(x=>x.value);
+  let sources=[...document.querySelectorAll("#sourceChoices input:checked")].map(x=>x.value);
+  if(sourceMode==="auto")sources=Object.keys(MODELS);
   if(sourceMode==="manual"&&!sources.length){
-    $("sourceError").textContent="Välj minst en prognoskälla.";
-    $("sourceError").classList.remove("hidden");
+    showSettingsError("Välj minst en prognoskälla eller byt till automatiskt läge.");
     return false;
   }
   const selectedAreaInputs=[...document.querySelectorAll('#regionChoices input[data-kind="area"]:checked')];
   const selectedAreas=[...new Set(selectedAreaInputs.map(x=>x.value))];
   if(!selectedAreas.length){
-    $("sourceError").textContent="Välj minst ett land eller område.";
-    $("sourceError").classList.remove("hidden");
+    showSettingsError("Välj minst ett område innan du sparar.");
     return false;
   }
   const selectedRegions=[...new Set(selectedAreaInputs.map(x=>x.dataset.region).filter(region=>REGIONS.includes(region)))];
-  $("sourceError").classList.add("hidden");
-  settings={...settings,temp:+$("tempTarget").value,rain:+$("rainWeight").value,
-    sun:+$("sunWeight").value,wind:+$("windWeight").value,sourceMode,sources,
+  const nextSettings={...settings,temp:Number($("tempTarget").value),rain:Number($("rainWeight").value),
+    sun:Number($("sunWeight").value),wind:Number($("windWeight").value),sourceMode,sources,
     regions:selectedRegions,areas:selectedAreas};
   try{
-    localStorage.setItem("vk-settings",JSON.stringify(settings));
+    localStorage.setItem("vk-settings",JSON.stringify(nextSettings));
+    const saved=JSON.parse(localStorage.getItem("vk-settings")||"null");
+    if(!saved||!Array.isArray(saved.areas)||saved.areas.length!==selectedAreas.length)throw new Error("Verifiering av sparade inställningar misslyckades");
+    settings=nextSettings;
   }catch(error){
     console.error("Kunde inte spara inställningarna",error);
-    $("sourceError").textContent="Inställningarna kunde inte sparas. Försök igen.";
-    $("sourceError").classList.remove("hidden");
+    showSettingsError("Inställningarna kunde inte sparas på enheten. Försök igen.");
     return false;
   }
   $("settingsDialog").close();
-  requestAnimationFrame(()=>{if(!restoreWeatherCache())load()});
+  setTimeout(()=>{if(!restoreWeatherCache())load()},0);
   return true;
 }
 $("settingsForm").addEventListener("submit",event=>{
@@ -1196,7 +1204,7 @@ $("settingsForm").addEventListener("submit",event=>{
   saveSettingsFromDialog();
 });
 if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
-  const reg=await navigator.serviceWorker.register(`sw.js?v=13.10.7`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=13.10.8`);
   reg.update();
   reg.addEventListener("updatefound",()=>{const worker=reg.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller){$("updateBanner").classList.remove("hidden");}})});
   navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload());
