@@ -380,7 +380,7 @@ async function mapWithConcurrency(items,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
   return results;
 }
-const diagnostics={version:"13.10.5",mode:"checking",lastLoad:null,sources:[]};
+const diagnostics={version:"13.10.6",mode:"checking",lastLoad:null,sources:[]};
 function setDataMode(mode,detail=""){
   diagnostics.mode=mode;
   const badge=$("dataModeBadge");
@@ -398,8 +398,8 @@ function setDataMode(mode,detail=""){
   badge.className=`data-mode-badge ${mode}`;
   badge.title=detail?`${state.title} ${detail}`:state.title;
 }
-const WEATHER_CACHE_KEY="vk-weather-cache-v13.10.5";
-const POINT_CACHE_KEY="vk-point-cache-v13.10.5";
+const WEATHER_CACHE_KEY="vk-weather-cache-v13.10.6";
+const POINT_CACHE_KEY="vk-point-cache-v13.10.6";
 const BACKGROUND_REFRESH_MS=30*60*1000;
 let refreshTimer=null;
 let loadInProgress=false;
@@ -1041,7 +1041,7 @@ let mainViewState=null;
 const MAIN_VIEW_IDS=["hero","metrics","winnerDetailsWrap","mapSection","rankingSection","aboutSection"];
 function detailRow(){
   const list=rankedList();
-  return list.find(r=>r.place===detailPlace)||list[0]||null;
+  return list.find(r=>r.place===detailPlace)||null;
 }
 function captureMainViewState(){
   const state=Object.fromEntries(MAIN_VIEW_IDS.map(id=>[id,$(id)?.classList.contains("hidden")??true]));
@@ -1103,6 +1103,14 @@ function renderDetail(){
   $("detailPage").dataset.score=r.score;
 }
 function renderDay(){
+  // Ett sent prognossvar eller en omrendering får aldrig återvisa vinnaren
+  // ovanför en öppen detaljsida. Detaljläget har alltid företräde.
+  if(detailPlace){
+    hideMainView();
+    $("detailPage").classList.remove("hidden");
+    renderDetail();
+    return;
+  }
   const list=rankedList();if(!list.length)return;
   if(!$("mapSection").classList.contains("hidden"))renderMap(list);
   const best=list[0],activity=ACTIVITIES[settings.activity];
@@ -1175,7 +1183,7 @@ $("saveSettings").onclick=()=>{
   localStorage.setItem("vk-settings",JSON.stringify(settings));$("settingsDialog").close();if(!restoreWeatherCache())load();
 };
 if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
-  const reg=await navigator.serviceWorker.register(`sw.js?v=13.10.5`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=13.10.6`);
   reg.update();
   reg.addEventListener("updatefound",()=>{const worker=reg.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller){$("updateBanner").classList.remove("hidden");}})});
   navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload());
