@@ -1,4 +1,4 @@
-## Version 13.8.2 – regional snapshot och CPU-korrigering
+## Version 13.8.3 – regional snapshot och CPU-korrigering
 
 Den här versionen minskar CPU-belastningen i `GET /v1/forecast`. Workern sparar prognosen både som komplett snapshot och som regionala del-snapshots. Prognosanrop läser bara de regioner användaren har valt i stället för hela databasen med 500 orter.
 
