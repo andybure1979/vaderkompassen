@@ -112,11 +112,35 @@ const SNOW_DAILY = "snowfall_sum";
 const SNOW_HOURLY = "snow_depth,freezing_level_height";
 
 
+const SETTINGS_KEY="vk-settings";
+const WEATHER_CACHE_KEY="vk-weather-cache-v13.10.10";
+const POINT_CACHE_PREFIX="vk-point-cache";
+
+function clearAppCacheStorage({includeCurrentWeather=false}={}){
+  const keys=[];
+  for(let i=0;i<localStorage.length;i++){
+    const key=localStorage.key(i);
+    if(key)keys.push(key);
+  }
+  for(const key of keys){
+    const isPointCache=key.startsWith(POINT_CACHE_PREFIX);
+    const isWeatherCache=key.startsWith("vk-weather-cache-");
+    const isOldWeatherCache=isWeatherCache&&key!==WEATHER_CACHE_KEY;
+    if(isPointCache||isOldWeatherCache||(includeCurrentWeather&&key===WEATHER_CACHE_KEY)){
+      localStorage.removeItem(key);
+    }
+  }
+}
+
+// Punktprognoser kan bli flera megabyte. Äldre beständiga punktcacher tas bort
+// vid start och hålls från och med v13.10.10 endast i minnet under sessionen.
+try{clearAppCacheStorage()}catch{}
+
 const defaults={
   temp:22,rain:3,sun:2,wind:1.5,regions:[...REGIONS],areas:[...ALL_AREAS],activity:"general",
   sourceMode:"auto",sources:Object.keys(MODELS)
 };
-let settings={...defaults,...JSON.parse(localStorage.getItem("vk-settings")||"{}")};
+let settings={...defaults,...JSON.parse(localStorage.getItem(SETTINGS_KEY)||"{}")};
 if(!Array.isArray(settings.regions)){ settings.regions=[...REGIONS]; }
 if(!Array.isArray(settings.areas))settings.areas=[...ALL_AREAS];
 if(settings.regions.includes("Danmark")){ settings.regions=settings.regions.filter(x=>x!=="Danmark").concat(["Jylland","Fyn","Själland"]); }
@@ -302,7 +326,7 @@ function renderActivities(){
     const b=document.createElement("button");
     b.type="button";b.className="activity-chip"+(settings.activity===key?" active":"");
     b.innerHTML=`<span>${a.icon}</span>${a.label}`;
-    b.onclick=()=>{settings.activity=key;localStorage.setItem("vk-settings",JSON.stringify(settings));renderActivities();if(!restoreWeatherCache())load();};
+    b.onclick=()=>{settings.activity=key;localStorage.setItem(SETTINGS_KEY,JSON.stringify(settings));renderActivities();if(!restoreWeatherCache())load();};
     box.appendChild(b);
   });
   $("activeActivity").textContent=`${ACTIVITIES[settings.activity].icon} ${ACTIVITIES[settings.activity].label}`;
@@ -380,7 +404,7 @@ async function mapWithConcurrency(items,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
   return results;
 }
-const diagnostics={version:"13.10.9",mode:"checking",lastLoad:null,sources:[]};
+const diagnostics={version:"13.10.10",mode:"checking",lastLoad:null,sources:[]};
 function setDataMode(mode,detail=""){
   diagnostics.mode=mode;
   const badge=$("dataModeBadge");
@@ -398,8 +422,6 @@ function setDataMode(mode,detail=""){
   badge.className=`data-mode-badge ${mode}`;
   badge.title=detail?`${state.title} ${detail}`:state.title;
 }
-const WEATHER_CACHE_KEY="vk-weather-cache-v13.10.9";
-const POINT_CACHE_KEY="vk-point-cache-v13.10.9";
 const BACKGROUND_REFRESH_MS=30*60*1000;
 let refreshTimer=null;
 let loadInProgress=false;
@@ -416,7 +438,15 @@ function readWeatherCache(){
   }catch{return null}
 }
 function saveWeatherCache(meta={}){
-  try{localStorage.setItem(WEATHER_CACHE_KEY,JSON.stringify({signature:cacheSignature(),savedAt:Date.now(),dailyResults,activeDate,modelText:$("modelCount").textContent,modelTitle:$("modelCount").title,...meta}))}catch{}
+  const value=JSON.stringify({signature:cacheSignature(),savedAt:Date.now(),dailyResults,activeDate,modelText:$("modelCount").textContent,modelTitle:$("modelCount").title,...meta});
+  try{
+    clearAppCacheStorage();
+    localStorage.setItem(WEATHER_CACHE_KEY,value);
+  }catch(error){
+    if(error?.name==="QuotaExceededError"){
+      try{clearAppCacheStorage({includeCurrentWeather:true})}catch{}
+    }
+  }
 }
 function restoreWeatherCache(){
   const cache=readWeatherCache();
@@ -449,8 +479,9 @@ function scheduleBackgroundRefresh(lastSaved=Date.now()){
 
 
 function pointCacheId(source,place){return `${source}|${place[0]}|${place[3]}|${place[4]}`}
-function readPointCache(){try{return JSON.parse(localStorage.getItem(POINT_CACHE_KEY)||"{}")||{}}catch{return {}}}
-function savePointCache(cache){try{localStorage.setItem(POINT_CACHE_KEY,JSON.stringify(cache))}catch{}}
+const pointCache={};
+function readPointCache(){return pointCache}
+function savePointCache(){/* v13.10.10: punktcache hålls endast i minnet */}
 async function fetchPlacesPersistently(source,places,worker){
   const cache=readPointCache();
   const results=await mapWithConcurrency(places,POINT_SOURCE_CONCURRENCY,async place=>{
@@ -1186,8 +1217,15 @@ function saveSettingsFromDialog(){
     sun:Number($("sunWeight").value),wind:Number($("windWeight").value),sourceMode,sources,
     regions:selectedRegions,areas:selectedAreas};
   try{
-    localStorage.setItem("vk-settings",JSON.stringify(nextSettings));
-    const saved=JSON.parse(localStorage.getItem("vk-settings")||"null");
+    const value=JSON.stringify(nextSettings);
+    try{
+      localStorage.setItem(SETTINGS_KEY,value);
+    }catch(error){
+      if(error?.name!=="QuotaExceededError")throw error;
+      clearAppCacheStorage({includeCurrentWeather:true});
+      localStorage.setItem(SETTINGS_KEY,value);
+    }
+    const saved=JSON.parse(localStorage.getItem(SETTINGS_KEY)||"null");
     if(!saved||!Array.isArray(saved.areas)||saved.areas.length!==selectedAreas.length)throw new Error("Verifiering av sparade inställningar misslyckades");
     settings=nextSettings;
   }catch(error){
@@ -1215,7 +1253,7 @@ $("settingsForm").addEventListener("submit",event=>{
   saveSettingsFromDialog();
 });
 if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
-  const reg=await navigator.serviceWorker.register(`sw.js?v=13.10.9`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=13.10.10`);
   reg.update();
   reg.addEventListener("updatefound",()=>{const worker=reg.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller){$("updateBanner").classList.remove("hidden");}})});
   navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload());

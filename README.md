@@ -4,9 +4,18 @@ Väderkompassen är en mobilanpassad PWA som hjälper användaren att välja **v
 
 ## Aktuell version
 
-**v13.10.9**
+**v13.10.10**
 
 ## Versionshistorik
+
+### v13.10.10 – lagringsfix och automatisk återhämtning
+
+- Grundorsaken till inställningsfelet åtgärdad: beständig punktcache kunde fylla Safaris `localStorage` till cirka 10 MB.
+- Punktprognoser hålls nu endast i minnet under den aktuella sessionen och skrivs inte längre till `localStorage`.
+- Gamla punktcacher och äldre vädercacheversioner rensas automatiskt vid appstart.
+- Om inställningssparning träffar `QuotaExceededError` rensas endast appens cache, varefter sparningen försöks igen automatiskt.
+- Användarens `vk-settings` bevaras alltid vid cache-rensning.
+- Ingen annan funktionalitet ändrad.
 
 ### v13.10.9 – diagnostik för inställningssparning
 - Visar det faktiska JavaScript-felets namn och meddelande när sparning misslyckas.
@@ -56,10 +65,11 @@ Väderkompassen är en mobilanpassad PWA som hjälper användaren att välja **v
 
 ### Öppna
 
-- Inga kända blockerande problem i v13.10.8. Inställningsflödet behöver verifieras på den publicerade iPhone/PWA-versionen.
+- Inga kända blockerande problem. v13.10.10 behöver verifieras på den publicerade iPhone/PWA-versionen.
 
 ### Lösta
 
+- Full `localStorage` blockerade sparning av inställningar (`QuotaExceededError`).
 - Vinnaren låg kvar ovanför vald ort på detaljsidan.
 - Vinnarkortet krävde en separat knapp för att öppna detaljsidan.
 - Tillbaka från detaljsidan kunde lämna kartan öppen.
