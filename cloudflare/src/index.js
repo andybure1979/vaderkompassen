@@ -170,55 +170,98 @@ async function buildSnapshot(env){
   const rows=[...freshRows,...fallbackRows].map(addServerScores),dailyResults={};
   for(const row of rows)(dailyResults[row.day]||=[]).push(row);
   const days=Object.keys(dailyResults).sort(),availablePlaces=new Set(rows.map(r=>r.place));
-  return {ok:true,version:'13.8.1',generatedAt:new Date().toISOString(),activeDate:days[0]||null,dailyResults,
+  return {ok:true,version:'13.8.2',generatedAt:new Date().toISOString(),activeDate:days[0]||null,dailyResults,
     sourceStatus:[{name:'Open-Meteo',ok:freshPlaces.size>0,rows:freshRows.length,error:failures.map(x=>`${x.place}: ${x.error}`).join(' · ')}],
     meta:{placesRequested:PLACES.length,placesUpdated:freshPlaces.size,placesFresh:freshPlaces.size,placesFallback:availablePlaces.size-freshPlaces.size,placesAvailable:availablePlaces.size,days:days.length,batches:batches.length,failedBatches:failures.length,failedPlaces:failures.map(x=>x.place)}};
 }
+function regionalSnapshotRows(snapshot){
+  const byRegion=new Map();
+  for(const [day,rows] of Object.entries(snapshot.dailyResults||{})){
+    for(const row of rows||[]){
+      if(!row?.region)continue;
+      let payload=byRegion.get(row.region);
+      if(!payload){
+        payload={ok:snapshot.ok!==false,version:snapshot.version,generatedAt:snapshot.generatedAt,activeDate:snapshot.activeDate,dailyResults:{},meta:snapshot.meta||{}};
+        byRegion.set(row.region,payload);
+      }
+      (payload.dailyResults[day]||=[]).push(row);
+    }
+  }
+  return [...byRegion.entries()].map(([region,payload])=>({
+    activity:'region',regions:[region],areas:[],payload,source_status:snapshot.sourceStatus,generated_at:snapshot.generatedAt
+  }));
+}
 async function saveBuiltSnapshot(env,snapshot){
-  const row={activity:'all',regions:[],areas:[],payload:snapshot,source_status:snapshot.sourceStatus,generated_at:snapshot.generatedAt};
-  await sb(env,'forecast_snapshots',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify(row)});
+  // Behåll en komplett snapshot för verifiering, historik och bakåtkompatibilitet.
+  // Regionala del-snapshots gör prognosanrop betydligt lättare eftersom bara valda regioner läses.
+  const rows=[
+    {activity:'all',regions:[],areas:[],payload:snapshot,source_status:snapshot.sourceStatus,generated_at:snapshot.generatedAt},
+    ...regionalSnapshotRows(snapshot)
+  ];
+  await sb(env,'forecast_snapshots',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify(rows)});
 }
 const FORECAST_ROWS_PER_DAY=75;
+const pgArray=value=>`{${value.map(v=>`"${String(v).replaceAll('\\','\\\\').replaceAll('"','\\"')}"`).join(',')}}`;
 async function latestSnapshot(env,url){
   const requested=url.searchParams.get('activity')||'general';
-  const q=new URLSearchParams({select:'payload,generated_at,source_status',order:'generated_at.desc',limit:'1'});
-  q.set('activity','in.(all)');
-  const rows=await sb(env,`forecast_snapshots?${q}`); if(!rows?.length)return null;
-  const stored=rows[0],payload=stored.payload||{};
   const regionValues=(url.searchParams.get('regions')||'').split(',').filter(Boolean);
   const areaValues=(url.searchParams.get('areas')||'').split(',').filter(Boolean);
-  const regions=regionValues.length?new Set(regionValues):null;
   const areas=areaValues.length?new Set(areaValues):null;
+
+  // Hämta först endast tidsstämpeln för senaste kompletta körningen. Ingen stor JSON laddas här.
+  const headQ=new URLSearchParams({select:'generated_at',activity:'eq.all',order:'generated_at.desc',limit:'1'});
+  const heads=await sb(env,`forecast_snapshots?${headQ}`); if(!heads?.length)return null;
+  const generatedAt=heads[0].generated_at;
+
+  // Läs därefter enbart de regionala delarna som användaren valt.
+  const shardQ=new URLSearchParams({select:'payload,generated_at,source_status',activity:'eq.region',generated_at:`eq.${generatedAt}`});
+  if(regionValues.length)shardQ.set('regions',`ov.${pgArray(regionValues)}`);
+  let storedRows=await sb(env,`forecast_snapshots?${shardQ}`);
+
+  // Bakåtkompatibel reserv innan första 13.8.2-snapshoten har skapats.
+  if(!storedRows?.length){
+    const fallbackQ=new URLSearchParams({select:'payload,generated_at,source_status',activity:'eq.all',order:'generated_at.desc',limit:'1'});
+    storedRows=await sb(env,`forecast_snapshots?${fallbackQ}`);
+  }
+  if(!storedRows?.length)return null;
+
   const coastOnly=requested==='coast',surfOnly=requested==='surf';
   const dailyResults={};
-  for(const day in (payload.dailyResults||{})){
-    const source=payload.dailyResults[day];
-    if(!Array.isArray(source)||!source.length)continue;
-    const filtered=[];
-    for(let i=0;i<source.length;i++){
-      const r=source[i];
-      if(regions&&!regions.has(r.region))continue;
-      if(areas&&!areas.has(r.area))continue;
-      if(coastOnly&&!COAST_PLACES.has(r.place))continue;
-      if(surfOnly&&!SURF_PLACES.has(r.place))continue;
-      filtered.push(r);
+  let payloadMeta=null,sourceStatus=[];
+  for(const stored of storedRows){
+    const payload=stored.payload||{};
+    payloadMeta ||= payload.meta||{};
+    if(!sourceStatus.length)sourceStatus=stored.source_status||payload.sourceStatus||[];
+    for(const [day,source] of Object.entries(payload.dailyResults||{})){
+      if(!Array.isArray(source)||!source.length)continue;
+      const target=dailyResults[day]||(dailyResults[day]=[]);
+      for(const r of source){
+        if(areas&&!areas.has(r.area))continue;
+        if(coastOnly&&!COAST_PLACES.has(r.place))continue;
+        if(surfOnly&&!SURF_PLACES.has(r.place))continue;
+        target.push(r);
+      }
     }
-    if(!filtered.length)continue;
+  }
+  for(const day of Object.keys(dailyResults)){
+    const filtered=dailyResults[day];
     filtered.sort((a,b)=>(b.serverScores?.[requested]??serverScore(b,requested))-(a.serverScores?.[requested]??serverScore(a,requested))||(b.confidence||0)-(a.confidence||0));
     dailyResults[day]=filtered.slice(0,FORECAST_ROWS_PER_DAY);
+    if(!dailyResults[day].length)delete dailyResults[day];
   }
-  return {ok:payload.ok!==false,version:payload.version||'13.8.1',generatedAt:stored.generated_at||payload.generatedAt,
-    activeDate:payload.activeDate||Object.keys(dailyResults).sort()[0]||null,dailyResults,
-    sourceStatus:stored.source_status||payload.sourceStatus||[],meta:payload.meta||{},activity:requested,
-    rankingEngine:'cloud-v2',resultLimitPerDay:FORECAST_ROWS_PER_DAY};
+  const firstPayload=storedRows[0].payload||{};
+  return {ok:firstPayload.ok!==false,version:firstPayload.version||'13.8.2',generatedAt,
+    activeDate:firstPayload.activeDate||Object.keys(dailyResults).sort()[0]||null,dailyResults,
+    sourceStatus,meta:payloadMeta||{},activity:requested,
+    rankingEngine:'cloud-v3-regional',resultLimitPerDay:FORECAST_ROWS_PER_DAY};
 }
 async function status(env){
   const [snapshots,runs]=await Promise.all([
-    sb(env,'forecast_snapshots?select=id,generated_at,activity,payload&order=generated_at.desc&limit=1'),
+    sb(env,'forecast_snapshots?select=id,generated_at,activity,payload&activity=eq.all&order=generated_at.desc&limit=1'),
     sb(env,'worker_runs?select=started_at,finished_at,status,message,details&order=started_at.desc&limit=10')
   ]);
   const latest=snapshots?.[0]||null;
-  return {ok:true,service:'Väderkompassen API',version:env.APP_VERSION||'13.8.1',time:new Date().toISOString(),
+  return {ok:true,service:'Väderkompassen API',version:env.APP_VERSION||'13.8.2',time:new Date().toISOString(),
     latestSnapshot:latest?{id:latest.id,generated_at:latest.generated_at,activity:latest.activity,meta:latest.payload?.meta||null}:null,recentRuns:runs||[]};
 }
 async function saveSnapshot(req,env){
@@ -247,7 +290,7 @@ export default {
   async fetch(req,env){
     const c=cors(env); if(req.method==='OPTIONS')return new Response(null,{status:204,headers:c}); const url=new URL(req.url);
     try{
-      if(url.pathname==='/'||url.pathname==='/health')return json({ok:true,service:'Väderkompassen API',version:env.APP_VERSION||'13.8.1',time:new Date().toISOString()},200,c);
+      if(url.pathname==='/'||url.pathname==='/health')return json({ok:true,service:'Väderkompassen API',version:env.APP_VERSION||'13.8.2',time:new Date().toISOString()},200,c);
       if((url.pathname==='/v1/status'||url.pathname==='/status')&&req.method==='GET')return json(await status(env),200,c);
       if(url.pathname==='/v1/verify'&&req.method==='GET'){
         const state=await status(env);
