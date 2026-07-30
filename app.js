@@ -917,6 +917,46 @@ function winnerMetricCards(r){
     card("💨",`${fmt(r.wind)} m/s`,"vind")
   ].join("");
 }
+function winnerDetailsHtml(r){
+  const rows=[];
+  const add=(label,value)=>{if(value!==null&&value!==undefined&&value!==""&&value!=="–")rows.push(`<div><dt>${label}</dt><dd>${value}</dd></div>`)};
+  add("Prognosdag",new Date(r.day+"T12:00:00").toLocaleDateString("sv-SE",{weekday:"long",day:"numeric",month:"long"}));
+  add("Max temperatur",`${fmt(r.temp,0)} °C`);
+  add("Min temperatur",`${fmt(r.min,0)} °C`);
+  add("Nederbörd",`${fmt(r.rain)} mm`);
+  add("Risk för nederbörd",`${fmt(r.risk,0)} %`);
+  add("Beräknad sol",`${fmt(r.sun)} h`);
+  add("Vind",`${fmt(r.wind)} m/s`);
+  if(Number.isFinite(r.windDirection))add("Vindriktning",`${compassDirection(r.windDirection)} · ${Math.round(r.windDirection)}°`);
+  add("Prognossäkerhet",`${fmt(r.confidence,0)} %`);
+  add("Aktivitetsbetyg",`${fmt(r.score,0)} / 100`);
+  add("Antal modeller",fmt(r.models,0));
+  add("Viktigaste källa",r.primarySource);
+  if(Array.isArray(r.usedSources)&&r.usedSources.length)add("Använda källor",r.usedSources.join(", "));
+  if(Number.isFinite(r.waveHeight))add("Våghöjd",`${fmt(r.waveHeight)} m`);
+  if(Number.isFinite(r.waveDirection))add("Vågriktning",`${compassDirection(r.waveDirection)} · ${Math.round(r.waveDirection)}°`);
+  if(Number.isFinite(r.wavePeriod))add("Vågperiod",`${fmt(r.wavePeriod,0)} s`);
+  if(Number.isFinite(r.swellHeight))add("Dyningshöjd",`${fmt(r.swellHeight)} m`);
+  if(Number.isFinite(r.swellDirection))add("Dyningsriktning",`${compassDirection(r.swellDirection)} · ${Math.round(r.swellDirection)}°`);
+  if(Number.isFinite(r.swellPeriod))add("Dyningsperiod",`${fmt(r.swellPeriod,0)} s`);
+  if(Number.isFinite(r.seaTemp))add("Havstemperatur",`${fmt(r.seaTemp,0)} °C`);
+  if(Number.isFinite(r.snowDepth))add("Snödjup",`${fmt(r.snowDepth,0)} cm`);
+  if(Number.isFinite(r.newSnow))add("Nysnö",`${fmt(r.newSnow)} cm`);
+  if(Number.isFinite(r.freezingLevel))add("Nollgradersnivå",`${fmt(r.freezingLevel,0)} m`);
+  add("Område",`${r.area} · ${r.region}`);
+  add("Position",`${Number(r.lat).toFixed(4)}, ${Number(r.lon).toFixed(4)}`);
+  return `<dl>${rows.join("")}</dl>`;
+}
+function setWinnerDetails(r){
+  const wrap=$("winnerDetailsWrap"),details=$("winnerDetails"),more=$("winnerMore");
+  details.innerHTML=winnerDetailsHtml(r);
+  details.hidden=true;more.textContent="Visa mer";more.setAttribute("aria-expanded","false");
+  wrap.classList.remove("hidden");
+}
+function toggleWinnerDetails(){
+  const details=$("winnerDetails"),more=$("winnerMore"),open=details.hidden;
+  details.hidden=!open;more.textContent=open?"Visa mindre":"Visa mer";more.setAttribute("aria-expanded",String(open));
+}
 function scoreColor(score){return score>=90?"#29974a":score>=80?"#78bd8a":score>=70?"#e4bd3d":score>=60?"#ed9653":"#e66b69";}
 function scoreClass(score){return score>=90?"perfect":score>=80?"great":score>=70?"good":score>=60?"okay":"poor";}
 function ensureMap(){
@@ -975,6 +1015,7 @@ function renderDay(){
   $("bestReason").textContent=decisionSentence(best);
   $("bestScore").textContent=best.score;$("hero").dataset.score=best.score;
   $("metrics").innerHTML=winnerMetricCards(best);
+  setWinnerDetails(best);
   $("mapLink").href=`https://maps.apple.com/?q=${encodeURIComponent(placeLabel(best))}&ll=${best.lat},${best.lon}`;
   ["hero","metrics","mapLink"].forEach(id=>$(id).classList.remove("hidden"));
   const ranking=$("ranking");ranking.innerHTML="";
@@ -996,6 +1037,7 @@ function syncSettings(){
   $("sourceMode").value=settings.sourceMode;renderRegionChoices();renderSourceChoices();
 }
 $("showMapBtn").onclick=toggleMap;
+$("winnerMore").onclick=toggleWinnerDetails;
 $("settingsBtn").onclick=()=>{syncSettings();$("settingsDialog").showModal()};
 $("tempTarget").oninput=e=>$("tempOut").textContent=`${e.target.value} °C`;
 $("sourceMode").onchange=renderSourceChoices;

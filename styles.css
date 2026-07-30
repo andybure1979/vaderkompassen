@@ -76,3 +76,19 @@ dialog{width:min(520px,calc(100% - 24px));border:0;border-radius:25px;padding:0;
   .metrics.metrics-four strong{font-size:14px}
   .metrics.metrics-four small,.metrics.metrics-four em{font-size:8px}
 }
+
+
+/* v13.9.2 – expanderbar full vädermetadata för vinnaren */
+.winner-details-wrap{margin:-7px 0 17px;text-align:center}
+.winner-more{appearance:none;-webkit-appearance:none;border:0;background:transparent;color:var(--activity-deep,var(--primary-deep));padding:7px 10px;font:inherit;font-size:13px;font-weight:850;cursor:pointer;text-decoration:none;touch-action:manipulation}
+.winner-more:after{content:"  ▾";display:inline-block;font-size:11px;transition:transform .18s ease}
+.winner-more[aria-expanded="true"]:after{transform:rotate(180deg)}
+.winner-more:focus-visible{outline:2px solid var(--activity);outline-offset:3px;border-radius:8px}
+.winner-details{text-align:left;margin-top:7px;background:var(--card);border:1px solid var(--border);border-radius:20px;padding:8px 15px;box-shadow:var(--shadow-soft);animation:winnerDetailsIn .18s ease-out}
+.winner-details dl{margin:0}
+.winner-details dl>div{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:baseline;padding:10px 1px;border-bottom:1px solid var(--border)}
+.winner-details dl>div:last-child{border-bottom:0}
+.winner-details dt{color:var(--muted);font-size:12px;font-weight:650}
+.winner-details dd{margin:0;color:var(--text);font-size:12px;font-weight:850;text-align:right;overflow-wrap:anywhere}
+@keyframes winnerDetailsIn{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:none}}
+@media(max-width:480px){.winner-details{padding:6px 13px}.winner-details dl>div{gap:10px;padding:9px 0}.winner-details dt,.winner-details dd{font-size:11px}}

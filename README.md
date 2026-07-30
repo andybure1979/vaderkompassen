@@ -1,3 +1,10 @@
+## Version 13.9.2 – all vinnardata via ”Visa mer”
+
+- Vinnaren har nu en ren textlänk **Visa mer** under faktakorten.
+- Texten expanderar samma vy och visar all metadata som faktiskt finns i prognosresultatet.
+- När vyn är öppen ändras texten till **Visa mindre**.
+- Ingen separat sida eller visuellt knappformat används.
+
 ## Version 13.9.1 – tydligare beslut och rekommendationer
 
 Den högst rankade platsen förklaras nu med en kort mänsklig motivering och tre aktivitetsrelevanta nyckelfaktorer. Topplistan är enklare att skanna och visar plats, område, omdöme och väderdata utan teknisk källtext. Ingen ranking-, filter-, kart- eller backendlogik har ändrats.
