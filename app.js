@@ -380,7 +380,7 @@ async function mapWithConcurrency(items,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
   return results;
 }
-const diagnostics={version:"13.10.8",mode:"checking",lastLoad:null,sources:[]};
+const diagnostics={version:"13.10.9",mode:"checking",lastLoad:null,sources:[]};
 function setDataMode(mode,detail=""){
   diagnostics.mode=mode;
   const badge=$("dataModeBadge");
@@ -398,8 +398,8 @@ function setDataMode(mode,detail=""){
   badge.className=`data-mode-badge ${mode}`;
   badge.title=detail?`${state.title} ${detail}`:state.title;
 }
-const WEATHER_CACHE_KEY="vk-weather-cache-v13.10.8";
-const POINT_CACHE_KEY="vk-point-cache-v13.10.8";
+const WEATHER_CACHE_KEY="vk-weather-cache-v13.10.9";
+const POINT_CACHE_KEY="vk-point-cache-v13.10.9";
 const BACKGROUND_REFRESH_MS=30*60*1000;
 let refreshTimer=null;
 let loadInProgress=false;
@@ -1192,7 +1192,18 @@ function saveSettingsFromDialog(){
     settings=nextSettings;
   }catch(error){
     console.error("Kunde inte spara inställningarna",error);
-    showSettingsError("Inställningarna kunde inte sparas på enheten. Försök igen.");
+    const errorName=error?.name||"Okänt fel";
+    const errorMessage=error?.message||String(error||"");
+    let storageInfo="";
+    try{
+      let used=0;
+      for(let i=0;i<localStorage.length;i++){
+        const key=localStorage.key(i)||"";
+        used+=key.length+(localStorage.getItem(key)||"").length;
+      }
+      storageInfo=` Lagring: cirka ${Math.round(used*2/1024)} kB.`;
+    }catch{}
+    showSettingsError(`Kunde inte spara: ${errorName}${errorMessage?` – ${errorMessage}`:""}.${storageInfo}`);
     return false;
   }
   $("settingsDialog").close();
@@ -1204,7 +1215,7 @@ $("settingsForm").addEventListener("submit",event=>{
   saveSettingsFromDialog();
 });
 if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
-  const reg=await navigator.serviceWorker.register(`sw.js?v=13.10.8`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=13.10.9`);
   reg.update();
   reg.addEventListener("updatefound",()=>{const worker=reg.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller){$("updateBanner").classList.remove("hidden");}})});
   navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload());

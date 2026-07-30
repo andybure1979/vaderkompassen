@@ -4,9 +4,14 @@ Väderkompassen är en mobilanpassad PWA som hjälper användaren att välja **v
 
 ## Aktuell version
 
-**v13.10.8**
+**v13.10.9**
 
 ## Versionshistorik
+
+### v13.10.9 – diagnostik för inställningssparning
+- Visar det faktiska JavaScript-felets namn och meddelande när sparning misslyckas.
+- Visar ungefärlig användning av webbläsarens lokala lagring.
+- Ingen annan funktion eller sparlogik ändrad.
 
 ### v13.10.8 – stabil sparning av inställningar
 
