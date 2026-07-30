@@ -366,7 +366,7 @@ async function mapWithConcurrency(items,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
   return results;
 }
-const diagnostics={version:"13.10.1",mode:"checking",lastLoad:null,sources:[]};
+const diagnostics={version:"13.10.2",mode:"checking",lastLoad:null,sources:[]};
 function setDataMode(mode,detail=""){
   diagnostics.mode=mode;
   const badge=$("dataModeBadge");
@@ -384,8 +384,8 @@ function setDataMode(mode,detail=""){
   badge.className=`data-mode-badge ${mode}`;
   badge.title=detail?`${state.title} ${detail}`:state.title;
 }
-const WEATHER_CACHE_KEY="vk-weather-cache-v13.10.1";
-const POINT_CACHE_KEY="vk-point-cache-v13.10.1";
+const WEATHER_CACHE_KEY="vk-weather-cache-v13.10.2";
+const POINT_CACHE_KEY="vk-point-cache-v13.10.2";
 const BACKGROUND_REFRESH_MS=30*60*1000;
 let refreshTimer=null;
 let loadInProgress=false;
@@ -976,20 +976,6 @@ function winnerDetailsHtml(r){
   add("Position",`${Number(r.lat).toFixed(4)}, ${Number(r.lon).toFixed(4)}`);
   return `<dl>${rows.join("")}</dl>`;
 }
-let winnerDetailsKey="";
-function setWinnerDetails(r){
-  const wrap=$("winnerDetailsWrap"),details=$("winnerDetails"),more=$("winnerMore");
-  const key=`${r.day}|${r.place}|${settings.activity}`;
-  const keepOpen=key===winnerDetailsKey&&!details.hidden;
-  details.innerHTML=winnerDetailsHtml(r);
-  details.hidden=!keepOpen;more.textContent=keepOpen?"Visa mindre":"Visa mer";more.setAttribute("aria-expanded",String(keepOpen));
-  winnerDetailsKey=key;
-  wrap.classList.remove("hidden");
-}
-function toggleWinnerDetails(){
-  const details=$("winnerDetails"),more=$("winnerMore"),open=details.hidden;
-  details.hidden=!open;more.textContent=open?"Visa mindre":"Visa mer";more.setAttribute("aria-expanded",String(open));
-}
 function scoreColor(score){return score>=90?"#29974a":score>=80?"#78bd8a":score>=70?"#e4bd3d":score>=60?"#ed9653":"#e66b69";}
 function scoreClass(score){return score>=90?"perfect":score>=80?"great":score>=70?"good":score>=60?"okay":"poor";}
 function ensureMap(){
@@ -1036,15 +1022,20 @@ function renderMap(list){
 }
 function toggleMap(){const section=$("mapSection"),button=$("showMapBtn");section.classList.toggle("hidden");const open=!section.classList.contains("hidden");button.textContent=open?"✕ Dölj kartan":"🗺 Visa topplistan på karta";button.setAttribute("aria-expanded",String(open));if(open){renderMap(rankedList());setTimeout(()=>map?.invalidateSize(),80);section.scrollIntoView({behavior:"smooth",block:"nearest"});}}
 let detailPlace="";
+let mainListScrollY=0;
 function detailRow(){
   const list=rankedList();
   return list.find(r=>r.place===detailPlace)||list[0]||null;
 }
 function setMainViewHidden(hidden){
-  ["hero","metrics","winnerDetailsWrap","mapSection","rankingSection","aboutSection"].forEach(id=>$(id)?.classList.toggle("hidden",hidden));
+  ["hero","metrics","winnerDetailsWrap","mapSection","rankingSection","aboutSection"].forEach(id=>{
+    const el=$(id);
+    if(el) el.classList.toggle("hidden",hidden);
+  });
   document.querySelector(".map-actions")?.classList.toggle("hidden",hidden);
 }
 function openDetail(r){
+  mainListScrollY=window.scrollY;
   detailPlace=r.place;
   setMainViewHidden(true);
   $("detailPage").classList.remove("hidden");
@@ -1052,11 +1043,12 @@ function openDetail(r){
   window.scrollTo({top:Math.max(0,$("dayTabs").offsetTop-12),behavior:"smooth"});
 }
 function closeDetail(){
+  const restoreY=mainListScrollY;
   detailPlace="";
   $("detailPage").classList.add("hidden");
   setMainViewHidden(false);
   renderDay();
-  window.scrollTo({top:Math.max(0,$("dayTabs").offsetTop-12),behavior:"smooth"});
+  requestAnimationFrame(()=>requestAnimationFrame(()=>window.scrollTo({top:restoreY,behavior:"auto"})));
 }
 function renderDetail(){
   const r=detailRow();if(!r)return;
@@ -1085,7 +1077,7 @@ function renderDay(){
   $("bestReason").textContent=decisionSentence(best);
   $("bestScore").textContent=best.score;$("hero").dataset.score=best.score;
   $("metrics").innerHTML=winnerMetricCards(best);
-  setWinnerDetails(best);
+  $("winnerDetailsWrap").classList.remove("hidden");
   $("mapLink").href=`https://maps.apple.com/?q=${encodeURIComponent(placeLabel(best))}&ll=${best.lat},${best.lon}`;
   ["hero","metrics","mapLink"].forEach(id=>$(id).classList.remove("hidden"));
   const ranking=$("ranking");ranking.innerHTML="";
@@ -1111,7 +1103,6 @@ function syncSettings(){
   $("sourceMode").value=settings.sourceMode;renderRegionChoices();renderSourceChoices();
 }
 $("showMapBtn").onclick=toggleMap;
-$("winnerMore").onclick=toggleWinnerDetails;
 $("openWinnerDetail").onclick=()=>{const r=rankedList()[0];if(r)openDetail(r)};
 $("detailBack").onclick=closeDetail;
 $("settingsBtn").onclick=()=>{syncSettings();$("settingsDialog").showModal()};
@@ -1139,7 +1130,7 @@ $("saveSettings").onclick=e=>{
   localStorage.setItem("vk-settings",JSON.stringify(settings));$("settingsDialog").close();if(!restoreWeatherCache())load();
 };
 if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
-  const reg=await navigator.serviceWorker.register(`sw.js?v=13.10.1`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=13.10.2`);
   reg.update();
   reg.addEventListener("updatefound",()=>{const worker=reg.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller){$("updateBanner").classList.remove("hidden");}})});
   navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload());
