@@ -307,30 +307,44 @@ function renderActivities(){
   });
   $("activeActivity").textContent=`${ACTIVITIES[settings.activity].icon} ${ACTIVITIES[settings.activity].label}`;
 }
+function syncRegionGroupState(group){
+  const parent=group.querySelector('input[data-kind="region"]');
+  const children=[...group.querySelectorAll('input[data-kind="area"]')];
+  const checked=children.filter(i=>i.checked).length;
+  parent.checked=checked===children.length && children.length>0;
+  parent.indeterminate=checked>0 && checked<children.length;
+}
 function renderRegionChoices(){
   const box=$("regionChoices");box.innerHTML="";
   REGIONS.forEach(region=>{
     const group=document.createElement("section");group.className="filter-region-group";
     const head=document.createElement("label");head.className="check region-check region-head";
     const ri=document.createElement("input");ri.type="checkbox";ri.value=region;ri.dataset.kind="region";
-    ri.checked=settings.regions.includes(region);
     head.append(ri,document.createTextNode(" "+region));group.appendChild(head);
     const children=document.createElement("div");children.className="landscape-grid";
     REGION_AREAS[region].forEach(area=>{
       const l=document.createElement("label");l.className="check landscape-check";
       const i=document.createElement("input");i.type="checkbox";i.value=area;i.dataset.kind="area";i.dataset.region=region;
-      i.checked=settings.areas.includes(area) && ri.checked;
+      i.checked=settings.areas.includes(area);
+      i.addEventListener("change",()=>syncRegionGroupState(group));
       l.append(i,document.createTextNode(" "+area));children.appendChild(l);
     });
-    ri.onchange=()=>children.querySelectorAll("input").forEach(i=>i.checked=ri.checked);
+    ri.addEventListener("change",()=>{
+      ri.indeterminate=false;
+      children.querySelectorAll("input").forEach(i=>i.checked=ri.checked);
+    });
     group.appendChild(children);box.appendChild(group);
+    syncRegionGroupState(group);
   });
 }
 function selectCountry(country){
   const target=new Set(COUNTRY_REGIONS[country]||[]);
-  document.querySelectorAll('#regionChoices input[data-kind="region"]').forEach(i=>{
-    i.checked=target.has(i.value);
-    document.querySelectorAll(`#regionChoices input[data-kind="area"][data-region="${i.value}"]`).forEach(a=>a.checked=i.checked);
+  document.querySelectorAll("#regionChoices .filter-region-group").forEach(group=>{
+    const regionInput=group.querySelector('input[data-kind="region"]');
+    const selected=target.has(regionInput.value);
+    regionInput.checked=selected;
+    regionInput.indeterminate=false;
+    group.querySelectorAll('input[data-kind="area"]').forEach(area=>area.checked=selected);
   });
 }
 function renderSourceChoices(){
@@ -366,7 +380,7 @@ async function mapWithConcurrency(items,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
   return results;
 }
-const diagnostics={version:"13.10.4",mode:"checking",lastLoad:null,sources:[]};
+const diagnostics={version:"13.10.5",mode:"checking",lastLoad:null,sources:[]};
 function setDataMode(mode,detail=""){
   diagnostics.mode=mode;
   const badge=$("dataModeBadge");
@@ -384,8 +398,8 @@ function setDataMode(mode,detail=""){
   badge.className=`data-mode-badge ${mode}`;
   badge.title=detail?`${state.title} ${detail}`:state.title;
 }
-const WEATHER_CACHE_KEY="vk-weather-cache-v13.10.4";
-const POINT_CACHE_KEY="vk-point-cache-v13.10.4";
+const WEATHER_CACHE_KEY="vk-weather-cache-v13.10.5";
+const POINT_CACHE_KEY="vk-point-cache-v13.10.5";
 const BACKGROUND_REFRESH_MS=30*60*1000;
 let refreshTimer=null;
 let loadInProgress=false;
@@ -1130,15 +1144,16 @@ $("showMapBtn").onclick=toggleMap;
 $("openWinnerDetail").onclick=()=>{const r=rankedList()[0];if(r)openDetail(r)};
 $("detailBack").onclick=closeDetail;
 $("settingsBtn").onclick=()=>{syncSettings();$("settingsDialog").showModal()};
+$("settingsClose").onclick=()=>$("settingsDialog").close();
+$("settingsForm").onsubmit=e=>e.preventDefault();
 $("tempTarget").oninput=e=>$("tempOut").textContent=`${e.target.value} °C`;
 $("sourceMode").onchange=renderSourceChoices;
-$("selectAllRegions").onclick=e=>{e.preventDefault();document.querySelectorAll("#regionChoices input").forEach(x=>x.checked=true)};
-$("clearRegions").onclick=e=>{e.preventDefault();document.querySelectorAll("#regionChoices input").forEach(x=>x.checked=false)};
-$("filterSweden").onclick=e=>{e.preventDefault();selectCountry("Sverige")};
-$("filterDenmark").onclick=e=>{e.preventDefault();selectCountry("Danmark")};
-$("filterNorway").onclick=e=>{e.preventDefault();selectCountry("Norge")};
-$("saveSettings").onclick=e=>{
-  e.preventDefault();
+$("selectAllRegions").onclick=()=>{document.querySelectorAll("#regionChoices input").forEach(x=>{x.checked=true;x.indeterminate=false})};
+$("clearRegions").onclick=()=>{document.querySelectorAll("#regionChoices input").forEach(x=>{x.checked=false;x.indeterminate=false})};
+$("filterSweden").onclick=()=>selectCountry("Sverige");
+$("filterDenmark").onclick=()=>selectCountry("Danmark");
+$("filterNorway").onclick=()=>selectCountry("Norge");
+$("saveSettings").onclick=()=>{
   const sourceMode=$("sourceMode").value;
   const sources=[...document.querySelectorAll("#sourceChoices input:checked")].map(x=>x.value);
   if(sourceMode==="manual"&&!sources.length){
@@ -1146,15 +1161,21 @@ $("saveSettings").onclick=e=>{
     $("sourceError").classList.remove("hidden");
     return;
   }
+  const selectedAreas=[...document.querySelectorAll('#regionChoices input[data-kind="area"]:checked')].map(x=>x.value);
+  if(!selectedAreas.length){
+    $("sourceError").textContent="Välj minst ett land eller område.";
+    $("sourceError").classList.remove("hidden");
+    return;
+  }
   $("sourceError").classList.add("hidden");
+  const selectedRegions=[...new Set(selectedAreas.map(area=>PLACES.find(place=>place[1]===area)?.[2]).filter(Boolean))];
   settings={...settings,temp:+$("tempTarget").value,rain:+$("rainWeight").value,
     sun:+$("sunWeight").value,wind:+$("windWeight").value,sourceMode,sources,
-    regions:[...document.querySelectorAll('#regionChoices input[data-kind="region"]:checked')].map(x=>x.value),
-    areas:[...document.querySelectorAll('#regionChoices input[data-kind="area"]:checked')].map(x=>x.value)};
+    regions:selectedRegions,areas:selectedAreas};
   localStorage.setItem("vk-settings",JSON.stringify(settings));$("settingsDialog").close();if(!restoreWeatherCache())load();
 };
 if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
-  const reg=await navigator.serviceWorker.register(`sw.js?v=13.10.4`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=13.10.5`);
   reg.update();
   reg.addEventListener("updatefound",()=>{const worker=reg.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller){$("updateBanner").classList.remove("hidden");}})});
   navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload());

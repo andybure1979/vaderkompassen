@@ -10,7 +10,7 @@
   <title>Väderkompassen – vart ska du åka?</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icon-180.png">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><link rel="stylesheet" href="styles.css?v=13.10.4">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><link rel="stylesheet" href="styles.css?v=13.10.5">
 </head>
 <body><div id="updateBanner" class="update-banner hidden"><span>En ny version finns.</span><button id="updateNow">Uppdatera nu</button></div>
 <header><div class="brand"><h1><span class="brand-mark">◈</span> Väderkompassen</h1><p>Vart ska du åka idag?</p></div><button id="settingsBtn" class="icon-btn" aria-label="Inställningar">⚙️</button></header>
@@ -44,9 +44,9 @@
   <section class="ranking-section" id="rankingSection"><div class="section-heading"><div><h2>Topplista</h2></div><span id="modelCount"></span></div><div id="ranking" class="ranking"></div></section>
   <details id="aboutSection" class="about"><summary>Hur tolkas prognosen och hur sätts aktivitetsbetyget</summary><p>Varje aktivitet har en egen balans mellan temperatur, regn, sol och vind. Surfväder gynnas exempelvis av mer vind, medan cykel- och båtväder gynnas av lugnare vind. Skidväder premierar kyla och nederbörd. I automatläget är väderprognosen en viktad sammanvägning: SMHI väger tyngst för svenska orter, Yr/MET Norway för norska orter och DMI för Danmark. I eget läge används bara de valda prognoskällorna och de väger lika. Övriga modeller används som stöd och för att bedöma osäkerheten. Kust- och surfbetyg använder våghöjd, vågperiod, dyning och havstemperatur. Skidbetyget använder modellberäknat snödjup, nysnö och nollgradersnivå. Uppgifterna är prognoser och ersätter inte lokala säkerhetsrapporter.</p></details>
 </main>
-<footer class="app-footer" aria-label="Versionsinformation"><span>Väderkompassen v13.10.4</span></footer>
-<dialog id="settingsDialog"><form method="dialog">
-  <div class="dialog-head"><h2>Inställningar</h2><button value="cancel" class="icon-btn">✕</button></div>
+<footer class="app-footer" aria-label="Versionsinformation"><span>Väderkompassen v13.10.5</span></footer>
+<dialog id="settingsDialog"><form id="settingsForm">
+  <div class="dialog-head"><h2>Inställningar</h2><button id="settingsClose" type="button" class="icon-btn" aria-label="Stäng inställningar">✕</button></div>
   <label>Önskad temperatur <output id="tempOut">22 °C</output><input id="tempTarget" type="range" min="12" max="30" value="22"></label>
   <label>Hur viktigt är lite regn?<select id="rainWeight"><option value="2">Viktigt</option><option value="3">Mycket viktigt</option><option value="4">Avgörande</option></select></label>
   <label>Hur viktigt är mycket sol?<select id="sunWeight"><option value="1">Lite</option><option value="2">Viktigt</option><option value="3">Mycket viktigt</option></select></label>
@@ -64,15 +64,15 @@
   </fieldset>
   <fieldset><legend>Regioner</legend>
     <div class="country-filter-actions">
-      <button id="filterSweden">🇸🇪 Hela Sverige</button>
-      <button id="filterDenmark">🇩🇰 Hela Danmark</button>
-      <button id="filterNorway">🇳🇴 Hela Norge</button>
+      <button id="filterSweden" type="button">🇸🇪 Hela Sverige</button>
+      <button id="filterDenmark" type="button">🇩🇰 Hela Danmark</button>
+      <button id="filterNorway" type="button">🇳🇴 Hela Norge</button>
     </div>
-    <div class="region-actions"><button id="selectAllRegions">Välj alla länder och områden</button><button id="clearRegions">Rensa</button></div>
+    <div class="region-actions"><button id="selectAllRegions" type="button">Välj alla länder och områden</button><button id="clearRegions" type="button">Rensa</button></div>
     <div id="regionChoices" class="region-grid"></div>
   </fieldset>
-  <button id="saveSettings" value="default" class="primary">Spara och uppdatera</button>
+  <button id="saveSettings" type="button" class="primary">Spara och uppdatera</button>
 </form></dialog>
 <template id="rankTemplate"><article class="rank-card"><div class="rank-number"></div><div class="rank-main"><h3></h3><p></p><div class="mini-metrics"></div></div><div class="rank-score"></div></article></template>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="config.js?v=13.10.4"></script><script src="app.js?v=13.10.4" defer></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="config.js?v=13.10.5"></script><script src="app.js?v=13.10.5" defer></script>
 </body></html>
