@@ -1,4 +1,4 @@
-# Driftstart Väderkompassen v13.8.2
+# Driftstart Väderkompassen v13.8.3
 
 Den här versionen åtgärdar CPU-tidsfelet i `GET /v1/forecast`.
 
