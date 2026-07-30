@@ -1,6 +1,6 @@
 {
   "name": "vaderkompassen-worker",
-  "version": "13.9.0",
+  "version": "13.10.0",
   "private": true,
   "scripts": {"deploy": "wrangler deploy", "dev": "wrangler dev"},
   "devDependencies": {"wrangler": "^4.26.0"}
