@@ -35,7 +35,7 @@ dialog{width:min(520px,calc(100% - 24px));border:0;border-radius:25px;padding:0;
 @media(min-width:520px){.landscape-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(min-width:700px){main{padding:24px}.ranking{grid-template-columns:1fr 1fr}}
 @media(max-width:480px){.map-actions{grid-template-columns:1fr}#weatherMap{height:58vh}.region-grid{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(3,1fr)}.metrics article:nth-child(4),.metrics article:nth-child(5){grid-column:auto}.source-grid{grid-template-columns:1fr}.country-filter-actions{grid-template-columns:1fr}.landscape-grid{grid-template-columns:1fr 1fr}.hero{padding:19px}.hero h2{font-size:24px}.score-ring{flex-basis:74px;width:74px;height:74px}.rank-card{grid-template-columns:37px 1fr 52px}.mini-metrics{gap:7px}.rank-main p{max-width:210px}}
 
-/* v13.8.1 – kartzoom och finputsning */
+/* v13.8.2 – kartzoom och finputsning */
 #modelCount{font-size:10px!important;line-height:1.25;max-width:48%;text-align:right;font-weight:750;letter-spacing:.01em}
 #weatherMap{touch-action:none;cursor:grab}
 #weatherMap:active{cursor:grabbing}
