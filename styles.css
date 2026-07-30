@@ -104,7 +104,7 @@ dialog{width:min(520px,calc(100% - 24px));border:0;border-radius:25px;padding:0;
 @media(max-width:350px){.metrics.metrics-four{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}.metrics.metrics-four article{padding-left:2px;padding-right:2px}.metrics.metrics-four strong{font-size:12px}}
 
 
-/* v13.10.3 – separat detaljvy, återställd topplista och utan visa-mer */
+/* v13.10.4 – separat detaljvy, återställd topplista och utan visa-mer */
 .winner-detail-actions{display:flex;justify-content:center;align-items:center;gap:8px;flex-wrap:wrap}
 .detail-primary{appearance:none;border:0;border-radius:999px;background:var(--activity);color:#fff;padding:10px 15px;font:inherit;font-size:13px;font-weight:850;box-shadow:var(--shadow-soft);cursor:pointer}
 .rank-card{cursor:pointer}
@@ -117,5 +117,5 @@ dialog{width:min(520px,calc(100% - 24px));border:0;border-radius:25px;padding:0;
 @keyframes detailIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
 @media(max-width:480px){.detail-hero{padding:18px 15px}.detail-hero h2{font-size:24px}.detail-score-ring{flex-basis:78px;width:78px;height:78px}.detail-score-ring strong{font-size:29px}}
 
-/* v13.10.3 */
+/* v13.10.4 */
 #winnerDetailsWrap{display:flex;justify-content:center;margin:-7px 0 17px}
