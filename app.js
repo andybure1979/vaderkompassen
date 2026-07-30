@@ -1152,7 +1152,6 @@ $("hero").onkeydown=e=>{if((e.key==="Enter"||e.key===" ")&&!detailPlace){e.preve
 $("detailBack").onclick=closeDetail;
 $("settingsBtn").onclick=()=>{syncSettings();$("settingsDialog").showModal()};
 $("settingsClose").onclick=()=>$("settingsDialog").close();
-$("settingsForm").onsubmit=e=>e.preventDefault();
 $("tempTarget").oninput=e=>$("tempOut").textContent=`${e.target.value} °C`;
 $("sourceMode").onchange=renderSourceChoices;
 $("selectAllRegions").onclick=()=>{document.querySelectorAll("#regionChoices input").forEach(x=>{x.checked=true;x.indeterminate=false})};
@@ -1160,29 +1159,44 @@ $("clearRegions").onclick=()=>{document.querySelectorAll("#regionChoices input")
 $("filterSweden").onclick=()=>selectCountry("Sverige");
 $("filterDenmark").onclick=()=>selectCountry("Danmark");
 $("filterNorway").onclick=()=>selectCountry("Norge");
-$("saveSettings").onclick=()=>{
+function saveSettingsFromDialog(){
   const sourceMode=$("sourceMode").value;
   const sources=[...document.querySelectorAll("#sourceChoices input:checked")].map(x=>x.value);
   if(sourceMode==="manual"&&!sources.length){
     $("sourceError").textContent="Välj minst en prognoskälla.";
     $("sourceError").classList.remove("hidden");
-    return;
+    return false;
   }
-  const selectedAreas=[...document.querySelectorAll('#regionChoices input[data-kind="area"]:checked')].map(x=>x.value);
+  const selectedAreaInputs=[...document.querySelectorAll('#regionChoices input[data-kind="area"]:checked')];
+  const selectedAreas=[...new Set(selectedAreaInputs.map(x=>x.value))];
   if(!selectedAreas.length){
     $("sourceError").textContent="Välj minst ett land eller område.";
     $("sourceError").classList.remove("hidden");
-    return;
+    return false;
   }
+  const selectedRegions=[...new Set(selectedAreaInputs.map(x=>x.dataset.region).filter(region=>REGIONS.includes(region)))];
   $("sourceError").classList.add("hidden");
-  const selectedRegions=[...new Set(selectedAreas.map(area=>PLACES.find(place=>place[1]===area)?.[2]).filter(Boolean))];
   settings={...settings,temp:+$("tempTarget").value,rain:+$("rainWeight").value,
     sun:+$("sunWeight").value,wind:+$("windWeight").value,sourceMode,sources,
     regions:selectedRegions,areas:selectedAreas};
-  localStorage.setItem("vk-settings",JSON.stringify(settings));$("settingsDialog").close();if(!restoreWeatherCache())load();
-};
+  try{
+    localStorage.setItem("vk-settings",JSON.stringify(settings));
+  }catch(error){
+    console.error("Kunde inte spara inställningarna",error);
+    $("sourceError").textContent="Inställningarna kunde inte sparas. Försök igen.";
+    $("sourceError").classList.remove("hidden");
+    return false;
+  }
+  $("settingsDialog").close();
+  requestAnimationFrame(()=>{if(!restoreWeatherCache())load()});
+  return true;
+}
+$("settingsForm").addEventListener("submit",event=>{
+  event.preventDefault();
+  saveSettingsFromDialog();
+});
 if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
-  const reg=await navigator.serviceWorker.register(`sw.js?v=13.10.6`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=13.10.7`);
   reg.update();
   reg.addEventListener("updatefound",()=>{const worker=reg.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller){$("updateBanner").classList.remove("hidden");}})});
   navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload());
