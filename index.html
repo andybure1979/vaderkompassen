@@ -10,7 +10,7 @@
   <title>Väderkompassen – vart ska du åka?</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icon-180.png">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><link rel="stylesheet" href="styles.css?v=13.9.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><link rel="stylesheet" href="styles.css?v=13.9.1">
 </head>
 <body><div id="updateBanner" class="update-banner hidden"><span>En ny version finns.</span><button id="updateNow">Uppdatera nu</button></div>
 <header><div class="brand"><h1><span class="brand-mark">◈</span> Väderkompassen</h1><p>Vart ska du åka idag?</p></div><button id="settingsBtn" class="icon-btn" aria-label="Inställningar">⚙️</button></header>
@@ -22,22 +22,15 @@
   <section class="status-card" id="statusCard"><span class="spinner"></span><span id="status">Hämtar prognoser…</span></section>
   <nav id="dayTabs" class="day-tabs" aria-label="Prognosdagar"></nav>
   <section id="hero" class="hero hidden">
-    <div><span class="eyebrow" id="bestEyebrow">DAGENS VAL</span><h2 id="bestPlace">–</h2><p id="bestRegion">–</p><p id="bestSummary">–</p><p id="bestReason" class="best-reason">–</p><div id="bestReasons" class="decision-reasons" aria-label="Därför rekommenderas platsen"></div></div>
+    <div><span class="eyebrow" id="bestEyebrow">DAGENS VAL</span><h2 id="bestPlace">–</h2><p id="bestRegion">–</p><p id="bestSummary">–</p><p id="bestReason" class="best-reason">–</p></div>
     <div class="score-ring"><strong id="bestScore">–</strong><span>/100</span></div>
   </section>
-  <section id="metrics" class="metrics metrics-five hidden">
-    <article><span>🌡️</span><strong id="bestTemp">–</strong><small>högsta</small></article>
-    <article><span>🌧️</span><strong id="bestRain">–</strong><small>regn</small></article>
-    <article><span>☀️</span><strong id="bestSun">–</strong><small>sol</small></article>
-    <article><span>💨</span><strong id="bestWind">–</strong><small>vind</small></article>
-    <article><span>🎯</span><strong id="bestConfidence">–</strong><small>säkerhet</small></article>
-  </section>
-  <section id="specialMetrics" class="special-metrics hidden"></section>
+  <section id="metrics" class="metrics metrics-four hidden" aria-label="Viktigaste vädervärden"></section>
   <div class="map-actions"><button id="showMapBtn" class="map-button">🗺 Visa topplistan på karta</button><a id="mapLink" class="map-button hidden" target="_blank" rel="noopener">📍 Navigera till vinnaren</a></div><section id="mapSection" class="map-section hidden"><div class="map-head"><div><span class="section-kicker">ÖVERBLICK</span><h2>Var ligger de bästa platserna?</h2></div><span class="map-hint">Tryck på en poäng</span></div><div class="map-legend"><span><i class="legend-green"></i>Perfekt</span><span><i class="legend-mint"></i>Mycket bra</span><span><i class="legend-yellow"></i>Bra</span><span><i class="legend-orange"></i>Okej</span><span><i class="legend-red"></i>Inte idag</span></div><div class="map-frame"><div id="weatherMap"></div></div></section>
   <section class="ranking-section"><div class="section-heading"><div><h2>Topplista</h2></div><span id="modelCount"></span></div><div id="ranking" class="ranking"></div></section>
   <details class="about"><summary>Hur tolkas prognosen och hur sätts aktivitetsbetyget</summary><p>Varje aktivitet har en egen balans mellan temperatur, regn, sol och vind. Surfväder gynnas exempelvis av mer vind, medan cykel- och båtväder gynnas av lugnare vind. Skidväder premierar kyla och nederbörd. I automatläget är väderprognosen en viktad sammanvägning: SMHI väger tyngst för svenska orter, Yr/MET Norway för norska orter och DMI för Danmark. I eget läge används bara de valda prognoskällorna och de väger lika. Övriga modeller används som stöd och för att bedöma osäkerheten. Kust- och surfbetyg använder våghöjd, vågperiod, dyning och havstemperatur. Skidbetyget använder modellberäknat snödjup, nysnö och nollgradersnivå. Uppgifterna är prognoser och ersätter inte lokala säkerhetsrapporter.</p></details>
 </main>
-<footer class="app-footer" aria-label="Versionsinformation"><span>Väderkompassen v13.9.0</span></footer>
+<footer class="app-footer" aria-label="Versionsinformation"><span>Väderkompassen v13.9.1</span></footer>
 <dialog id="settingsDialog"><form method="dialog">
   <div class="dialog-head"><h2>Inställningar</h2><button value="cancel" class="icon-btn">✕</button></div>
   <label>Önskad temperatur <output id="tempOut">22 °C</output><input id="tempTarget" type="range" min="12" max="30" value="22"></label>
@@ -67,5 +60,5 @@
   <button id="saveSettings" value="default" class="primary">Spara och uppdatera</button>
 </form></dialog>
 <template id="rankTemplate"><article class="rank-card"><div class="rank-number"></div><div class="rank-main"><h3></h3><p></p><div class="mini-metrics"></div></div><div class="rank-score"></div></article></template>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="config.js?v=13.9.0"></script><script src="app.js?v=13.9.0" defer></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="config.js?v=13.9.1"></script><script src="app.js?v=13.9.1" defer></script>
 </body></html>

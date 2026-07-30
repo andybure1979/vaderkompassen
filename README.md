@@ -1,4 +1,4 @@
-## Version 13.9.0 – tydligare beslut och rekommendationer
+## Version 13.9.1 – tydligare beslut och rekommendationer
 
 Den högst rankade platsen förklaras nu med en kort mänsklig motivering och tre aktivitetsrelevanta nyckelfaktorer. Topplistan är enklare att skanna och visar plats, område, omdöme och väderdata utan teknisk källtext. Ingen ranking-, filter-, kart- eller backendlogik har ändrats.
 

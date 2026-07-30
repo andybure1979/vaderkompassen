@@ -890,6 +890,33 @@ function specialMetricHtml(r){
   }
   return "";
 }
+function winnerMetricCards(r){
+  const card=(icon,value,label,detail="")=>`<article><span>${icon}</span><strong>${value}</strong><small>${label}</small>${detail?`<em>${detail}</em>`:""}</article>`;
+  if(settings.activity==="surf")return [
+    card("🌊",`${fmt(r.waveHeight)} m`,"vågor",`${fmt(r.wavePeriod,0)} s`),
+    card("💨",`${fmt(r.wind)} m/s`,"vind",Number.isFinite(r.windDirection)?compassDirection(r.windDirection):""),
+    card("☀️",`${fmt(r.sun)} h`,"sol"),
+    card("🌡️",`${fmt(r.temp,0)}°`,"temperatur")
+  ].join("");
+  if(["coast","boat","fishing"].includes(settings.activity))return [
+    card("🌊",`${fmt(r.waveHeight)} m`,"vågor",`${fmt(r.wavePeriod,0)} s`),
+    card("💨",`${fmt(r.wind)} m/s`,"vind",Number.isFinite(r.windDirection)?compassDirection(r.windDirection):""),
+    card("🌡️",`${fmt(r.seaTemp,0)}°`,"hav"),
+    card("🌡️",`${fmt(r.temp,0)}°`,"temperatur")
+  ].join("");
+  if(settings.activity==="ski")return [
+    card("❄️",`${fmt(r.snowDepth,0)} cm`,"snödjup"),
+    card("🌨️",`${fmt(r.newSnow)} cm`,"nysnö"),
+    card("🌡️",`${fmt(r.temp,0)}°`,"temperatur"),
+    card("💨",`${fmt(r.wind)} m/s`,"vind")
+  ].join("");
+  return [
+    card("🌡️",`${fmt(r.temp,0)}°`,"temperatur"),
+    card("🌧️",`${fmt(r.rain)} mm`,"regn"),
+    card("☀️",`${fmt(r.sun)} h`,"sol"),
+    card("💨",`${fmt(r.wind)} m/s`,"vind")
+  ].join("");
+}
 function scoreColor(score){return score>=90?"#29974a":score>=80?"#78bd8a":score>=70?"#e4bd3d":score>=60?"#ed9653":"#e66b69";}
 function scoreClass(score){return score>=90?"perfect":score>=80?"great":score>=70?"good":score>=60?"okay":"poor";}
 function ensureMap(){
@@ -903,11 +930,22 @@ function ensureMap(){
     doubleClickZoom:true,
     boxZoom:true,
     keyboard:true,
-    tap:true
+    zoomSnap:0.5,
+    zoomDelta:0.5,
+    wheelPxPerZoomLevel:60,
+    bounceAtZoomLimits:false
   }).setView([60.2,15.4],5);
   L.control.zoom({position:"bottomright"}).addTo(map);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18,attribution:'&copy; OpenStreetMap',className:"pastel-map-tiles"}).addTo(map);
   markerLayer=L.layerGroup().addTo(map);
+  map.whenReady(()=>{
+    map.dragging.enable();
+    map.touchZoom.enable();
+    map.scrollWheelZoom.enable();
+    map.doubleClickZoom.enable();
+    map.boxZoom.enable();
+    map.keyboard.enable();
+  });
 }
 function mapPopupHtml(r,position){
   const activity=ACTIVITIES[settings.activity];
@@ -935,11 +973,8 @@ function renderDay(){
     : `${best.area} · ${best.region} · ${best.usedSources.length} valda källor`;
   $("bestSummary").textContent=activitySummary(best.score);
   $("bestReason").textContent=decisionSentence(best);
-  $("bestReasons").innerHTML=decisionReasons(best).map(x=>`<span><b>${x.icon} ${x.value}</b><small>${x.label}</small></span>`).join("");
-  $("bestScore").textContent=best.score;$("hero").dataset.score=best.score;$("bestTemp").textContent=`${fmt(best.temp,0)}°`;
-  $("bestRain").textContent=`${fmt(best.rain)} mm`;$("bestSun").textContent=`${fmt(best.sun)} h`;
-  $("bestWind").textContent=`${fmt(best.wind)} m/s`;$("bestConfidence").textContent=`${best.confidence}%`;
-  $("specialMetrics").innerHTML=specialMetricHtml(best);$("specialMetrics").classList.toggle("hidden",!$("specialMetrics").innerHTML);
+  $("bestScore").textContent=best.score;$("hero").dataset.score=best.score;
+  $("metrics").innerHTML=winnerMetricCards(best);
   $("mapLink").href=`https://maps.apple.com/?q=${encodeURIComponent(placeLabel(best))}&ll=${best.lat},${best.lon}`;
   ["hero","metrics","mapLink"].forEach(id=>$(id).classList.remove("hidden"));
   const ranking=$("ranking");ranking.innerHTML="";

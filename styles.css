@@ -55,3 +55,24 @@ dialog{width:min(520px,calc(100% - 24px));border:0;border-radius:25px;padding:0;
 .rank-card:first-child{border-color:color-mix(in srgb,var(--activity) 34%,var(--border));box-shadow:0 9px 28px color-mix(in srgb,var(--activity) 12%,transparent)}
 .rank-card:first-child .rank-number:before{content:"🥇 ";font-size:14px}
 @media(max-width:480px){.decision-reasons{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.decision-reasons span{min-width:0;padding:8px 7px}.decision-reasons b{font-size:11px}.best-reason{font-size:12px}}
+
+
+/* v13.9.1 – fyra likvärdiga faktakort och stabil kartzoom */
+.metrics.metrics-four{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:12px 0 16px}
+.metrics.metrics-four article{min-height:104px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px 6px;border-radius:17px}
+.metrics.metrics-four span{font-size:22px;line-height:1}
+.metrics.metrics-four strong{font-size:16px;margin:8px 0 3px}
+.metrics.metrics-four small{font-size:10px;text-transform:uppercase;letter-spacing:.04em;font-weight:750}
+.metrics.metrics-four em{display:block;margin-top:3px;color:var(--muted);font-size:10px;font-style:normal;font-weight:750}
+#weatherMap,.leaflet-container{touch-action:none!important;-ms-touch-action:none!important}
+#weatherMap{position:relative;z-index:1;min-height:430px}
+.leaflet-control-zoom{display:block!important;pointer-events:auto!important}
+.leaflet-control-zoom a{touch-action:manipulation!important;pointer-events:auto!important}
+.leaflet-pane,.leaflet-map-pane,.leaflet-tile-pane{pointer-events:auto}
+@media(max-width:480px){
+  .metrics.metrics-four{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+  .metrics.metrics-four article{min-height:92px;padding:10px 3px}
+  .metrics.metrics-four span{font-size:20px}
+  .metrics.metrics-four strong{font-size:14px}
+  .metrics.metrics-four small,.metrics.metrics-four em{font-size:8px}
+}
