@@ -214,11 +214,15 @@ async function latestSnapshot(env,url){
 
   // Läs därefter enbart de regionala delarna som användaren valt.
   const shardQ=new URLSearchParams({select:'regions,payload,generated_at,source_status',activity:'eq.region',generated_at:`eq.${generatedAt}`});
-  let storedRows=await sb(env,`forecast_snapshots?${shardQ}`);
+  // Filtrera regionala del-snapshots i PostgREST/Supabase i stället för i Workern.
+  // Varje shard innehåller en JSONB-array med exakt en region. `cs` motsvarar JSONB-operatorn @>.
   if(regionValues.length){
-    const requestedRegions=new Set(regionValues);
-    storedRows=(storedRows||[]).filter(stored=>Array.isArray(stored.regions)&&stored.regions.some(region=>requestedRegions.has(region)));
+    const clauses=regionValues.map(region=>`regions.cs.${JSON.stringify([region])}`);
+    shardQ.set('or',`(${clauses.join(',')})`);
   }
+  const queryStarted=Date.now();
+  let storedRows=await sb(env,`forecast_snapshots?${shardQ}`);
+  const queryMs=Date.now()-queryStarted;
 
   // Bakåtkompatibel reserv innan första 13.9.0-snapshoten har skapats.
   if(!storedRows?.length){
@@ -245,17 +249,24 @@ async function latestSnapshot(env,url){
       }
     }
   }
+  const rankingStarted=Date.now();
   for(const day of Object.keys(dailyResults)){
     const filtered=dailyResults[day];
-    filtered.sort((a,b)=>(b.serverScores?.[requested]??serverScore(b,requested))-(a.serverScores?.[requested]??serverScore(a,requested))||(b.confidence||0)-(a.confidence||0));
+    // Normalfallet använder förberäknade serverScores. Räkna bara om för äldre snapshots som saknar poäng.
+    filtered.sort((a,b)=>{
+      const scoreB=b.serverScores?.[requested];
+      const scoreA=a.serverScores?.[requested];
+      return (Number.isFinite(scoreB)?scoreB:serverScore(b,requested))-(Number.isFinite(scoreA)?scoreA:serverScore(a,requested))||(b.confidence||0)-(a.confidence||0);
+    });
     dailyResults[day]=filtered.slice(0,FORECAST_ROWS_PER_DAY);
     if(!dailyResults[day].length)delete dailyResults[day];
   }
+  const rankingMs=Date.now()-rankingStarted;
   const firstPayload=storedRows[0].payload||{};
   return {ok:firstPayload.ok!==false,version:firstPayload.version||'13.9.0',generatedAt,
     activeDate:firstPayload.activeDate||Object.keys(dailyResults).sort()[0]||null,dailyResults,
-    sourceStatus,meta:payloadMeta||{},activity:requested,
-    rankingEngine:'cloud-v3-regional-jsonb-safe',resultLimitPerDay:FORECAST_ROWS_PER_DAY};
+    sourceStatus,meta:{...(payloadMeta||{}),performance:{queryMs,rankingMs,shards:storedRows.length}},activity:requested,
+    rankingEngine:'cloud-v4-supabase-region-filter',resultLimitPerDay:FORECAST_ROWS_PER_DAY};
 }
 async function status(env){
   const [snapshots,runs]=await Promise.all([

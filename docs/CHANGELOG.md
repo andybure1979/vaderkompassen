@@ -1,6 +1,15 @@
 # Ändringslogg
 
 
+
+## 14.0.6.3
+
+- Filtrerar valda regioner direkt i Supabase/PostgREST innan regionala prognos-shards laddas till Workern.
+- Återanvänder förberäknade `serverScores` och räknar bara om för äldre snapshots.
+- Lägger till enkel prestandamätning för databasfråga, rankning och antal laddade shards.
+- Ny GIN-indexmigration för `forecast_snapshots.regions`.
+- Uppdaterade versionsnummer och cache till 14.0.6.3.
+
 ## 14.0.6.2
 
 - Lade till `package.json` i projektroten.

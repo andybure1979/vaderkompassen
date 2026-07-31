@@ -35,3 +35,8 @@ Betalning är ännu inte ansluten till Apple App Store eller Google Play. Fälte
 2. Kör `npm install` från projektroten.
 3. Ange `npm run deploy` som deploy command i Cloudflare.
 4. Använd inte `npx wrangler deploy`, eftersom det kan hämta en annan Wrangler-version än den som projektet är testat mot.
+
+
+## Forecast CPU Fix i v14.0.6.3
+
+Kör migrationen `supabase/migrations/20260731_140603_forecast_cpu_fix.sql` i Supabase SQL Editor efter tidigare migrationer. Deploya därefter Workern med `npm run deploy`. Kontrollera `/v1/forecast` med flera regioner och verifiera att svaret innehåller `meta.performance`.
