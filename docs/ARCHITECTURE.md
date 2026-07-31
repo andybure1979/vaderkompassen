@@ -2,13 +2,28 @@
 
 ## Premium och åtkomst
 
-`auth.js` är den gemensamma åtkomstmodulen. `window.VK_AUTH` exponerar:
+Premiumåtkomsten hanteras centralt i `auth.js`:
 
-- `getAccessState()` – aktuell användare, profil, roll och behörighet.
 - `hasPremiumAccess()` – om användaren har full åtkomst.
 - `canAccess(feature)` – kontrollerar en namngiven Premium-funktion.
-- `requirePremium(feature)` – returnerar `false` och öppnar Premium-dialogen när åtkomst saknas.
+- `requirePremium(feature)` – öppnar Premium-dialogen när åtkomst saknas.
 
-Premiumroller är `trial`, `premium`, `vip` och `admin`. Rollen `free` saknar Premium-åtkomst.
+Rollerna är `free`, `trial`, `premium`, `vip` och `admin`.
 
-Betalningsleverantörer är ännu inte integrerade. Befintliga profilfält för leverantör, status och giltighet används senare för Apple och Google.
+## Provperiod och prenumeration
+
+V14.0.5 använder skyddade Supabase RPC-funktioner:
+
+- `start_premium_trial()` startar kontots enda tre dagar långa provperiod.
+- `cancel_premium_subscription()` avslutar automatisk förnyelse men behåller åtkomsten till periodens slut.
+
+`trial_used_at` är den permanenta spärren mot en andra provperiod. Efter en avslutad, ej uppsagd provperiod behandlar klientens centrala åtkomstmodell kontot som Premium. Fram till att App Store och Google Play ansluts används `subscription_provider = manual`; ingen faktisk betalning genomförs.
+
+## Dokumentation
+
+Aktuell dokumentation finns endast i:
+
+- `ARCHITECTURE.md`
+- `CHANGELOG.md`
+- `ROADMAP.md`
+- `SETUP.md`

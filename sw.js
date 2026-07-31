@@ -1,5 +1,5 @@
-const CACHE="vaderkompassen-v14-0-4";
-const ASSETS=["./","index.html","styles.css?v=14.0.4","config.js?v=14.0.4","auth.js?v=14.0.4","app.js?v=14.0.4","manifest.webmanifest","icon-192.png","icon-512.png","icon-180.png"];
+const CACHE="vaderkompassen-v14-0-5";
+const ASSETS=["./","index.html","styles.css?v=14.0.5","config.js?v=14.0.5","auth.js?v=14.0.5","app.js?v=14.0.5","manifest.webmanifest","icon-192.png","icon-512.png","icon-180.png"];
 self.addEventListener("install",e=>{self.skipWaiting();e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)))});
 self.addEventListener("activate",e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==CACHE).map(x=>caches.delete(x)))).then(()=>self.clients.claim()))});
 self.addEventListener("message",e=>{if(e.data?.type==="SKIP_WAITING")self.skipWaiting()});

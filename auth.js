@@ -75,7 +75,9 @@
   function effectiveRole(p) {
     if (!p) return "free";
     if (["admin", "vip", "premium"].includes(p.role)) return p.role;
-    if (p.trial_ends_at && new Date(p.trial_ends_at).getTime() > Date.now()) return "trial";
+    const trialActive = p.trial_ends_at && new Date(p.trial_ends_at).getTime() > Date.now();
+    if (p.role === "trial" && trialActive) return "trial";
+    if (p.role === "trial" && p.subscription_status === "active" && !p.cancel_at_period_end) return "premium";
     return "free";
   }
 
@@ -110,18 +112,61 @@
   function renderPremiumInfo() {
     const role = effectiveRole(profile);
     const trialDays = daysLeft(profile?.trial_ends_at);
+    const trialUsed = Boolean(profile?.trial_used_at);
+    const cancelled = Boolean(profile?.cancel_at_period_end || profile?.subscription_status === "cancelled");
     if ($("premiumPrice")) $("premiumPrice").textContent = `${PREMIUM_PRICE_SEK} kr/månad`;
+    if ($("premiumPriceNote")) $("premiumPriceNote").textContent = role === "trial"
+      ? `${trialDays} dag${trialDays === 1 ? "" : "ar"} kvar av provperioden`
+      : "3 dagar gratis, därefter automatisk förnyelse";
     if ($("premiumState")) {
       $("premiumState").textContent = role === "trial"
-        ? `Din kostnadsfria provperiod är aktiv i ${trialDays} dag${trialDays === 1 ? "" : "ar"}.`
-        : hasPremiumAccess()
-          ? "Du har redan full Premium-åtkomst."
-          : "Premiumbetalning aktiveras i en kommande version.";
+        ? cancelled
+          ? `Provperioden är aktiv i ${trialDays} dag${trialDays === 1 ? "" : "ar"} till och förnyas inte.`
+          : `Provperioden är aktiv. Därefter övergår den automatiskt till Premium för ${PREMIUM_PRICE_SEK} kr/månad.`
+        : role === "premium"
+          ? "Premium är aktivt och förnyas automatiskt."
+          : hasPremiumAccess()
+            ? "Du har full Premium-åtkomst."
+            : trialUsed
+              ? "Din kostnadsfria provperiod har redan använts."
+              : "Du har inte aktiverat provperioden.";
     }
     if ($("premiumPurchase")) {
-      $("premiumPurchase").disabled = true;
-      $("premiumPurchase").textContent = hasPremiumAccess() ? "Premium är aktivt" : "Betalning kommer snart";
+      const canStart = Boolean(session?.user) && role === "free" && !trialUsed;
+      $("premiumPurchase").classList.toggle("hidden", !canStart);
+      $("premiumPurchase").disabled = !canStart;
+      $("premiumPurchase").textContent = "Starta 3 dagars gratis provperiod";
     }
+    if ($("premiumCancel")) {
+      const canCancel = ["trial", "premium"].includes(role) && !cancelled;
+      $("premiumCancel").classList.toggle("hidden", !canCancel);
+    }
+  }
+
+  async function startPremiumTrial() {
+    if (!client || !session?.user) return;
+    if (!window.confirm(`Starta 3 dagar gratis? Därefter förnyas Premium automatiskt för ${PREMIUM_PRICE_SEK} kr/månad tills du avslutar.`)) return;
+    setMessage("premiumState", "Aktiverar provperioden …");
+    const { data, error } = await client.rpc("start_premium_trial");
+    if (error) return setMessage("premiumState", error.message, true);
+    profile = Array.isArray(data) ? data[0] : data;
+    if (!profile) await loadProfile();
+    else renderAccount();
+    renderPremiumInfo();
+    window.dispatchEvent(new CustomEvent("vk:access-changed", { detail: getAccessState() }));
+  }
+
+  async function cancelPremiumRenewal() {
+    if (!client || !session?.user) return;
+    if (!window.confirm("Avsluta den automatiska förnyelsen? Du behåller Premium till provperiodens eller betalperiodens slut.")) return;
+    setMessage("premiumState", "Avslutar automatisk förnyelse …");
+    const { data, error } = await client.rpc("cancel_premium_subscription");
+    if (error) return setMessage("premiumState", error.message, true);
+    profile = Array.isArray(data) ? data[0] : data;
+    if (!profile) await loadProfile();
+    else renderAccount();
+    renderPremiumInfo();
+    window.dispatchEvent(new CustomEvent("vk:access-changed", { detail: getAccessState() }));
   }
 
   async function loadProfile() {
@@ -175,13 +220,18 @@
     $("profileTrial").textContent = trialDays
       ? `${trialDays} dag${trialDays === 1 ? "" : "ar"} kvar`
       : profile?.trial_ends_at ? "Avslutad" : "Ingen provperiod aktiverad";
-    $("profileSubscription").textContent = profile?.subscription_status === "active"
-      ? "Premium är aktivt"
-      : "Du använder gratisversionen";
+    const renewalCancelled = Boolean(profile?.cancel_at_period_end || profile?.subscription_status === "cancelled");
+    $("profileSubscription").textContent = role === "trial"
+      ? renewalCancelled ? "Provperiod – avslutas automatiskt" : `Provperiod – därefter ${PREMIUM_PRICE_SEK} kr/månad`
+      : role === "premium"
+        ? renewalCancelled ? "Premium – avslutas vid periodens slut" : `Premium – ${PREMIUM_PRICE_SEK} kr/månad`
+        : hasPremiumAccess() ? "Premiumåtkomst" : "Du använder gratisversionen";
     $("profileAccessText").textContent = role === "trial"
       ? `Full Premium i ${trialDays} dag${trialDays === 1 ? "" : "ar"}`
       : hasPremiumAccess() ? "Full tillgång utan reklam" : "Grundläggande tillgång";
-    $("upgradePremium").classList.toggle("hidden", hasPremiumAccess());
+    const mayStartTrial = role === "free" && !profile?.trial_used_at;
+    $("upgradePremium").classList.toggle("hidden", !mayStartTrial);
+    $("upgradePremium").textContent = "Prova Premium gratis i 3 dagar";
     $("openAdmin").classList.toggle("hidden", role !== "admin");
   }
 
@@ -326,6 +376,8 @@
     $("signOut")?.addEventListener("click", signOut);
     $("saveProfileName")?.addEventListener("click", saveDisplayName);
     $("upgradePremium")?.addEventListener("click", () => openPremiumInfo());
+    $("premiumPurchase")?.addEventListener("click", startPremiumTrial);
+    $("premiumCancel")?.addEventListener("click", cancelPremiumRenewal);
     $("openAdmin")?.addEventListener("click", () => { $("profileDialog").close(); $("adminDialog").showModal(); });
     $("adminSearchBtn")?.addEventListener("click", searchAdmin);
     $("adminSearch")?.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); searchAdmin(); } });

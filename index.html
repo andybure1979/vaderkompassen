@@ -10,7 +10,7 @@
   <title>Väderkompassen – vart ska du åka?</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icon-180.png">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><link rel="stylesheet" href="styles.css?v=14.0.4">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><link rel="stylesheet" href="styles.css?v=14.0.5">
 </head>
 <body><div id="updateBanner" class="update-banner hidden"><span>En ny version finns.</span><button id="updateNow">Uppdatera nu</button></div>
 <header><div class="brand"><h1><span class="brand-mark">◈</span> Väderkompassen</h1><p>Vart ska du åka idag?</p></div><div class="header-actions"><button id="accountBtn" class="account-btn" type="button" aria-label="Konto"><span id="accountIcon">👤</span><span id="accountLabel">Logga in</span></button><button id="settingsBtn" class="icon-btn" aria-label="Inställningar">⚙️</button></div></header>
@@ -41,7 +41,7 @@
   <section class="ranking-section" id="rankingSection"><div class="section-heading"><div><h2>Topplista</h2></div><span id="modelCount"></span></div><div id="ranking" class="ranking"></div></section>
   <details id="aboutSection" class="about"><summary>Hur tolkas prognosen och hur sätts aktivitetsbetyget</summary><p>Varje aktivitet har en egen balans mellan temperatur, regn, sol och vind. Surfväder gynnas exempelvis av mer vind, medan cykel- och båtväder gynnas av lugnare vind. Skidväder premierar kyla och nederbörd. I automatläget är väderprognosen en viktad sammanvägning: SMHI väger tyngst för svenska orter, Yr/MET Norway för norska orter och DMI för Danmark. I eget läge används bara de valda prognoskällorna och de väger lika. Övriga modeller används som stöd och för att bedöma osäkerheten. Kust- och surfbetyg använder våghöjd, vågperiod, dyning och havstemperatur. Skidbetyget använder modellberäknat snödjup, nysnö och nollgradersnivå. Uppgifterna är prognoser och ersätter inte lokala säkerhetsrapporter.</p></details>
 </main>
-<footer class="app-footer" aria-label="Versionsinformation"><span>Väderkompassen v14.0.4</span></footer>
+<footer class="app-footer" aria-label="Versionsinformation"><span>Väderkompassen v14.0.5</span></footer>
 <dialog id="settingsDialog"><form id="settingsForm">
   <div class="dialog-head"><h2>Inställningar</h2><button id="settingsClose" type="button" class="icon-btn" aria-label="Stäng inställningar">✕</button></div>
   <label>Önskad temperatur <output id="tempOut">22 °C</output><input id="tempTarget" type="range" min="12" max="30" value="22"></label>
@@ -93,18 +93,20 @@
     <div class="profile-editor-row"><input id="profileDisplayName" type="text" maxlength="60" autocomplete="name" placeholder="Ditt namn"><button id="saveProfileName" type="button" class="secondary">Spara namn</button></div>
     <p id="profileNameMessage" class="account-message hidden" role="status"></p>
   </div>
-  <button id="upgradePremium" type="button" class="primary">Uppgradera till Premium</button>
+  <button id="upgradePremium" type="button" class="primary">Prova Premium gratis i 3 dagar</button>
   <button id="openAdmin" type="button" class="secondary hidden">Öppna adminpanel</button>
   <button id="signOut" type="button" class="text-button danger">Logga ut</button>
 </form></dialog>
 
 <dialog id="premiumInfoDialog" class="account-dialog premium-dialog"><form method="dialog">
   <div class="dialog-head"><div><span class="section-kicker">PREMIUM</span><h2>Mer av Väderkompassen</h2></div><button id="premiumInfoClose" type="button" class="icon-btn" aria-label="Stäng Premium-information">✕</button></div>
-  <div class="premium-price-card"><strong id="premiumPrice">29 kr/månad</strong><span>3 dagar kostnadsfritt för nya konton</span></div>
+  <div class="premium-price-card"><strong id="premiumPrice">29 kr/månad</strong><span id="premiumPriceNote">3 dagar gratis, därefter automatisk förnyelse</span></div>
   <p id="premiumRequestedFeature" class="account-intro">Premium ger dig hela Väderkompassen.</p>
   <ul class="premium-benefits"><li>Reklamfri upplevelse</li><li>Fler aktiviteter</li><li>Molnsynk mellan dina enheter</li><li>Personliga rekommendationer</li></ul>
-  <p id="premiumState" class="account-message">Premiumbetalning aktiveras i en kommande version.</p>
-  <button id="premiumPurchase" type="button" class="primary" disabled>Betalning kommer snart</button>
+  <p id="premiumTerms" class="account-intro">Provperioden kan användas en gång. Om du inte avslutar under provperioden övergår den automatiskt till Premium för 29 kr/månad.</p>
+  <p id="premiumState" class="account-message">Du har inte aktiverat provperioden.</p>
+  <button id="premiumPurchase" type="button" class="primary">Starta 3 dagars gratis provperiod</button>
+  <button id="premiumCancel" type="button" class="secondary hidden">Avsluta automatisk förnyelse</button>
   <button id="premiumInfoDone" type="submit" class="secondary">Stäng</button>
 </form></dialog>
 
@@ -115,5 +117,5 @@
   <div id="adminResults" class="admin-results"><p class="empty-state">Sök efter en användare för att ändra åtkomst.</p></div>
 </form></dialog>
 <template id="rankTemplate"><article class="rank-card"><div class="rank-number"></div><div class="rank-main"><h3></h3><p></p><div class="mini-metrics"></div></div><div class="rank-score"></div></article></template>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js?v=14.0.4"></script><script src="auth.js?v=14.0.4" defer></script><script src="app.js?v=14.0.4" defer></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js?v=14.0.5"></script><script src="auth.js?v=14.0.5" defer></script><script src="app.js?v=14.0.5" defer></script>
 </body></html>

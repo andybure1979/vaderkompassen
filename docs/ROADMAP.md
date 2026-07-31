@@ -6,9 +6,10 @@
 - **14.0.1–14.0.2** Stabil konto- och profilupplevelse.
 - **14.0.3** Personlig profil och molnsynk.
 - **14.0.4** Premiumgrund och behörighetsmodell.
+- **14.0.5** Frivillig engångsprovperiod och prenumerationsflöde.
 
 ## Nästa
 
-- **14.0.5** Adminpanel och driftöversikt.
+- **14.0.6** Adminpanel och driftöversikt.
 - **14.1.x** Förbättrat beslutsstöd, historik och personalisering utan favoriter.
-- **Senare** App Store- och Google Play-prenumerationer.
+- **Senare** App Store- och Google Play-prenumerationer som extern betalningskälla.

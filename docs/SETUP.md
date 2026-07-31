@@ -1,28 +1,29 @@
 # Installation och drift
 
-## Väderkompassen v14.0.4
+## Väderkompassen v14.0.5
 
-1. Publicera hela projektet till GitHub.
-2. Kontrollera att webbplatsen visar `Väderkompassen v14.0.4` i sidfoten.
-3. Testa registrering, inloggning, profil och Premium-dialog.
+1. Kör SQL-migrationerna i ordningen nedan.
+2. Publicera hela projektet till GitHub.
+3. Kontrollera att webbplatsen visar `Väderkompassen v14.0.5` i sidfoten.
+4. Testa registrering, inloggning, start av provperiod och avslutad automatisk förnyelse.
 
 ## Manuella databassteg
 
-**Inga nya SQL-migrationer krävs för v14.0.4.**
-
-Följande tidigare migrationer ska redan vara körda i Supabase, i denna ordning:
+Kör migrationerna i Supabase SQL Editor i följande ordning:
 
 1. `supabase/migrations/20260730_1400_identity_platform.sql`
 2. `supabase/migrations/20260731_1403_profile_cloud_sync.sql`
+3. `supabase/migrations/20260731_1405_subscription_trial_flow.sql`
 
-## Premium i v14.0.4
+Den nya migrationen återställer äldre, automatiskt skapade testprovperioder till Gratis. Dessa användare kan därefter själva starta sin enda provperiod.
 
-Premiumgrunden är aktiv men betalning är ännu inte ansluten. Priset visas som 29 kr/månad. Roller och åtkomst hanteras i `public.profiles`:
+## Premium i v14.0.5
 
-- `free`
-- `trial`
-- `premium`
-- `vip`
-- `admin`
+- Nya konton börjar som `free`.
+- Provperioden startas via ett skyddat Supabase RPC-anrop.
+- `trial_used_at` gör att en andra provperiod inte kan aktiveras.
+- `cancel_at_period_end` anger att automatisk förnyelse har avslutats.
+- Under provperioden behålls Premium-åtkomst till slutdatumet även efter uppsägning.
+- Utan uppsägning behandlas kontot som Premium efter provperiodens slut.
 
-Nya konton får tre dagars provperiod. `trial`, `premium`, `vip` och `admin` har Premium-behörighet.
+Betalning är ännu inte ansluten till Apple App Store eller Google Play. Fältet `subscription_provider = manual` används tills butikskvitton blir sanningskälla. Ingen verklig debitering sker i denna version.
