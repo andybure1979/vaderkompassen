@@ -129,5 +129,4 @@ dialog{width:min(520px,calc(100% - 24px));border:0;border-radius:25px;padding:0;
 
 /* v13.10.11 – återställd kartzoom på touch-enheter */
 #weatherMap.leaflet-container{touch-action:none!important;-webkit-user-select:none!important;user-select:none!important}
-#weatherMap .leaflet-map-pane,#weatherMap .leaflet-tile-pane{pointer-events:none}
 #weatherMap .leaflet-marker-pane,#weatherMap .leaflet-shadow-pane,#weatherMap .leaflet-popup-pane,#weatherMap .leaflet-tooltip-pane,#weatherMap .leaflet-control-container{pointer-events:auto}

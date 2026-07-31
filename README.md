@@ -4,9 +4,18 @@ Väderkompassen är en mobilanpassad PWA som hjälper användaren att välja **v
 
 ## Aktuell version
 
-**v13.10.11**
+**v13.10.12**
 
 ## Versionshistorik
+
+### v13.10.12 – stabil kartvy och säker uppdatering efter inställningar
+
+- Kartans markörer kan uppdateras utan att `fitBounds()` återställer en zoom eller panorering som användaren själv gjort.
+- Automatisk kartanpassning sker bara första gången och när valet av regioner eller områden faktiskt ändras.
+- Tar bort kvarvarande CSS som blockerade pekhändelser i kartans map- och tile-lager.
+- Varje prognoshämtning får ett generationsnummer. Sena svar från äldre inställningar ignoreras och kan inte skriva över topplistan eller cachen.
+- När inställningarna sparas startas alltid en ny prognoshämtning för de nya valen, även om en äldre hämtning fortfarande pågår.
+- Ingen annan funktionalitet ändrad.
 
 ### v13.10.11 – återställd kartzoom
 
@@ -72,7 +81,7 @@ Väderkompassen är en mobilanpassad PWA som hjälper användaren att välja **v
 
 ### Öppna
 
-- v13.10.11 behöver verifieras på den publicerade iPhone/PWA-versionen, särskilt nypzoom och zoomknappar i kartan.
+- v13.10.12 behöver verifieras på den publicerade iPhone/PWA-versionen: behållen nypzoom efter släpp samt automatisk topplisteuppdatering efter sparade inställningar.
 
 ### Lösta
 

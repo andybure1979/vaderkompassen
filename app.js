@@ -113,7 +113,7 @@ const SNOW_HOURLY = "snow_depth,freezing_level_height";
 
 
 const SETTINGS_KEY="vk-settings";
-const WEATHER_CACHE_KEY="vk-weather-cache-v13.10.11";
+const WEATHER_CACHE_KEY="vk-weather-cache-v13.10.12";
 const POINT_CACHE_PREFIX="vk-point-cache";
 
 function clearAppCacheStorage({includeCurrentWeather=false}={}){
@@ -404,7 +404,7 @@ async function mapWithConcurrency(items,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
   return results;
 }
-const diagnostics={version:"13.10.11",mode:"checking",lastLoad:null,sources:[]};
+const diagnostics={version:"13.10.12",mode:"checking",lastLoad:null,sources:[]};
 function setDataMode(mode,detail=""){
   diagnostics.mode=mode;
   const badge=$("dataModeBadge");
@@ -425,6 +425,7 @@ function setDataMode(mode,detail=""){
 const BACKGROUND_REFRESH_MS=30*60*1000;
 let refreshTimer=null;
 let loadInProgress=false;
+let loadGeneration=0;
 function cacheSignature(){
   return JSON.stringify({regions:[...settings.regions].sort(),areas:[...settings.areas].sort(),activity:settings.activity});
 }
@@ -786,8 +787,9 @@ async function fetchMetNo(places){
 }
 
 async function load({background=false}={}){
-  if(loadInProgress)return;
+  const generation=++loadGeneration;
   loadInProgress=true;
+  const isCurrent=()=>generation===loadGeneration;
   const selected=new Set(settings.regions),selectedAreas=new Set(settings.areas);
   const places=PLACES.filter(p=>selected.has(p[2])&&selectedAreas.has(p[1]));
   if(!places.length){loadInProgress=false;showError("Välj minst en region i inställningarna.");return}
@@ -797,6 +799,7 @@ async function load({background=false}={}){
     if(cloudApiEnabled()){
       try{
         const snapshot=await fetchCloudSnapshot(places);
+        if(!isCurrent())return;
         if(snapshot){applyCloudSnapshot(snapshot,places);return}
       }catch(cloudError){
         diagnostics.cloudError=cloudError.message;
@@ -829,6 +832,7 @@ async function load({background=false}={}){
       }catch(reason){sourceStatus.push({name:"MET Norway",ok:false,rows:0,error:reason?.message||"fel"})}
     }
 
+    if(!isCurrent())return;
     diagnostics.lastLoad=new Date().toISOString();diagnostics.sources=sourceStatus;diagnostics.placeCount=places.length;
     console.table(sourceStatus);
     if(!rows.length)throw new Error(`Ingen väderkälla svarade. ${sourceStatus.map(x=>`${x.name}: ${x.error||"fel"}`).join(" · ")}`);
@@ -841,9 +845,11 @@ async function load({background=false}={}){
     if(needsSnow)extraJobs.push(["snow",withDeadline(fetchSnow(places),EXTRA_TIMEOUT_MS,"Snödata")]);
     if(extraJobs.length){
       const extraResults=await Promise.allSettled(extraJobs.map(x=>x[1]));
+      if(!isCurrent())return;
       extraResults.forEach((result,i)=>{if(result.status!=="fulfilled")return;if(extraJobs[i][0]==="marine")marineResult=result.value;if(extraJobs[i][0]==="snow")snowResult=result.value});
     }
 
+    if(!isCurrent())return;
     dailyResults=aggregate(rows,marineResult,snowResult);activeDate=Object.keys(dailyResults).sort()[0];
     if(!activeDate)throw new Error("Väderkällan svarade men prognosdata kunde inte tolkas.");
     const ok=sourceStatus.filter(x=>x.ok).length;
@@ -854,6 +860,7 @@ async function load({background=false}={}){
     saveWeatherCache({sourceStatus});
     scheduleBackgroundRefresh();
   }catch(e){
+    if(!isCurrent())return;
     if(background){
       console.warn("Bakgrundsuppdateringen misslyckades:",e);
       const cache=readWeatherCache();
@@ -863,7 +870,9 @@ async function load({background=false}={}){
       }
       scheduleBackgroundRefresh(Date.now());
     }else showError(`${e.message} Kontrollera internetanslutningen.`)
-  }finally{loadInProgress=false}
+  }finally{
+    if(isCurrent())loadInProgress=false;
+  }
 }
 
 function aggregate(rows,marineRows=[],snowRows=[]){
@@ -1057,6 +1066,10 @@ function mapPopupHtml(r,position){
   const activity=ACTIVITIES[settings.activity];
   return `<article class="map-popup-card"><div class="map-popup-top"><span class="map-popup-rank">${position}</span><div><strong>${placeLabel(r)}</strong><small>${r.area} · ${r.region}</small></div><b class="map-popup-score ${scoreClass(r.score)}">${r.score}</b></div><p>${activitySummary(r.score)} för ${activity.label.toLowerCase()}</p><div class="map-popup-metrics"><span>🌡️ <b>${fmt(r.temp,0)}°</b></span><span>💨 <b>${fmt(r.wind)} m/s</b></span>${settings.activity==="surf"?`<span>🌊 <b>${fmt(r.waveHeight)} m</b></span>`:`<span>☀️ <b>${fmt(r.sun)} h</b></span>`}</div><a href="https://maps.apple.com/?q=${encodeURIComponent(placeLabel(r))}&ll=${r.lat},${r.lon}" target="_blank" rel="noopener">Visa vägen →</a></article>`;
 }
+let mapViewSignature="";
+function currentMapSelectionSignature(){
+  return JSON.stringify({regions:[...settings.regions].sort(),areas:[...settings.areas].sort()});
+}
 function renderMap(list){
   ensureMap();if(!map||!markerLayer)return;
   markerLayer.clearLayers();
@@ -1065,7 +1078,12 @@ function renderMap(list){
     const m=L.marker([r.lat,r.lon],{icon,zIndexOffset:i===0?1000:Math.max(0,500-i)});
     m.bindPopup(mapPopupHtml(r,i+1),{className:"vk-map-popup",maxWidth:290,minWidth:240,closeButton:true});m.addTo(markerLayer);
   });
-  if(list.length){const bounds=L.latLngBounds(list.map(r=>[r.lat,r.lon]));map.fitBounds(bounds,{padding:[30,30],maxZoom:7});}
+  const selectionSignature=currentMapSelectionSignature();
+  if(list.length&&mapViewSignature!==selectionSignature){
+    const bounds=L.latLngBounds(list.map(r=>[r.lat,r.lon]));
+    map.fitBounds(bounds,{padding:[30,30],maxZoom:7});
+    mapViewSignature=selectionSignature;
+  }
 }
 function toggleMap(){const section=$("mapSection"),button=$("showMapBtn");section.classList.toggle("hidden");const open=!section.classList.contains("hidden");button.textContent=open?"✕ Dölj kartan":"🗺 Visa topplistan på karta";button.setAttribute("aria-expanded",String(open));if(open){renderMap(rankedList());setTimeout(()=>{map?.invalidateSize();enableMapInteractions();},80);section.scrollIntoView({behavior:"smooth",block:"nearest"});}}
 let detailPlace="";
@@ -1247,7 +1265,9 @@ function saveSettingsFromDialog(){
     return false;
   }
   $("settingsDialog").close();
-  setTimeout(()=>{if(!restoreWeatherCache())load()},0);
+  // Starta alltid en ny generation. Äldre, pågående svar ignoreras och kan
+  // varken skriva över topplistan eller sparas under de nya inställningarna.
+  setTimeout(()=>load({background:false}),0);
   return true;
 }
 $("settingsForm").addEventListener("submit",event=>{
@@ -1255,7 +1275,7 @@ $("settingsForm").addEventListener("submit",event=>{
   saveSettingsFromDialog();
 });
 if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
-  const reg=await navigator.serviceWorker.register(`sw.js?v=13.10.11`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=13.10.12`);
   reg.update();
   reg.addEventListener("updatefound",()=>{const worker=reg.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller){$("updateBanner").classList.remove("hidden");}})});
   navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload());
