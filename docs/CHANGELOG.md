@@ -2,6 +2,14 @@
 
 
 
+## 14.0.7
+
+- Lägger till mänskliga kvalitetsomdömen bredvid poängen.
+- Visar fyra tydliga väderorsaker för vinnaren, detaljsidan och varje topplistekort.
+- Lägger till korta, naturliga rekommendationstexter utan att ändra rankning eller poängmodell.
+- Bioväder och Badhusväder får egna lättsamma inomhusmotiveringar.
+- Ingen Supabase-migration krävs.
+
 ## 14.0.6.3
 
 - Filtrerar valda regioner direkt i Supabase/PostgREST innan regionala prognos-shards laddas till Workern.

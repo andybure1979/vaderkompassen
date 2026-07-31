@@ -15,3 +15,5 @@
 
 - **14.1.x** Förbättrat beslutsstöd, historik och personalisering utan favoriter.
 - **Senare** App Store- och Google Play-prenumerationer som extern betalningskälla.
+
+- **14.0.7** Förklarade rekommendationer och mänskliga omdömen.

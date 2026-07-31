@@ -334,34 +334,73 @@ function activityScore(r){
   }
 }
 function activitySummary(score){
-  if(score>=90)return "Perfekt idag";
-  if(score>=80)return "Mycket bra idag";
-  if(score>=65)return "Bra idag";
-  if(score>=50)return "Okej idag";
-  return "Välj hellre en annan plats";
+  const indoor=["cinema","indoorPool"].includes(settings.activity);
+  if(indoor){
+    if(score>=90)return "Perfekt inomhusväder";
+    if(score>=80)return "Riktigt bra inomhusläge";
+    if(score>=70)return "Bra läge att gå in";
+    if(score>=60)return "Helt okej inomhusväder";
+    return "Utevädret är nästan för bra";
+  }
+  if(score>=90)return "Fantastiskt";
+  if(score>=80)return "Mycket bra";
+  if(score>=70)return "Bra";
+  if(score>=60)return "Okej";
+  return "Inte idag";
+}
+function qualityIcon(score){
+  if(score>=90)return "⭐";
+  if(score>=80)return "👍";
+  if(score>=70)return "🙂";
+  if(score>=60)return "😐";
+  return "👎";
 }
 function decisionReasons(r){
   const reasons=[];
   const add=(icon,label,value)=>reasons.push({icon,label,value});
   const a=settings.activity;
-  if(a==="surf"){
+  if(a==="cinema"||a==="indoorPool"){
+    if(r.rain>=5)add("🌧️","Mycket regn",`${fmt(r.rain)} mm`); else if(r.rain>=1)add("🌦️","Regnigt",`${fmt(r.rain)} mm`); else add("☁️","Uppehåll",`${fmt(r.rain)} mm`);
+    if(r.wind>=8)add("💨","Blåsigt",`${fmt(r.wind)} m/s`); else add("🍃","Vind",`${fmt(r.wind)} m/s`);
+    if(r.sun<=3)add("☁️","Lite sol",`${fmt(r.sun)} h`); else add("☀️","Sol",`${fmt(r.sun)} h`);
+    add("🌡️","Temperatur",`${fmt(r.temp,0)}°`);
+  }else if(a==="surf"){
     if(Number.isFinite(r.waveHeight))add("🌊","Vågor",`${fmt(r.waveHeight)} m`);
-    if(Number.isFinite(r.wavePeriod))add("↔️","Period",`${fmt(r.wavePeriod,0)} s`);
+    if(Number.isFinite(r.wavePeriod))add("↔️","Vågperiod",`${fmt(r.wavePeriod,0)} s`);
     add("💨","Vind",`${fmt(r.wind)} m/s ${Number.isFinite(r.windDirection)?compassDirection(r.windDirection):""}`.trim());
+    if(Number.isFinite(r.windDirection))add("🏖️","Frånland",`${Math.round(surfOffshoreScore(r))}/100`);
   }else if(a==="ski"){
-    if(Number.isFinite(r.snowDepth))add("❄️","Snö",`${fmt(r.snowDepth,0)} cm`);
+    if(Number.isFinite(r.snowDepth))add("❄️","Snödjup",`${fmt(r.snowDepth,0)} cm`);
     if(Number.isFinite(r.newSnow))add("🌨️","Nysnö",`${fmt(r.newSnow)} cm`);
     add("🌡️","Temperatur",`${fmt(r.temp,0)}°`);
+    add("💨","Vind",`${fmt(r.wind)} m/s`);
   }else if(["coast","boat","fishing"].includes(a)){
     add("💨","Vind",`${fmt(r.wind)} m/s`);
     if(Number.isFinite(r.waveHeight))add("🌊","Vågor",`${fmt(r.waveHeight)} m`);
+    add("🌧️","Regn",`${fmt(r.rain)} mm`);
     add("☀️","Sol",`${fmt(r.sun)} h`);
   }else{
-    add("☀️","Sol",`${fmt(r.sun)} h`);
-    add("🌧️","Regn",`${fmt(r.rain)} mm`);
     add("🌡️","Temperatur",`${fmt(r.temp,0)}°`);
+    add("🌧️","Regn",`${fmt(r.rain)} mm`);
+    add("☀️","Sol",`${fmt(r.sun)} h`);
+    add("💨","Vind",`${fmt(r.wind)} m/s`);
   }
-  return reasons.slice(0,3);
+  return reasons.slice(0,4);
+}
+function reasonsHtml(r,compact=false){
+  const reasons=decisionReasons(r);
+  return `<div class="decision-reasons${compact?" compact":""}" aria-label="Därför rekommenderas platsen">${reasons.map(x=>`<span><b>${x.icon} ${x.value}</b><small>${x.label}</small></span>`).join("")}</div>`;
+}
+function recommendationIntro(r){
+  const name=placeLabel(r);
+  if(settings.activity==="cinema")return `${name} har ett av de ruskigaste utomhuslägena – ett utmärkt tillfälle att krypa in i biomörkret.`;
+  if(settings.activity==="indoorPool")return `${name} har väder som gör varmt vatten och inomhusbad extra lockande.`;
+  const score=r.score;
+  if(score>=90)return `Ett ovanligt starkt val idag – förhållandena stämmer mycket väl för ${ACTIVITIES[settings.activity].label.toLowerCase()}.`;
+  if(score>=80)return `Ett tryggt val idag med en bra balans mellan de viktigaste väderfaktorerna.`;
+  if(score>=70)return `Bra förutsättningar, även om någon väderfaktor drar ned helheten lite.`;
+  if(score>=60)return `Det kan fungera, men kontrollera detaljerna innan du bestämmer dig.`;
+  return `Förhållandena är svaga idag – välj gärna en högre rankad plats.`;
 }
 function decisionSentence(r){
   const a=settings.activity;
@@ -461,7 +500,7 @@ async function mapWithConcurrency(items,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
   return results;
 }
-const diagnostics={version:"14.0.6.3",mode:"checking",lastLoad:null,sources:[]};
+const diagnostics={version:"14.0.7",mode:"checking",lastLoad:null,sources:[]};
 function setDataMode(mode,detail=""){
   diagnostics.mode=mode;
   const badge=$("dataModeBadge");
@@ -1203,8 +1242,8 @@ function renderDetail(){
   $("detailEyebrow").textContent=`${activity.label.toUpperCase()} · ${new Date(r.day+"T12:00:00").toLocaleDateString("sv-SE",{weekday:"long"}).toUpperCase()}`;
   $("detailPlace").textContent=placeLabel(r);
   $("detailRegion").textContent=`${r.area} · ${r.region}`;
-  $("detailSummary").textContent=activitySummary(r.score);
-  $("detailReason").textContent=decisionSentence(r);
+  $("detailSummary").textContent=`${qualityIcon(r.score)} ${activitySummary(r.score)}`;
+  $("detailReason").innerHTML=`${recommendationIntro(r)}${reasonsHtml(r)}`;
   $("detailScore").textContent=r.score;
   $("detailMetrics").innerHTML=winnerMetricCards(r);
   $("detailData").innerHTML=winnerDetailsHtml(r);
@@ -1222,8 +1261,8 @@ function renderDay(){
   $("bestRegion").textContent=settings.sourceMode==="auto"
     ? `${best.area} · ${best.region} · Tyngst: ${best.primarySource}`
     : `${best.area} · ${best.region} · ${best.usedSources.length} valda källor`;
-  $("bestSummary").textContent=activitySummary(best.score);
-  $("bestReason").textContent=decisionSentence(best);
+  $("bestSummary").textContent=`${qualityIcon(best.score)} ${activitySummary(best.score)}`;
+  $("bestReason").innerHTML=`${recommendationIntro(best)}${reasonsHtml(best)}`;
   $("bestScore").textContent=best.score;$("hero").dataset.score=best.score;
   $("metrics").innerHTML=winnerMetricCards(best);
   $("mapLink").href=`https://maps.apple.com/?q=${encodeURIComponent(placeLabel(best))}&ll=${best.lat},${best.lon}`;
@@ -1238,8 +1277,8 @@ function renderDay(){
     card.querySelector(".rank-card").dataset.score=r.score;
     card.querySelector(".rank-number").textContent=i+1;
     card.querySelector("h3").textContent=placeLabel(r);
-    card.querySelector("p").textContent=`${r.area} · ${r.region} · ${activitySummary(r.score)}`;
-    card.querySelector(".mini-metrics").innerHTML=`<span>🌡️ ${fmt(r.temp,0)}°</span><span>🌧️ ${fmt(r.rain)} mm</span><span>☀️ ${fmt(r.sun)} h</span><span>💨 ${fmt(r.wind)} m/s</span>${specialMetricHtml(r)}<span>🎯 ${r.confidence}%</span>`;
+    card.querySelector("p").textContent=`${r.area} · ${r.region} · ${qualityIcon(r.score)} ${activitySummary(r.score)}`;
+    card.querySelector(".mini-metrics").innerHTML=reasonsHtml(r,true);
     card.querySelector(".rank-score").textContent=r.score;
     const rankCard=card.querySelector(".rank-card");
     rankCard.tabIndex=0;rankCard.setAttribute("role","button");rankCard.setAttribute("aria-label",`Visa detaljer för ${placeLabel(r)}`);
@@ -1332,7 +1371,7 @@ $("settingsForm").addEventListener("submit",event=>{
   saveSettingsFromDialog();
 });
 if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
-  const reg=await navigator.serviceWorker.register(`sw.js?v=14.0.6.3`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=14.0.7`);
   reg.update();
   reg.addEventListener("updatefound",()=>{const worker=reg.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller){$("updateBanner").classList.remove("hidden");}})});
   navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload());
