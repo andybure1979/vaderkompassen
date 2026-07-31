@@ -1,10 +1,10 @@
 # Installation och drift
 
-## Väderkompassen v14.0.6
+## Väderkompassen v14.0.6.1
 
 1. Kör SQL-migrationerna i ordningen nedan.
 2. Publicera hela projektet till GitHub.
-3. Kontrollera att webbplatsen visar `Väderkompassen v14.0.6` i sidfoten.
+3. Kontrollera att webbplatsen visar `Väderkompassen v14.0.6.1` i sidfoten.
 4. Testa registrering, inloggning, start av provperiod och avslutad automatisk förnyelse.
 
 ## Manuella databassteg
@@ -18,7 +18,7 @@ Kör migrationerna i Supabase SQL Editor i följande ordning:
 
 Den nya migrationen återställer äldre, automatiskt skapade testprovperioder till Gratis. Dessa användare kan därefter själva starta sin enda provperiod.
 
-## Premium i v14.0.6
+## Premium i v14.0.6.1
 
 - Nya konton börjar som `free`.
 - Provperioden startas via ett skyddat Supabase RPC-anrop.

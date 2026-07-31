@@ -1,12 +1,5 @@
-# Väderkompassen
 
-Väderkompassen hjälper användaren att välja vart den ska åka utifrån aktivitet och prognos.
+## Inomhusväder
 
-## Version 14.0.6
+Bioväder och Badhusväder ligger sist i aktivitetsväljaren och använder medvetet omvänd poängsättning: ju sämre utomhusväder, desto bättre betyg för inomhusaktiviteten.
 
-- Kustväder har fått en ljus pastellrosa profilfärg.
-- Ny aktivitet: **Bioväder** med pastellvinröd profil.
-- Ny aktivitet: **Badhusväder** med en mörkare pastellvinröd profil.
-- De nya aktiviteterna har egna poängmodeller och beslutsförklaringar.
-
-Ingen databasändring krävs för denna version.

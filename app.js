@@ -14,14 +14,14 @@ const ALL_AREAS=[...new Set(PLACES.map(p=>p[1]))];
 const ACTIVITIES = {
   general:{label:"Sol och bad",icon:"☀️"},
   coast:{label:"Kustväder",icon:"🏖️"},
-  cinema:{label:"Bioväder",icon:"🎬"},
-  indoorPool:{label:"Badhusväder",icon:"🏊"},
   surf:{label:"Surfväder",icon:"🏄"},
   boat:{label:"Båtväder",icon:"⛵"},
   fishing:{label:"Fiskeväder",icon:"🎣"},
   cycling:{label:"Cykelväder",icon:"🚴"},
   hiking:{label:"Vandringsväder",icon:"🥾"},
-  ski:{label:"Skidväder",icon:"⛷️"}
+  ski:{label:"Skidväder",icon:"⛷️"},
+  cinema:{label:"Bioväder",icon:"🎬"},
+  indoorPool:{label:"Badhusväder",icon:"🏊"}
 };
 const MODELS = {
   "SMHI":{type:"smhi",country:"SE"},
@@ -283,18 +283,22 @@ function activityScore(r){
       return .20*bell(temp,22,12)+.20*dry+.18*sunny+.14*bell(wind,5,6)+.18*sea+.10*waves;
     }
     case "cinema":{
-      // Bioväder: ett lugnt, torrt och behagligt resväder premieras. Vind har liten påverkan.
-      const comfortable=bell(temp,18,16);
-      const calm=bell(wind,2.5,9);
-      const lowThunder=clamp(100-risk);
-      return .38*dry+.27*comfortable+.20*lowThunder+.10*calm+.05*sunny;
+      // Bioväder är medvetet omvänt: ju ruskigare utomhus, desto bättre bioväder.
+      const wet=100-dry;
+      const gloomy=100-sunny;
+      const windy=clamp(wind/14*100);
+      const uncomfortable=100-bell(temp,20,16);
+      const thunder=clamp(risk);
+      return .34*wet+.23*gloomy+.18*windy+.15*uncomfortable+.10*thunder;
     }
     case "indoorPool":{
-      // Badhusväder: resan dit ska vara enkel, medan utomhusvädret i övrigt väger lätt.
-      const comfortable=bell(temp,16,20);
-      const calm=bell(wind,3,10);
-      const lowThunder=clamp(100-risk);
-      return .42*dry+.22*comfortable+.20*lowThunder+.10*calm+.06*sunny;
+      // Badhusväder visar också de platser där utomhusvädret är som sämst.
+      const wet=100-dry;
+      const gloomy=100-sunny;
+      const windy=clamp(wind/14*100);
+      const uncomfortable=100-bell(temp,19,18);
+      const thunder=clamp(risk);
+      return .31*wet+.21*gloomy+.17*windy+.21*uncomfortable+.10*thunder;
     }
     case "surf":{
       // Högre vågor ger högre poäng (upp till 3,5 m). Frånlandsvind premieras både för riktning och styrka.
@@ -361,8 +365,8 @@ function decisionReasons(r){
 }
 function decisionSentence(r){
   const a=settings.activity;
-  if(a==="cinema")return `Bäst bioläge utifrån nederbörd, temperatur och åskrisk.`;
-  if(a==="indoorPool")return `Bäst badhusläge utifrån nederbörd, temperatur och resväder.`;
+  if(a==="cinema")return `Sämst utomhusväder bland de valda platserna – alltså ett utmärkt bioläge.`;
+  if(a==="indoorPool")return `Ruskigast väder bland de valda platserna – perfekt läge för badhuset.`;
   if(a==="surf")return `Bäst kombination av vågor, period och vind bland de valda platserna.`;
   if(a==="ski")return `Bäst kombination av snö, temperatur och prognossäkerhet.`;
   if(a==="coast")return `Bäst kustläge utifrån vind, vågor och väder.`;
@@ -457,7 +461,7 @@ async function mapWithConcurrency(items,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
   return results;
 }
-const diagnostics={version:"14.0.6",mode:"checking",lastLoad:null,sources:[]};
+const diagnostics={version:"14.0.6.1",mode:"checking",lastLoad:null,sources:[]};
 function setDataMode(mode,detail=""){
   diagnostics.mode=mode;
   const badge=$("dataModeBadge");
@@ -1328,7 +1332,7 @@ $("settingsForm").addEventListener("submit",event=>{
   saveSettingsFromDialog();
 });
 if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
-  const reg=await navigator.serviceWorker.register(`sw.js?v=14.0.6`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=14.0.6.1`);
   reg.update();
   reg.addEventListener("updatefound",()=>{const worker=reg.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller){$("updateBanner").classList.remove("hidden");}})});
   navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload());

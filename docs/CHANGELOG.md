@@ -1,5 +1,13 @@
 # Ändringslogg
 
+## 14.0.6.1
+
+- Bioväder och Badhusväder ligger nu sist i aktivitetsväljaren.
+- Båda inomhuskategorierna använder omvänd poängsättning och lyfter fram de platser som har sämst utomhusväder.
+- Regn, blåst, kyla, mulet väder och åskrisk höjer inomhusbetyget.
+- Beslutsförklaringarna har fått en lättsam ton som förklarar skämtet.
+- Ingen Supabase-migration krävs.
+
 ## 14.0.6
 
 - Kustväder använder nu en ljus pastellrosa aktivitetsprofil.

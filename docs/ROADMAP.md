@@ -9,6 +9,7 @@
 - **14.0.5** Frivillig engångsprovperiod och prenumerationsflöde.
 - **14.0.5.1** Rättad aktivering av provperiod via Supabase RPC.
 - **14.0.6** Nya aktivitetskategorier och uppdaterade färgprofiler.
+- **14.0.6.1** Inomhusväder sist i listan med omvänd väderpoäng.
 
 ## Nästa
 
