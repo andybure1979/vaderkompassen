@@ -109,6 +109,7 @@
   }
 
   async function signInWithPassword(event) {
+    if (event.submitter?.value === "cancel") return;
     event.preventDefault();
     setMessage("authMessage", "Loggar in …");
     const { error } = await client.auth.signInWithPassword({
