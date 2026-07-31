@@ -7,6 +7,7 @@
 - **14.0.3** Personlig profil och molnsynk.
 - **14.0.4** Premiumgrund och behörighetsmodell.
 - **14.0.5** Frivillig engångsprovperiod och prenumerationsflöde.
+- **14.0.5.1** Rättad aktivering av provperiod via Supabase RPC.
 
 ## Nästa
 

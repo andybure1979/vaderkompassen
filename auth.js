@@ -144,16 +144,45 @@
   }
 
   async function startPremiumTrial() {
-    if (!client || !session?.user) return;
+    if (!client || !session?.user) {
+      setMessage("premiumState", "Du måste vara inloggad för att starta provperioden.", true);
+      return;
+    }
     if (!window.confirm(`Starta 3 dagar gratis? Därefter förnyas Premium automatiskt för ${PREMIUM_PRICE_SEK} kr/månad tills du avslutar.`)) return;
+
+    const button = $("premiumPurchase");
+    const originalText = button?.textContent || "Starta 3 dagars gratis provperiod";
+    if (button) {
+      button.disabled = true;
+      button.textContent = "Aktiverar …";
+    }
     setMessage("premiumState", "Aktiverar provperioden …");
-    const { data, error } = await client.rpc("start_premium_trial");
-    if (error) return setMessage("premiumState", error.message, true);
-    profile = Array.isArray(data) ? data[0] : data;
-    if (!profile) await loadProfile();
-    else renderAccount();
-    renderPremiumInfo();
-    window.dispatchEvent(new CustomEvent("vk:access-changed", { detail: getAccessState() }));
+
+    try {
+      const { data, error } = await client.rpc("start_premium_trial");
+      if (error) throw error;
+
+      profile = Array.isArray(data) ? data[0] : data;
+      await loadProfile();
+
+      if (effectiveRole(profile) !== "trial" || !profile?.trial_used_at) {
+        throw new Error("Provperioden kunde inte aktiveras. Kontrollera att den senaste Supabase-migrationen är körd.");
+      }
+
+      renderPremiumInfo();
+      setMessage("premiumState", `Provperioden är aktiv. Därefter övergår den automatiskt till Premium för ${PREMIUM_PRICE_SEK} kr/månad.`);
+      window.dispatchEvent(new CustomEvent("vk:access-changed", { detail: getAccessState() }));
+    } catch (error) {
+      console.error("Kunde inte starta Premium-provperiod", error);
+      await loadProfile();
+      renderPremiumInfo();
+      setMessage("premiumState", error?.message || "Provperioden kunde inte aktiveras. Försök igen.", true);
+    } finally {
+      if (button && !button.classList.contains("hidden")) {
+        button.disabled = false;
+        button.textContent = originalText;
+      }
+    }
   }
 
   async function cancelPremiumRenewal() {

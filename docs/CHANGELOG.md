@@ -1,5 +1,12 @@
 # Ändringslogg
 
+## 14.0.5.1
+
+- Rättar att bekräftelsen för provperioden inte ändrade kontots status.
+- Skyddstriggern tillåter nu kontrollerade åtkomständringar via säkerhetsdefinierade RPC-funktioner.
+- Aktiveringsknappen visar pågående status och tydliga felmeddelanden.
+- Ny migration: `20260731_140501_trial_activation_fix.sql`.
+
 ## 14.0.5
 
 - Nya konton börjar som Gratis utan automatisk provperiod.
