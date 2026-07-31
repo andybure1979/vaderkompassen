@@ -113,6 +113,7 @@ const SNOW_HOURLY = "snow_depth,freezing_level_height";
 
 
 const SETTINGS_KEY="vk-settings";
+const CLOUD_SYNC_KEY="vk-cloud-settings-updated-at";
 const WEATHER_CACHE_KEY="vk-weather-cache-v14.0.0";
 const POINT_CACHE_PREFIX="vk-point-cache";
 
@@ -152,6 +153,40 @@ if(!["auto","manual"].includes(settings.sourceMode))settings.sourceMode="auto";
 if(!Array.isArray(settings.sources))settings.sources=Object.keys(MODELS);
 settings.sources=[...new Set(settings.sources.filter(x=>Object.hasOwn(MODELS,x)))];
 if(!settings.sources.length)settings.sources=Object.keys(MODELS);
+
+function normalizeSettings(candidate={}){
+  const next={...defaults,...candidate};
+  next.regions=Array.isArray(next.regions)?[...new Set(next.regions.filter(x=>REGIONS.includes(x)))]:[...REGIONS];
+  if(!next.regions.length)next.regions=[...REGIONS];
+  next.areas=Array.isArray(next.areas)?[...new Set(next.areas.filter(x=>ALL_AREAS.includes(x)))]:[...ALL_AREAS];
+  if(!next.areas.length)next.areas=[...ALL_AREAS];
+  next.activity=Object.hasOwn(ACTIVITIES,next.activity)?next.activity:"general";
+  next.sourceMode=["auto","manual"].includes(next.sourceMode)?next.sourceMode:"auto";
+  next.sources=Array.isArray(next.sources)?[...new Set(next.sources.filter(x=>Object.hasOwn(MODELS,x)))]:Object.keys(MODELS);
+  if(!next.sources.length)next.sources=Object.keys(MODELS);
+  next.temp=Number.isFinite(Number(next.temp))?Number(next.temp):defaults.temp;
+  next.rain=Number.isFinite(Number(next.rain))?Number(next.rain):defaults.rain;
+  next.sun=Number.isFinite(Number(next.sun))?Number(next.sun):defaults.sun;
+  next.wind=Number.isFinite(Number(next.wind))?Number(next.wind):defaults.wind;
+  return next;
+}
+function persistSettings(next,{cloud=true}={}){
+  settings=normalizeSettings(next);
+  localStorage.setItem(SETTINGS_KEY,JSON.stringify(settings));
+  if(cloud)window.VK_AUTH?.saveSettings?.(settings);
+  return settings;
+}
+window.addEventListener("vk:cloud-settings",event=>{
+  const cloud=event.detail?.settings;
+  if(!cloud)return;
+  persistSettings(cloud,{cloud:false});
+  if(event.detail?.updatedAt)localStorage.setItem(CLOUD_SYNC_KEY,event.detail.updatedAt);
+  renderActivities();
+  if(!restoreWeatherCache())load({background:false});
+});
+window.addEventListener("vk:cloud-settings-empty",()=>{
+  window.VK_AUTH?.saveSettings?.(settings);
+});
 
 let dailyResults={}, cloudRankings={}, activeDate=null, map=null, markerLayer=null;
 const $=id=>document.getElementById(id);
@@ -326,7 +361,7 @@ function renderActivities(){
     const b=document.createElement("button");
     b.type="button";b.className="activity-chip"+(settings.activity===key?" active":"");
     b.innerHTML=`<span>${a.icon}</span>${a.label}`;
-    b.onclick=()=>{settings.activity=key;localStorage.setItem(SETTINGS_KEY,JSON.stringify(settings));renderActivities();if(!restoreWeatherCache())load();};
+    b.onclick=()=>{persistSettings({...settings,activity:key});renderActivities();if(!restoreWeatherCache())load();};
     box.appendChild(b);
   });
   $("activeActivity").textContent=`${ACTIVITIES[settings.activity].icon} ${ACTIVITIES[settings.activity].label}`;
@@ -404,7 +439,7 @@ async function mapWithConcurrency(items,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
   return results;
 }
-const diagnostics={version:"14.0.0",mode:"checking",lastLoad:null,sources:[]};
+const diagnostics={version:"14.0.3",mode:"checking",lastLoad:null,sources:[]};
 function setDataMode(mode,detail=""){
   diagnostics.mode=mode;
   const badge=$("dataModeBadge");
@@ -1247,7 +1282,7 @@ function saveSettingsFromDialog(){
     }
     const saved=JSON.parse(localStorage.getItem(SETTINGS_KEY)||"null");
     if(!saved||!Array.isArray(saved.areas)||saved.areas.length!==selectedAreas.length)throw new Error("Verifiering av sparade inställningar misslyckades");
-    settings=nextSettings;
+    settings=persistSettings(nextSettings);
   }catch(error){
     console.error("Kunde inte spara inställningarna",error);
     const errorName=error?.name||"Okänt fel";
@@ -1275,7 +1310,7 @@ $("settingsForm").addEventListener("submit",event=>{
   saveSettingsFromDialog();
 });
 if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
-  const reg=await navigator.serviceWorker.register(`sw.js?v=14.0.0`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=14.0.3`);
   reg.update();
   reg.addEventListener("updatefound",()=>{const worker=reg.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller){$("updateBanner").classList.remove("hidden");}})});
   navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload());

@@ -11,6 +11,7 @@
   let session = null;
   let profile = null;
   let pendingVerificationNotice = false;
+  let cloudSettingsRequested = false;
 
   const ROLE_LABELS = {
     free: ["GRATIS", "Gratis"],
@@ -115,6 +116,7 @@
 
     $("profileEmail").textContent = session.user.email || "–";
     const displayName = profile?.display_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || "";
+    if ($("profileDisplayName")) $("profileDisplayName").value = displayName;
     $("profileName").textContent = displayName ? `Hej, ${displayName}!` : "Ditt konto";
     $("profileBadge").textContent = labels[0];
     $("profileBadge").dataset.role = role;
@@ -142,6 +144,49 @@
     }
     if (session?.user) $("profileDialog").showModal();
     else $("authDialog").showModal();
+  }
+
+  async function saveDisplayName() {
+    if (!client || !session?.user) return;
+    const displayName = $("profileDisplayName")?.value.trim() || "";
+    setMessage("profileNameMessage", "Sparar …");
+    const { data, error } = await client.from("profiles")
+      .update({ display_name: displayName || null })
+      .eq("id", session.user.id)
+      .select("*")
+      .single();
+    if (error) return setMessage("profileNameMessage", error.message, true);
+    profile = data;
+    renderAccount();
+    setMessage("profileNameMessage", "Namnet är sparat.");
+  }
+
+  async function saveSettings(appSettings) {
+    if (!client || !session?.user || !appSettings || typeof appSettings !== "object") return false;
+    const { data, error } = await client.from("profiles")
+      .update({ app_settings: appSettings, settings_updated_at: new Date().toISOString() })
+      .eq("id", session.user.id)
+      .select("*")
+      .single();
+    if (error) {
+      console.warn("Kunde inte synka inställningar", error.message);
+      window.dispatchEvent(new CustomEvent("vk:cloud-sync-error", { detail: { message: error.message } }));
+      return false;
+    }
+    profile = data;
+    window.dispatchEvent(new CustomEvent("vk:cloud-sync-saved", { detail: { updatedAt: data.settings_updated_at } }));
+    return true;
+  }
+
+  function dispatchCloudSettings() {
+    if (!session?.user || cloudSettingsRequested) return;
+    cloudSettingsRequested = true;
+    const cloud = profile?.app_settings;
+    if (cloud && typeof cloud === "object" && Object.keys(cloud).length) {
+      window.dispatchEvent(new CustomEvent("vk:cloud-settings", { detail: { settings: cloud, updatedAt: profile?.settings_updated_at || null } }));
+    } else {
+      window.dispatchEvent(new CustomEvent("vk:cloud-settings-empty"));
+    }
   }
 
   async function signInWithPassword(event) {
@@ -230,6 +275,7 @@
     $("googleLogin")?.addEventListener("click", () => oauth("google"));
     $("resetPassword")?.addEventListener("click", resetPassword);
     $("signOut")?.addEventListener("click", signOut);
+    $("saveProfileName")?.addEventListener("click", saveDisplayName);
     $("upgradePremium")?.addEventListener("click", () => {
       closeDialog("profileDialog");
       $("premiumInfoDialog")?.showModal();
@@ -254,6 +300,7 @@
     const { data } = await client.auth.getSession();
     session = data.session;
     await loadProfile();
+    dispatchCloudSettings();
 
     if (callback.error) {
       setMessage("authMessage", callback.error.replace(/\+/g, " "), true);
@@ -268,7 +315,9 @@
 
     client.auth.onAuthStateChange(async (_event, nextSession) => {
       session = nextSession;
+      cloudSettingsRequested = false;
       await loadProfile();
+      dispatchCloudSettings();
       if (pendingVerificationNotice && nextSession?.user) {
         pendingVerificationNotice = false;
         setMessage("profileNotice", "Din e-postadress är verifierad och du är nu inloggad.");
@@ -278,6 +327,6 @@
     });
   }
 
-  window.VK_AUTH = Object.freeze({ getAccessState, hasPremiumAccess, client });
+  window.VK_AUTH = Object.freeze({ getAccessState, hasPremiumAccess, saveSettings, client });
   document.addEventListener("DOMContentLoaded", init, { once: true });
 })();
