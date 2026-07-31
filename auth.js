@@ -13,6 +13,14 @@
   let pendingVerificationNotice = false;
   let cloudSettingsRequested = false;
 
+  const PREMIUM_PRICE_SEK = 29;
+  const PREMIUM_FEATURES = Object.freeze({
+    adFree: "Reklamfri upplevelse",
+    extendedActivities: "Fler aktiviteter",
+    cloudSync: "Molnsynk mellan enheter",
+    personalRecommendations: "Personliga rekommendationer"
+  });
+
   const ROLE_LABELS = {
     free: ["GRATIS", "Gratis"],
     trial: ["TRIAL", "Provperiod"],
@@ -73,6 +81,47 @@
 
   function hasPremiumAccess(p = profile) {
     return ["trial", "premium", "vip", "admin"].includes(effectiveRole(p));
+  }
+
+  function canAccess(feature, p = profile) {
+    if (!Object.prototype.hasOwnProperty.call(PREMIUM_FEATURES, feature)) return false;
+    return hasPremiumAccess(p);
+  }
+
+  function openPremiumInfo(feature = "") {
+    const requested = PREMIUM_FEATURES[feature] || "";
+    if ($("premiumRequestedFeature")) {
+      $("premiumRequestedFeature").textContent = requested
+        ? `${requested} ingår i Premium.`
+        : "Premium ger dig hela Väderkompassen.";
+    }
+    renderPremiumInfo();
+    closeDialog("profileDialog");
+    if (!$("premiumInfoDialog")?.open) $("premiumInfoDialog")?.showModal();
+  }
+
+  function requirePremium(feature, options = {}) {
+    if (canAccess(feature)) return true;
+    if (options.openDialog !== false) openPremiumInfo(feature);
+    window.dispatchEvent(new CustomEvent("vk:premium-required", { detail: { feature } }));
+    return false;
+  }
+
+  function renderPremiumInfo() {
+    const role = effectiveRole(profile);
+    const trialDays = daysLeft(profile?.trial_ends_at);
+    if ($("premiumPrice")) $("premiumPrice").textContent = `${PREMIUM_PRICE_SEK} kr/månad`;
+    if ($("premiumState")) {
+      $("premiumState").textContent = role === "trial"
+        ? `Din kostnadsfria provperiod är aktiv i ${trialDays} dag${trialDays === 1 ? "" : "ar"}.`
+        : hasPremiumAccess()
+          ? "Du har redan full Premium-åtkomst."
+          : "Premiumbetalning aktiveras i en kommande version.";
+    }
+    if ($("premiumPurchase")) {
+      $("premiumPurchase").disabled = true;
+      $("premiumPurchase").textContent = hasPremiumAccess() ? "Premium är aktivt" : "Betalning kommer snart";
+    }
   }
 
   async function loadProfile() {
@@ -276,10 +325,7 @@
     $("resetPassword")?.addEventListener("click", resetPassword);
     $("signOut")?.addEventListener("click", signOut);
     $("saveProfileName")?.addEventListener("click", saveDisplayName);
-    $("upgradePremium")?.addEventListener("click", () => {
-      closeDialog("profileDialog");
-      $("premiumInfoDialog")?.showModal();
-    });
+    $("upgradePremium")?.addEventListener("click", () => openPremiumInfo());
     $("openAdmin")?.addEventListener("click", () => { $("profileDialog").close(); $("adminDialog").showModal(); });
     $("adminSearchBtn")?.addEventListener("click", searchAdmin);
     $("adminSearch")?.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); searchAdmin(); } });
@@ -327,6 +373,15 @@
     });
   }
 
-  window.VK_AUTH = Object.freeze({ getAccessState, hasPremiumAccess, saveSettings, client });
+  window.VK_AUTH = Object.freeze({
+    getAccessState,
+    hasPremiumAccess,
+    canAccess,
+    requirePremium,
+    openPremiumInfo,
+    saveSettings,
+    client,
+    premium: Object.freeze({ priceSek: PREMIUM_PRICE_SEK, features: PREMIUM_FEATURES })
+  });
   document.addEventListener("DOMContentLoaded", init, { once: true });
 })();
