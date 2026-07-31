@@ -1,6 +1,12 @@
+# Väderkompassen
 
+Väderkompassen hjälper användaren att välja vart den ska åka utifrån aktivitet och prognos.
 
+## Version 14.0.6
 
-## Version 14.0.5.1
+- Kustväder har fått en ljus pastellrosa profilfärg.
+- Ny aktivitet: **Bioväder** med pastellvinröd profil.
+- Ny aktivitet: **Badhusväder** med en mörkare pastellvinröd profil.
+- De nya aktiviteterna har egna poängmodeller och beslutsförklaringar.
 
-Rättar aktivering av Premium-provperioden. Kör migrationen `supabase/migrations/20260731_140501_trial_activation_fix.sql` efter tidigare migrationer.
+Ingen databasändring krävs för denna version.

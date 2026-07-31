@@ -8,7 +8,9 @@
   font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif;
 }
 body[data-activity="general"]{--activity:#e9b833;--activity-soft:#fff1c8}
-body[data-activity="coast"]{--activity:#e2aa35;--activity-soft:#fff0c9}
+body[data-activity="coast"]{--activity:#e7a8c3;--activity-soft:#f8d7e6}
+body[data-activity="cinema"]{--activity:#b86f85;--activity-soft:#ead1d9}
+body[data-activity="indoorPool"]{--activity:#9f5d73;--activity-soft:#dfc2cc}
 body[data-activity="surf"]{--activity:#2cb6b4;--activity-soft:#d9f2ef}
 body[data-activity="boat"]{--activity:#67a8d7;--activity-soft:#dfedfa}
 body[data-activity="fishing"]{--activity:#f08d63;--activity-soft:#ffe4d9}

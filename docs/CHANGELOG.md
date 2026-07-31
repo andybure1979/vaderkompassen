@@ -1,5 +1,13 @@
 # Ändringslogg
 
+## 14.0.6
+
+- Kustväder använder nu en ljus pastellrosa aktivitetsprofil.
+- Ny kategori: Bioväder med egen pastellvinröd färg, ikon och poängmodell.
+- Ny kategori: Badhusväder med en mörkare pastellvinröd färg, ikon och poängmodell.
+- Beslutsförklaringar och aktivitetsväljare har uppdaterats.
+- Ingen Supabase-migration krävs.
+
 ## 14.0.5.1
 
 - Rättar att bekräftelsen för provperioden inte ändrade kontots status.
