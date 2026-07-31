@@ -1,8 +1,10 @@
-/* Väderkompassen v13.1 – publik klientkonfiguration.
+/* Väderkompassen v14.0.0 – publik klientkonfiguration.
    Ange endast den publika Worker-adressen här. Lägg aldrig Supabase service-nycklar i appen. */
 window.VK_CONFIG = Object.freeze({
   apiBaseUrl: "https://vaderkompassen.andreas-bure.workers.dev",
   apiTimeoutMs: 10000,
   preferCloud: true,
-  allowLocalFallback: true
+  allowLocalFallback: true,
+  supabaseUrl: "",
+  supabaseAnonKey: ""
 });
