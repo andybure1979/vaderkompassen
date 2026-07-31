@@ -28,3 +28,10 @@ Den nya migrationen återställer äldre, automatiskt skapade testprovperioder t
 - Utan uppsägning behandlas kontot som Premium efter provperiodens slut.
 
 Betalning är ännu inte ansluten till Apple App Store eller Google Play. Fältet `subscription_provider = manual` används tills butikskvitton blir sanningskälla. Ingen verklig debitering sker i denna version.
+
+## Stabil Cloudflare-deploy i v14.0.6.2
+
+1. Använd Node.js 22 eller senare (`nvm use` läser `.nvmrc`).
+2. Kör `npm install` från projektroten.
+3. Ange `npm run deploy` som deploy command i Cloudflare.
+4. Använd inte `npx wrangler deploy`, eftersom det kan hämta en annan Wrangler-version än den som projektet är testat mot.

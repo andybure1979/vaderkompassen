@@ -1,5 +1,15 @@
 # Ändringslogg
 
+
+## 14.0.6.2
+
+- Lade till `package.json` i projektroten.
+- Låste Wrangler till `4.114.0`.
+- Lade till `npm run deploy` och `npm run dev`.
+- Lade till Node-krav och `.nvmrc` för Node 22.
+- Synkroniserade Wrangler-versionen i `cloudflare/package.json`.
+- Uppdaterade versionsnummer och cache till 14.0.6.2.
+
 ## 14.0.6.1
 
 - Bioväder och Badhusväder ligger nu sist i aktivitetsväljaren.
