@@ -391,16 +391,274 @@ function reasonsHtml(r,compact=false){
   const reasons=decisionReasons(r);
   return `<div class="decision-reasons${compact?" compact":""}" aria-label="Därför rekommenderas platsen">${reasons.map(x=>`<span><b>${x.icon} ${x.value}</b><small>${x.label}</small></span>`).join("")}</div>`;
 }
+function textHash(value){
+  let h=2166136261;
+  for(const ch of String(value)){
+    h^=ch.charCodeAt(0);
+    h=Math.imul(h,16777619);
+  }
+  return h>>>0;
+}
+function textPick(options,key,salt=""){
+  if(!options?.length)return "";
+  return options[textHash(`${key}|${salt}`)%options.length];
+}
+function recommendationTextKey(r){
+  return `${r.day}|${placeLabel(r)}|${settings.activity}|${Math.round(r.score)}`;
+}
+function dominantWeatherFactor(r){
+  const a=settings.activity;
+  const factors=[];
+  const push=(id,strength)=>factors.push({id,strength:Number.isFinite(strength)?strength:0});
+  if(a==="cinema"||a==="indoorPool"){
+    push("rain",clamp((r.rain||0)*11));
+    push("wind",clamp(((r.wind||0)-3)*10));
+    push("cloud",clamp(100-(r.sun||0)*7));
+    push("temperature",clamp(Math.abs((r.temp||0)-20)*7));
+  }else if(a==="surf"){
+    push("waves",clamp((r.waveHeight||0)*42));
+    push("period",clamp(((r.wavePeriod||0)-4)*13));
+    push("wind",clamp(100-Math.abs((r.wind||0)-7)*11));
+    push("direction",Number.isFinite(r.windDirection)?surfOffshoreScore(r):0);
+  }else if(a==="ski"){
+    push("snow",clamp((r.snowDepth||0)*1.4));
+    push("freshSnow",clamp((r.newSnow||0)*7));
+    push("temperature",bell(r.temp,-3,12));
+    push("wind",bell(r.wind,3,7));
+  }else{
+    push("temperature",bell(r.temp,settings.temp,14));
+    push("dry",clamp(100-(r.rain||0)*12));
+    push("sun",clamp((r.sun||0)*7));
+    push("wind",clamp(100-Math.max(0,(r.wind||0)-3)*10));
+  }
+  return factors.sort((x,y)=>y.strength-x.strength)[0]?.id||"balance";
+}
+const ACTIVITY_TEXT={
+  general:[
+    "Vädret hjälper verkligen till idag.",
+    "Här finns en ovanligt fin helhet för dagens planer.",
+    "Förutsättningarna faller väl på plats på den här orten.",
+    "Det mesta talar för att dagen blir lätt att tycka om här.",
+    "Ett välbalanserat väderläge gör platsen extra intressant."
+  ],
+  hiking:[
+    "Lederna ser ut att bjuda på fina förhållanden.",
+    "Det här är ett väderläge som passar bra för en dag på stigarna.",
+    "Förutsättningarna talar för en behaglig vandringsdag.",
+    "Ryggsäcken kan med fördel packas för den här platsen.",
+    "Här ser det ut att bli lätt att trivas längs leden."
+  ],
+  cycling:[
+    "Förutsättningarna ser lovande ut för en längre tur.",
+    "Ett väderläge som gör det lätt att vilja ta cykeln.",
+    "Här finns bra balans för både tempo och distans.",
+    "Vägen ser ut att bjuda på en riktigt trevlig cykeldag.",
+    "Dagens väder passar fint för många kilometer i sadeln."
+  ],
+  running:[
+    "Ett riktigt fint löparväder väntar.",
+    "Här passar vädret bra för både lugn runda och högre tempo.",
+    "Skorna får goda skäl att komma ut idag.",
+    "Förhållandena ser behagliga ut för ett löppass.",
+    "Det här är ett väder som gör löpningen lite lättare."
+  ],
+  golf:[
+    "Förutsättningarna ger goda spelmöjligheter.",
+    "Här ser det ut att bli en trivsam dag på banan.",
+    "Vädret bör ge gott om utrymme att fokusera på spelet.",
+    "Ett lovande läge för många hål utomhus.",
+    "Banan lär kännas extra inbjudande i det här vädret."
+  ],
+  fishing:[
+    "Förhållandena vid vattnet ser lovande ut.",
+    "Här finns ett väderläge som passar en dag med fiskespöet.",
+    "Det ser ut att bli lätt att stanna länge vid vattnet.",
+    "Vädret ger fina skäl att prova fiskelyckan här.",
+    "Ett stabilt läge för lugna timmar vid sjö eller kust."
+  ],
+  coast:[
+    "Kustläget ser ovanligt trivsamt ut idag.",
+    "Här samspelar hav och väder på ett fint sätt.",
+    "Det här ser ut som ett bra val för en dag nära kusten.",
+    "Kustvädret gör platsen extra lockande.",
+    "Havsluften kommer med goda förutsättningar här."
+  ],
+  boat:[
+    "Förhållandena på vattnet ser lovande ut.",
+    "Här finns ett lugnt och användbart båtläge.",
+    "Vädret ger fina förutsättningar för en tur på sjön.",
+    "Det här är ett läge som passar bra för båtliv.",
+    "Vattenvägen känns som ett klokt val här idag."
+  ],
+  surf:[
+    "Vågor och vind ser ut att samarbeta här.",
+    "Det här är ett av dagens mest intressanta surflägen.",
+    "Förutsättningarna talar för tid på brädan.",
+    "Havet ser ut att bjuda på rätt sorts energi.",
+    "Här finns en lovande kombination för surf."
+  ],
+  ski:[
+    "Snöläget ser ut att bjuda på en fin dag.",
+    "Här finns goda förutsättningar för skidåkning.",
+    "Väder och snö samspelar bra på den här platsen.",
+    "Det här ser ut som ett bra val för dagens skidtur.",
+    "Skidorna har goda skäl att följa med hit."
+  ],
+  cinema:[
+    "Bioduken lockar lite extra när vädret beter sig så här.",
+    "Rusk utanför gör biomörkret ovanligt inbjudande.",
+    "Det här är en dag då popcorn känns som rätt utrustning.",
+    "Regn och gråväder gör bio till ett starkt alternativ.",
+    "Vädret ute gör det lätt att välja en varm biosalong."
+  ],
+  indoorPool:[
+    "När vädret sviker ute känns badhuset som ett riktigt bra val.",
+    "Rusk utanför gör varmt vatten extra lockande.",
+    "Det här är en dag då bassängen vinner över utomhusplanerna.",
+    "Gråvädret ger ett utmärkt skäl att bada inne.",
+    "Badhuset känns ovanligt rätt när utevädret är så här."
+  ]
+};
+const FACTOR_TEXT={
+  temperature:[
+    "Temperaturen ligger nära det optimala.",
+    "Det är framför allt den behagliga temperaturen som lyfter platsen.",
+    "Dagens temperatur passar aktiviteten mycket väl.",
+    "Lagom värme ger platsen ett tydligt plus.",
+    "Temperaturen bör göra det lätt att vara ute länge."
+  ],
+  dry:[
+    "Uppehållsvädret är dagens tydligaste styrka.",
+    "Regnet ser ut att hålla sig undan.",
+    "Den låga nederbörden väger tungt i rekommendationen.",
+    "Torrt väder gör planeringen betydligt enklare.",
+    "Det mesta talar för en dag utan störande regn."
+  ],
+  sun:[
+    "Solen blir ett av dagens stora plus.",
+    "Gott om ljus gör platsen extra inbjudande.",
+    "Solchanserna stärker helhetsintrycket tydligt.",
+    "Det ser ut att bli en ljus och trivsam dag.",
+    "Solen hjälper platsen högt upp i listan."
+  ],
+  wind:[
+    "Den lugna vinden är en viktig del av rekommendationen.",
+    "Vinden väntas inte störa dagens planer.",
+    "Svaga vindar ger platsen ett tydligt övertag.",
+    "Det lugna vindläget gör dagen extra behaglig.",
+    "Vinden håller sig på en användbar nivå."
+  ],
+  rain:[
+    "Regnet gör inomhusalternativet extra lockande.",
+    "Nederbörden är en stark anledning att söka sig in.",
+    "Regnet arbetar helt klart för dagens inomhusplan.",
+    "Blött ute betyder bättre läge för något under tak.",
+    "Dagens regn ger den här rekommendationen extra kraft."
+  ],
+  cloud:[
+    "Det grå vädret passar dagens inomhusidé perfekt.",
+    "Molnen gör det lättare att lämna utomhusplanerna.",
+    "Lite sol och mycket grått talar för ett inomhusval.",
+    "Det dämpade vädret gör platsen ovanligt lämplig.",
+    "Molntäcket hjälper skämtkategorin uppåt i listan."
+  ],
+  waves:[
+    "Våghöjden är den främsta styrkan här.",
+    "Vågorna ger platsen ett tydligt surfövertag.",
+    "Havets rörelse är dagens stora plus.",
+    "Vågbilden ser mest lovande ut på den här platsen.",
+    "Det är framför allt vågorna som gör läget intressant."
+  ],
+  period:[
+    "Vågperioden ger förutsättningarna extra kvalitet.",
+    "Tiden mellan vågorna stärker surfvärdet tydligt.",
+    "Perioden ser ovanligt användbar ut.",
+    "Vågornas rytm är en viktig anledning till placeringen.",
+    "En lovande vågperiod lyfter helheten."
+  ],
+  direction:[
+    "Vindriktningen arbetar till surfens fördel.",
+    "Frånlandskomponenten ger platsen ett tydligt plus.",
+    "Riktningen på vinden ser användbar ut.",
+    "Vindvinkeln är en viktig del av dagens läge.",
+    "Det är framför allt vindriktningen som sticker ut."
+  ],
+  snow:[
+    "Snödjupet är den tydligaste styrkan.",
+    "Den befintliga snön ger platsen ett övertag.",
+    "Snöbasen ser mest lovande ut här.",
+    "Det stabila snötäcket lyfter rekommendationen.",
+    "Snöläget väger tungt i dagens ranking."
+  ],
+  freshSnow:[
+    "Nysnön ger platsen extra dragningskraft.",
+    "Det färska snötillskottet är dagens stora plus.",
+    "Nyfallen snö lyfter skidläget tydligt.",
+    "Nysnön gör rekommendationen extra intressant.",
+    "Det är framför allt den färska snön som lockar."
+  ],
+  balance:[
+    "Det är helheten snarare än en enskild faktor som sticker ut.",
+    "Flera väderdelar samspelar på ett bra sätt.",
+    "Balansen mellan dagens viktigaste faktorer är ovanligt fin.",
+    "Ingen enskild detalj behöver bära rekommendationen.",
+    "Helhetsläget är jämnt och användbart."
+  ]
+};
+const SCORE_TEXT={
+  excellent:[
+    "Ett ovanligt starkt val idag.",
+    "Här finns några av dagens allra bästa förutsättningar.",
+    "Det här är en plats som verkligen sticker ut.",
+    "Dagens väderträff är ovanligt bra här.",
+    "Ett toppval som är lätt att rekommendera."
+  ],
+  veryGood:[
+    "Ett tryggt och mycket bra val.",
+    "Platsen har en stark kombination av väderfaktorer.",
+    "Det mesta ser riktigt lovande ut här.",
+    "Ett stabilt val med få tydliga nackdelar.",
+    "Förutsättningarna ligger klart över genomsnittet."
+  ],
+  good:[
+    "Ett bra alternativ med någon mindre reservation.",
+    "Helheten är positiv även om allt inte är perfekt.",
+    "Platsen fungerar bra för dagens aktivitet.",
+    "Flera saker talar för platsen, trots någon svagare punkt.",
+    "Ett användbart val som bör ge en bra dag."
+  ],
+  okay:[
+    "Det kan fungera, men vädret kräver lite mer eftertanke.",
+    "Ett möjligt val om du accepterar några kompromisser.",
+    "Förutsättningarna är blandade men inte hopplösa.",
+    "Platsen är okej, men kontrollera detaljerna först.",
+    "Det finns bättre val, men detta kan fortfarande fungera."
+  ],
+  weak:[
+    "Förhållandena är svaga jämfört med högre rankade platser.",
+    "Dagens väder gör platsen svår att rekommendera.",
+    "Det här är inte platsens starkaste dag.",
+    "Flera väderfaktorer arbetar åt fel håll.",
+    "Välj gärna ett alternativ högre upp i listan."
+  ]
+};
+function scoreTextBand(score){
+  if(score>=90)return "excellent";
+  if(score>=80)return "veryGood";
+  if(score>=70)return "good";
+  if(score>=60)return "okay";
+  return "weak";
+}
 function recommendationIntro(r){
-  const name=placeLabel(r);
-  if(settings.activity==="cinema")return `${name} har ett av de ruskigaste utomhuslägena – ett utmärkt tillfälle att krypa in i biomörkret.`;
-  if(settings.activity==="indoorPool")return `${name} har väder som gör varmt vatten och inomhusbad extra lockande.`;
-  const score=r.score;
-  if(score>=90)return `Ett ovanligt starkt val idag – förhållandena stämmer mycket väl för ${ACTIVITIES[settings.activity].label.toLowerCase()}.`;
-  if(score>=80)return `Ett tryggt val idag med en bra balans mellan de viktigaste väderfaktorerna.`;
-  if(score>=70)return `Bra förutsättningar, även om någon väderfaktor drar ned helheten lite.`;
-  if(score>=60)return `Det kan fungera, men kontrollera detaljerna innan du bestämmer dig.`;
-  return `Förhållandena är svaga idag – välj gärna en högre rankad plats.`;
+  const key=recommendationTextKey(r);
+  const activityLines=ACTIVITY_TEXT[settings.activity]||ACTIVITY_TEXT.general;
+  const factor=dominantWeatherFactor(r);
+  const factorLines=FACTOR_TEXT[factor]||FACTOR_TEXT.balance;
+  const scoreLines=SCORE_TEXT[scoreTextBand(r.score)];
+  const first=textPick(activityLines,key,"activity");
+  const second=textPick(factorLines,key,"factor");
+  const third=textPick(scoreLines,key,"score");
+  return `${first} ${second} ${third}`;
 }
 function decisionSentence(r){
   const a=settings.activity;
@@ -500,7 +758,7 @@ async function mapWithConcurrency(items,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
   return results;
 }
-const diagnostics={version:"14.0.7",mode:"checking",lastLoad:null,sources:[]};
+const diagnostics={version:"14.0.8",mode:"checking",lastLoad:null,sources:[]};
 function setDataMode(mode,detail=""){
   diagnostics.mode=mode;
   const badge=$("dataModeBadge");
@@ -1371,7 +1629,7 @@ $("settingsForm").addEventListener("submit",event=>{
   saveSettingsFromDialog();
 });
 if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
-  const reg=await navigator.serviceWorker.register(`sw.js?v=14.0.7`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=14.0.8`);
   reg.update();
   reg.addEventListener("updatefound",()=>{const worker=reg.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller){$("updateBanner").classList.remove("hidden");}})});
   navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload());

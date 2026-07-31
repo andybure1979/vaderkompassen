@@ -1,6 +1,13 @@
 # Ändringslogg
 
+## 14.0.8
 
+- Inför ett deterministiskt textbibliotek med många varierade formuleringar.
+- Varje aktivitet får ett eget språk och en tydligare personlighet.
+- Rekommendationstexten lyfter automatiskt dagens starkaste väderfaktor.
+- Samma ort, dag och aktivitet får stabil text vid omrendering, medan andra platser och dagar får variation.
+- Poängmodell och ranking är oförändrade.
+- Ingen Supabase-migration krävs.
 
 ## 14.0.7
 

@@ -11,6 +11,8 @@
 - **14.0.6** Nya aktivitetskategorier och uppdaterade färgprofiler.
 - **14.0.6.1** Inomhusväder sist i listan med omvänd väderpoäng.
 
+- **14.0.8** Intelligent textsystem med aktivitetsspecifika och varierade rekommendationer.
+
 ## Nästa
 
 - **14.1.x** Förbättrat beslutsstöd, historik och personalisering utan favoriter.

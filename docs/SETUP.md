@@ -1,10 +1,10 @@
 # Installation och drift
 
-## Väderkompassen v14.0.6.1
+## Väderkompassen v14.0.8
 
 1. Kör SQL-migrationerna i ordningen nedan.
 2. Publicera hela projektet till GitHub.
-3. Kontrollera att webbplatsen visar `Väderkompassen v14.0.6.1` i sidfoten.
+3. Kontrollera att webbplatsen visar `Väderkompassen v14.0.8` i sidfoten.
 4. Testa registrering, inloggning, start av provperiod och avslutad automatisk förnyelse.
 
 ## Manuella databassteg
@@ -40,3 +40,8 @@ Betalning är ännu inte ansluten till Apple App Store eller Google Play. Fälte
 ## Forecast CPU Fix i v14.0.6.3
 
 Kör migrationen `supabase/migrations/20260731_140603_forecast_cpu_fix.sql` i Supabase SQL Editor efter tidigare migrationer. Deploya därefter Workern med `npm run deploy`. Kontrollera `/v1/forecast` med flera regioner och verifiera att svaret innehåller `meta.performance`.
+
+
+## Intelligent textsystem i v14.0.8
+
+Ingen databasändring krävs. Publicera projektet och kontrollera att rekommendationerna varierar mellan orter, dagar och aktiviteter utan att rankningen förändras.
