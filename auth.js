@@ -10,9 +10,10 @@
 
   let session = null;
   let profile = null;
+  let pendingVerificationNotice = false;
 
   const ROLE_LABELS = {
-    free: ["FREE", "Gratis"],
+    free: ["GRATIS", "Gratis"],
     trial: ["TRIAL", "Provperiod"],
     premium: ["PREMIUM", "Premium"],
     vip: ["VIP", "VIP"],
@@ -30,6 +31,36 @@
   function daysLeft(iso) {
     if (!iso) return 0;
     return Math.max(0, Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000));
+  }
+
+  function appRedirectUrl() {
+    return new URL("./", window.location.href).href;
+  }
+
+  function closeDialog(id) {
+    const dialog = $(id);
+    if (dialog?.open) dialog.close();
+  }
+
+  function bindDialogDismiss(dialogId, closeButtonId) {
+    const dialog = $(dialogId);
+    $(closeButtonId)?.addEventListener("click", () => closeDialog(dialogId));
+    dialog?.addEventListener("click", event => {
+      if (event.target === dialog) closeDialog(dialogId);
+    });
+  }
+
+  function callbackState() {
+    const search = new URLSearchParams(location.search);
+    const hash = new URLSearchParams(location.hash.replace(/^#/, ""));
+    const error = search.get("error_description") || hash.get("error_description");
+    const isCallback = search.has("code") || hash.has("access_token") || search.has("token_hash");
+    return { error, isCallback };
+  }
+
+  function clearAuthCallbackUrl() {
+    if (!location.search && !location.hash) return;
+    history.replaceState({}, document.title, appRedirectUrl());
   }
 
   function effectiveRole(p) {
@@ -83,14 +114,19 @@
     if (!signedIn) return;
 
     $("profileEmail").textContent = session.user.email || "–";
-    $("profileName").textContent = profile?.display_name || "Ditt konto";
+    const displayName = profile?.display_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || "";
+    $("profileName").textContent = displayName ? `Hej, ${displayName}!` : "Ditt konto";
     $("profileBadge").textContent = labels[0];
     $("profileBadge").dataset.role = role;
     $("profileAccessTitle").textContent = labels[1];
 
     const trialDays = daysLeft(profile?.trial_ends_at);
-    $("profileTrial").textContent = trialDays ? `${trialDays} dag${trialDays === 1 ? "" : "ar"} kvar` : "Avslutad";
-    $("profileSubscription").textContent = profile?.subscription_status === "active" ? "Aktivt" : "Inget aktivt abonnemang";
+    $("profileTrial").textContent = trialDays
+      ? `${trialDays} dag${trialDays === 1 ? "" : "ar"} kvar`
+      : profile?.trial_ends_at ? "Avslutad" : "Ingen provperiod aktiverad";
+    $("profileSubscription").textContent = profile?.subscription_status === "active"
+      ? "Premium är aktivt"
+      : "Du använder gratisversionen";
     $("profileAccessText").textContent = role === "trial"
       ? `Full Premium i ${trialDays} dag${trialDays === 1 ? "" : "ar"}`
       : hasPremiumAccess() ? "Full tillgång utan reklam" : "Grundläggande tillgång";
@@ -109,8 +145,8 @@
   }
 
   async function signInWithPassword(event) {
-    if (event.submitter?.value === "cancel") return;
     event.preventDefault();
+    if (!client) return setMessage("authMessage", "Inloggningen är inte konfigurerad ännu.", true);
     setMessage("authMessage", "Loggar in …");
     const { error } = await client.auth.signInWithPassword({
       email: $("authEmail").value.trim(),
@@ -126,7 +162,7 @@
     const email = $("authEmail").value.trim();
     const password = $("authPassword").value;
     if (!email || password.length < 6) return setMessage("authMessage", "Ange en giltig e-postadress och minst 6 tecken.", true);
-    const { error } = await client.auth.signUp({ email, password, options: { emailRedirectTo: location.origin + location.pathname } });
+    const { error } = await client.auth.signUp({ email, password, options: { emailRedirectTo: appRedirectUrl() } });
     if (error) return setMessage("authMessage", error.message, true);
     setMessage("authMessage", "Kontot är skapat. Kontrollera din e-post för verifieringslänken.");
   }
@@ -136,7 +172,7 @@
     setMessage("authMessage", `Öppnar ${provider === "apple" ? "Apple" : "Google"} …`);
     const { error } = await client.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: location.origin + location.pathname }
+      options: { redirectTo: appRedirectUrl() }
     });
     if (error) setMessage("authMessage", error.message, true);
   }
@@ -144,7 +180,7 @@
   async function resetPassword() {
     const email = $("authEmail").value.trim();
     if (!email) return setMessage("authMessage", "Ange din e-postadress först.", true);
-    const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
+    const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo: appRedirectUrl() });
     setMessage("authMessage", error ? error.message : "Återställningslänk skickad.", Boolean(error));
   }
 
@@ -194,13 +230,22 @@
     $("googleLogin")?.addEventListener("click", () => oauth("google"));
     $("resetPassword")?.addEventListener("click", resetPassword);
     $("signOut")?.addEventListener("click", signOut);
-    $("upgradePremium")?.addEventListener("click", () => alert("Betalning aktiveras i v14.1. Ditt konto är redan förberett."));
+    $("upgradePremium")?.addEventListener("click", () => {
+      closeDialog("profileDialog");
+      $("premiumInfoDialog")?.showModal();
+    });
     $("openAdmin")?.addEventListener("click", () => { $("profileDialog").close(); $("adminDialog").showModal(); });
     $("adminSearchBtn")?.addEventListener("click", searchAdmin);
     $("adminSearch")?.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); searchAdmin(); } });
+    bindDialogDismiss("authDialog", "authClose");
+    bindDialogDismiss("profileDialog", "profileClose");
+    bindDialogDismiss("premiumInfoDialog", "premiumInfoClose");
+    bindDialogDismiss("adminDialog", "adminClose");
   }
 
   async function init() {
+    const callback = callbackState();
+    pendingVerificationNotice = callback.isCallback;
     bind();
     if (!client) {
       renderAccount();
@@ -209,9 +254,27 @@
     const { data } = await client.auth.getSession();
     session = data.session;
     await loadProfile();
+
+    if (callback.error) {
+      setMessage("authMessage", callback.error.replace(/\+/g, " "), true);
+      $("authDialog").showModal();
+      clearAuthCallbackUrl();
+    } else if (callback.isCallback && session?.user) {
+      pendingVerificationNotice = false;
+      setMessage("profileNotice", "Din e-postadress är verifierad och du är nu inloggad.");
+      $("profileDialog").showModal();
+      clearAuthCallbackUrl();
+    }
+
     client.auth.onAuthStateChange(async (_event, nextSession) => {
       session = nextSession;
       await loadProfile();
+      if (pendingVerificationNotice && nextSession?.user) {
+        pendingVerificationNotice = false;
+        setMessage("profileNotice", "Din e-postadress är verifierad och du är nu inloggad.");
+        if (!$("profileDialog").open) $("profileDialog").showModal();
+        clearAuthCallbackUrl();
+      }
     });
   }
 
