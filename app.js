@@ -113,7 +113,7 @@ const SNOW_HOURLY = "snow_depth,freezing_level_height";
 
 
 const SETTINGS_KEY="vk-settings";
-const WEATHER_CACHE_KEY="vk-weather-cache-v13.10.10";
+const WEATHER_CACHE_KEY="vk-weather-cache-v13.10.11";
 const POINT_CACHE_PREFIX="vk-point-cache";
 
 function clearAppCacheStorage({includeCurrentWeather=false}={}){
@@ -404,7 +404,7 @@ async function mapWithConcurrency(items,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
   return results;
 }
-const diagnostics={version:"13.10.10",mode:"checking",lastLoad:null,sources:[]};
+const diagnostics={version:"13.10.11",mode:"checking",lastLoad:null,sources:[]};
 function setDataMode(mode,detail=""){
   diagnostics.mode=mode;
   const badge=$("dataModeBadge");
@@ -1023,6 +1023,15 @@ function winnerDetailsHtml(r){
 }
 function scoreColor(score){return score>=90?"#29974a":score>=80?"#78bd8a":score>=70?"#e4bd3d":score>=60?"#ed9653":"#e66b69";}
 function scoreClass(score){return score>=90?"perfect":score>=80?"great":score>=70?"good":score>=60?"okay":"poor";}
+function enableMapInteractions(){
+  if(!map)return;
+  map.dragging?.enable();
+  map.touchZoom?.enable();
+  map.scrollWheelZoom?.enable();
+  map.doubleClickZoom?.enable();
+  map.boxZoom?.enable();
+  map.keyboard?.enable();
+}
 function ensureMap(){
   if(map||!window.L)return;
   map=L.map("weatherMap",{
@@ -1042,14 +1051,7 @@ function ensureMap(){
   L.control.zoom({position:"bottomright"}).addTo(map);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18,attribution:'&copy; OpenStreetMap',className:"pastel-map-tiles"}).addTo(map);
   markerLayer=L.layerGroup().addTo(map);
-  map.whenReady(()=>{
-    map.dragging.enable();
-    map.touchZoom.enable();
-    map.scrollWheelZoom.enable();
-    map.doubleClickZoom.enable();
-    map.boxZoom.enable();
-    map.keyboard.enable();
-  });
+  map.whenReady(enableMapInteractions);
 }
 function mapPopupHtml(r,position){
   const activity=ACTIVITIES[settings.activity];
@@ -1065,7 +1067,7 @@ function renderMap(list){
   });
   if(list.length){const bounds=L.latLngBounds(list.map(r=>[r.lat,r.lon]));map.fitBounds(bounds,{padding:[30,30],maxZoom:7});}
 }
-function toggleMap(){const section=$("mapSection"),button=$("showMapBtn");section.classList.toggle("hidden");const open=!section.classList.contains("hidden");button.textContent=open?"✕ Dölj kartan":"🗺 Visa topplistan på karta";button.setAttribute("aria-expanded",String(open));if(open){renderMap(rankedList());setTimeout(()=>map?.invalidateSize(),80);section.scrollIntoView({behavior:"smooth",block:"nearest"});}}
+function toggleMap(){const section=$("mapSection"),button=$("showMapBtn");section.classList.toggle("hidden");const open=!section.classList.contains("hidden");button.textContent=open?"✕ Dölj kartan":"🗺 Visa topplistan på karta";button.setAttribute("aria-expanded",String(open));if(open){renderMap(rankedList());setTimeout(()=>{map?.invalidateSize();enableMapInteractions();},80);section.scrollIntoView({behavior:"smooth",block:"nearest"});}}
 let detailPlace="";
 let mainListScrollY=0;
 let mainViewState=null;
@@ -1253,7 +1255,7 @@ $("settingsForm").addEventListener("submit",event=>{
   saveSettingsFromDialog();
 });
 if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
-  const reg=await navigator.serviceWorker.register(`sw.js?v=13.10.10`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=13.10.11`);
   reg.update();
   reg.addEventListener("updatefound",()=>{const worker=reg.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller){$("updateBanner").classList.remove("hidden");}})});
   navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload());

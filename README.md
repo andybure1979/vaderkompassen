@@ -4,9 +4,16 @@ Väderkompassen är en mobilanpassad PWA som hjälper användaren att välja **v
 
 ## Aktuell version
 
-**v13.10.10**
+**v13.10.11**
 
 ## Versionshistorik
+
+### v13.10.11 – återställd kartzoom
+
+- Återställer nypzoom, dubbeltryckszoom, mushjulszoom och panorering i Leaflet-kartan.
+- Tar bort en CSS-regel som gav kartans tile- och map-panes egna pekhändelser och kunde blockera touchgester i Safari.
+- Kartans interaktionshanterare aktiveras på nytt efter att en dold karta har öppnats och storleken räknats om.
+- Ingen annan funktionalitet ändrad.
 
 ### v13.10.10 – lagringsfix och automatisk återhämtning
 
@@ -65,10 +72,11 @@ Väderkompassen är en mobilanpassad PWA som hjälper användaren att välja **v
 
 ### Öppna
 
-- Inga kända blockerande problem. v13.10.10 behöver verifieras på den publicerade iPhone/PWA-versionen.
+- v13.10.11 behöver verifieras på den publicerade iPhone/PWA-versionen, särskilt nypzoom och zoomknappar i kartan.
 
 ### Lösta
 
+- Kartans zoom kunde blockeras på touch-enheter av felaktig pekhändelsehantering i kartans lager.
 - Full `localStorage` blockerade sparning av inställningar (`QuotaExceededError`).
 - Vinnaren låg kvar ovanför vald ort på detaljsidan.
 - Vinnarkortet krävde en separat knapp för att öppna detaljsidan.

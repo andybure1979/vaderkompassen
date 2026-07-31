@@ -68,7 +68,7 @@ dialog{width:min(520px,calc(100% - 24px));border:0;border-radius:25px;padding:0;
 #weatherMap{position:relative;z-index:1;min-height:430px}
 .leaflet-control-zoom{display:block!important;pointer-events:auto!important}
 .leaflet-control-zoom a{touch-action:manipulation!important;pointer-events:auto!important}
-.leaflet-pane,.leaflet-map-pane,.leaflet-tile-pane{pointer-events:auto}
+.leaflet-control-container,.leaflet-marker-pane,.leaflet-popup-pane{pointer-events:auto}
 @media(max-width:480px){
   .metrics.metrics-four{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
   .metrics.metrics-four article{min-height:92px;padding:10px 3px}
@@ -125,3 +125,9 @@ dialog{width:min(520px,calc(100% - 24px));border:0;border-radius:25px;padding:0;
 #hero[role="button"]{cursor:pointer}
 #hero[role="button"]:focus-visible{outline:3px solid var(--activity);outline-offset:4px}
 #hero[role="button"]:active{transform:scale(.992)}
+
+
+/* v13.10.11 – återställd kartzoom på touch-enheter */
+#weatherMap.leaflet-container{touch-action:none!important;-webkit-user-select:none!important;user-select:none!important}
+#weatherMap .leaflet-map-pane,#weatherMap .leaflet-tile-pane{pointer-events:none}
+#weatherMap .leaflet-marker-pane,#weatherMap .leaflet-shadow-pane,#weatherMap .leaflet-popup-pane,#weatherMap .leaflet-tooltip-pane,#weatherMap .leaflet-control-container{pointer-events:auto}
