@@ -1,6 +1,6 @@
 {
   "name": "vaderkompassen-worker",
-  "version": "14.0.7",
+  "version": "14.0.8",
   "private": true,
   "scripts": {
     "deploy": "wrangler deploy",
