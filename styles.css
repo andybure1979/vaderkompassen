@@ -161,8 +161,12 @@ dialog{width:min(520px,calc(100% - 24px));border:0;border-radius:25px;padding:0;
 }
 
 /* Aktivitetsanpassade vädervärden i topplistan */
-.rank-main .mini-metrics{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:2px;margin:6px 0 0}
-.rank-main .mini-metrics article{min-width:0;min-height:41px;padding:2px 0;border-radius:6px;box-shadow:none}
-.rank-main .mini-metrics span{font-size:12px;line-height:1}
-.rank-main .mini-metrics strong{margin:2px 0 1px;font-size:8px;line-height:1.1;overflow-wrap:anywhere}
-.rank-main .mini-metrics small,.rank-main .mini-metrics em{font-size:6px;line-height:1.05;letter-spacing:0}
+.rank-main .mini-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin:8px 0 0}
+.rank-main .mini-metrics article{min-width:0;min-height:52px;padding:5px 2px;border:0;border-radius:8px;background:var(--bg);box-shadow:none}
+.rank-main .mini-metrics span{font-size:14px;line-height:1}
+.rank-main .mini-metrics strong{margin:3px 0 1px;font-size:10px;line-height:1.1;overflow-wrap:anywhere}
+.rank-main .mini-metrics small,.rank-main .mini-metrics em{font-size:7px;line-height:1.1;letter-spacing:0}
+@media(max-width:480px){
+  .rank-main .mini-metrics{gap:3px}
+  .rank-main .mini-metrics article{min-height:48px;padding:4px 1px}
+}
