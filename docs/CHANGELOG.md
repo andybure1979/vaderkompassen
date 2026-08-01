@@ -1,5 +1,13 @@
 # Ändringslogg
 
+## 14.1.0 – Performance 2.0
+
+- Samlar edge-cache, normaliserade requestnycklar, Worker-coalescing, frontend-abort och kompakt forecast-payload i den slutliga 14.1.0-versionen.
+- Märker Worker-svar med `X-Vaderkompassen-Worker-Version: 14.1.0` och rankingmotorn `cloud-v6-performance-2`.
+- Root-deploy använder `wrangler.jsonc` och `cloudflare/src/index.js`; den alternativa Worker-konfigurationen använder samma källa relativt `cloudflare/`.
+- Behåller poäng, ranking, vinnare, prognosdagar, max 75 resultat, UI, karta, navigation, Auth och Premium.
+- Ingen Supabase-migration krävs.
+
 ## 14.1.0c
 
 - Begränsar regionala Supabase-svar till redan använda `payload,source_status`.

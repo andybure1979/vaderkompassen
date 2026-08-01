@@ -1,3 +1,9 @@
+## v14.1.0 – Performance 2.0
+
+Performance 2.0 samlar den kanoniska forecast-cachen, request coalescing, säkra frontend-aborter och den kompakta payloaden i en slutversion. Den publicerade Worker-versionen kan verifieras i JSON-svaret och headern `X-Vaderkompassen-Worker-Version`; rankingmotorn identifieras som `cloud-v6-performance-2`.
+
+Samma logiska urval använder samma cache- och requestnyckel oavsett parameterordning. Cacheträffar går förbi Supabase och all bearbetning, samtidiga cachemissar delar en färdigserialiserad body och frontend återanvänder identiska hämtningar utan att äldre `finally` kan påverka ett nyare UI-läge. Poäng, ranking, max 75 resultat, karta, texter, Auth och Premium är oförändrade. Ingen Supabase-migration krävs.
+
 ## v14.1.0c – Kompaktare prognossvar
 
 `/v1/forecast` skickar nu en uttrycklig, frontend-verifierad uppsättning radfält och endast den efterfrågade aktivitetens `serverScore`. Saknade marina, snö- och specialvärden utelämnas, medan giltiga värden som `0` och `false` bevaras. Topplista, vinnarkort, detaljsida, karta, navigation, faktaboxar och rekommendationstexter behåller de fält de faktiskt använder.
