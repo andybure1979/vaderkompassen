@@ -292,8 +292,8 @@
       ? `Full Premium i ${trialDays} dag${trialDays === 1 ? "" : "ar"}`
       : hasPremiumAccess() ? "Full tillgång utan reklam" : "Grundläggande tillgång";
     const mayStartTrial = cfg.subscriptionMode==="manual_test"&&role === "free" && (entitlement?entitlement.can_start_trial:!profile?.trial_used_at);
-    $("upgradePremium").classList.toggle("hidden", !mayStartTrial);
-    $("upgradePremium").textContent = "Prova Premium gratis i 3 dagar";
+    $("upgradePremium").classList.toggle("hidden", accountStatus!=="active");
+    $("upgradePremium").textContent = mayStartTrial ? "Prova Premium gratis i 3 dagar" : "Visa Premiumstatus";
     $("openAdmin").classList.toggle("hidden", role !== "admin" || accountStatus!=="active");
   }
 

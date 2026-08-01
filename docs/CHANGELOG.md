@@ -1,5 +1,12 @@
 # Ändringslogg
 
+## 14.3.2 – Åtkomlig Premiumstatus
+
+- Rättar ett UI-villkor som dolde länken till Premiumdialogen för Admin, VIP och andra konton som inte kunde starta en ny trial.
+- Visar “Prova Premium gratis i 3 dagar” endast när trial faktiskt kan startas.
+- Visar annars “Visa Premiumstatus”, så aktuell entitlement och uppsägningsstatus alltid kan granskas.
+- Blockerade eller pausade konton får fortsatt ingen Premiumåtgärd.
+
 ## 14.3.1 – Worker runtime-fix
 
 - Flyttar filtrering och sortering av lagrade forecast-rader till en service-role-skyddad Supabase-RPC.

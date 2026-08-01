@@ -1,4 +1,4 @@
-/* Väderkompassen v14.3.1 – publik klientkonfiguration.
+/* Väderkompassen v14.3.2 – publik klientkonfiguration.
    Ange endast den publika Worker-adressen här. Lägg aldrig Supabase service-nycklar i appen. */
 window.VK_CONFIG = Object.freeze({
   // Explicit internt testläge. Ingen debitering eller butikstransaktion sker.

@@ -1,10 +1,10 @@
 # Installation och drift
 
-## Väderkompassen v14.3.1
+## Väderkompassen v14.3.2
 
 1. Kör SQL-migrationerna i ordningen nedan.
 2. Publicera hela projektet till GitHub.
-3. Kontrollera att webbplatsen visar `Väderkompassen v14.3.1` i sidfoten.
+3. Kontrollera att webbplatsen visar `Väderkompassen v14.3.2` i sidfoten.
 4. Testa Admin-behörighet, användarsökning, VIP, audit och Worker-hälsa enligt checklistan nedan.
 
 ## Manuella databassteg
@@ -48,6 +48,10 @@ Apple-/Googleverifiering, provider-synk, Cloudflare Logs API, tillförlitligt an
 4. Upprepa anropet och kontrollera `X-Vaderkompassen-Cache: HIT`.
 5. Kör cron manuellt och kontrollera att snapshot sparas även om en extern väderbatch misslyckas.
 6. Kontrollera Cloudflare-loggarna för frånvaro av `exceededCpu` och `Too many subrequests`.
+
+## Premiumstatus i v14.3.2
+
+Logga in separat som Free, Trial, VIP och Admin. Öppna profilen och kontrollera att varje aktivt konto ser antingen “Prova Premium gratis i 3 dagar” eller “Visa Premiumstatus”. Knappen ska öppna samma Premiumdialog men med serverns faktiska entitlementstatus.
 
 ## Äldre Premiumfält
 

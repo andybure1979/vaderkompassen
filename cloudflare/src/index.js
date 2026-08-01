@@ -22,7 +22,7 @@ const SURF_PLACES = new Set(Object.keys(SURF_PROFILES));
 const JSON_HEADERS={"content-type":"application/json; charset=utf-8","cache-control":"no-store"};
 const json=(data,status=200,extra={})=>new Response(JSON.stringify(data),{status,headers:{...JSON_HEADERS,...extra}});
 const now=()=>performance.now();
-const cors=env=>({"access-control-allow-origin":env.ALLOWED_ORIGIN||"*","access-control-allow-methods":"GET,POST,OPTIONS","access-control-allow-headers":"content-type,authorization,x-admin-token","X-Vaderkompassen-Worker-Version":env.APP_VERSION||"14.3.1"});
+const cors=env=>({"access-control-allow-origin":env.ALLOWED_ORIGIN||"*","access-control-allow-methods":"GET,POST,OPTIONS","access-control-allow-headers":"content-type,authorization,x-admin-token","X-Vaderkompassen-Worker-Version":env.APP_VERSION||"14.3.2"});
 const supabaseKeyType=env=>String(env.SUPABASE_SERVICE_ROLE_KEY||'').startsWith('sb_secret_')?'secret':'legacy-service-role';
 const sbHeaders=env=>{
   const key=String(env.SUPABASE_SERVICE_ROLE_KEY||'').trim();
@@ -67,7 +67,7 @@ async function adminHealth(req,env){
   const responseMs=Math.round((performance.now()-started)*10)/10,row=latest?.[0]||null;
   const generated=row?.generated_at||null,ageMinutes=generated?Math.max(0,Math.round((Date.now()-new Date(generated).getTime())/60000)):null;
   try{await sb(env,'admin_audit_log',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify({actor_user_id:admin.id,action:'admin_health_check',entity_type:'worker',reason:'Manuell hälsokontroll från adminvyn',new_value:{ok:Boolean(row),responseMs}})});}catch(error){console.warn('Kunde inte logga admin health:',error.message)}
-  return {ok:Boolean(row),checkedAt:new Date().toISOString(),workerVersion:env.APP_VERSION||'14.3.1',environment:env.ENVIRONMENT||'production',buildId:env.BUILD_ID||null,forecast:{status:row?'ok':'warning',responseMs,cache:null,rowsRead:row?1:0,rowsReturned:row?1:0},snapshot:{status:row&&ageMinutes<=90?'ok':row?'warning':'error',generatedAt:generated,ageMinutes,shards:null},supabase:{status:'ok'},auth:{status:'ok'},subscriptions:{status:'ok'}};
+  return {ok:Boolean(row),checkedAt:new Date().toISOString(),workerVersion:env.APP_VERSION||'14.3.2',environment:env.ENVIRONMENT||'production',buildId:env.BUILD_ID||null,forecast:{status:row?'ok':'warning',responseMs,cache:null,rowsRead:row?1:0,rowsReturned:row?1:0},snapshot:{status:row&&ageMinutes<=90?'ok':row?'warning':'error',generatedAt:generated,ageMinutes,shards:null},supabase:{status:'ok'},auth:{status:'ok'},subscriptions:{status:'ok'}};
 }
 const chunks=(a,n)=>Array.from({length:Math.ceil(a.length/n)},(_,i)=>a.slice(i*n,(i+1)*n));
 const finite=v=>Number.isFinite(Number(v))?Number(v):null;
@@ -214,7 +214,7 @@ async function buildSnapshot(env){
   const rows=[...freshRows,...fallbackRows].map(addServerScores),dailyResults={};
   for(const row of rows)(dailyResults[row.day]||=[]).push(row);
   const days=Object.keys(dailyResults).sort(),availablePlaces=new Set(rows.map(r=>r.place));
-  return {ok:true,version:env.APP_VERSION||'14.3.1',generatedAt:new Date().toISOString(),activeDate:days[0]||null,dailyResults,
+  return {ok:true,version:env.APP_VERSION||'14.3.2',generatedAt:new Date().toISOString(),activeDate:days[0]||null,dailyResults,
     sourceStatus:[{name:'Open-Meteo',ok:freshPlaces.size>0,rows:freshRows.length,error:failures.map(x=>`${x.place}: ${x.error}`).join(' · ')}],
     meta:{placesRequested:PLACES.length,placesUpdated:freshPlaces.size,placesFresh:freshPlaces.size,placesFallback:availablePlaces.size-freshPlaces.size,placesAvailable:availablePlaces.size,days:days.length,batches:batches.length,failedBatches:failures.length,failedPlaces:failures.map(x=>x.place)}};
 }
@@ -344,7 +344,7 @@ async function latestSnapshot(env,normalized,performanceMetrics){
   }
   performanceMetrics.shards=storedRows.length;
   const firstPayload=storedRows[0].payload||{};
-  return {ok:firstPayload.ok!==false,version:env.APP_VERSION||firstPayload.version||'14.3.1',generatedAt,
+  return {ok:firstPayload.ok!==false,version:env.APP_VERSION||firstPayload.version||'14.3.2',generatedAt,
     activeDate:firstPayload.activeDate||Object.keys(dailyResults).sort()[0]||null,dailyResults,
     sourceStatus,meta:responseMeta(payloadMeta,performanceMetrics),activity:requested,
     rankingEngine:'cloud-v6-performance-2',resultLimitPerDay:FORECAST_ROWS_PER_DAY};
@@ -363,7 +363,7 @@ async function databaseRankedForecast(env,normalized,c){
     method:'POST',headers:{...sbHeaders(env),accept:'application/json'},
     body:JSON.stringify({p_activity:normalized.activity,p_regions:normalized.regions,p_areas:normalized.areas,
       p_places:normalized.activity==='coast'?[...COAST_PLACES]:normalized.activity==='surf'?[...SURF_PLACES]:[],
-      p_limit:FORECAST_ROWS_PER_DAY,p_version:env.APP_VERSION||'14.3.1'})
+      p_limit:FORECAST_ROWS_PER_DAY,p_version:env.APP_VERSION||'14.3.2'})
   });
   const body=await response.text();
   if(response.status===404||response.status===400&&/get_ranked_forecast|schema cache/i.test(body))return null;
@@ -424,7 +424,7 @@ async function status(env){
     sb(env,'worker_runs?select=started_at,finished_at,status,message,details&order=started_at.desc&limit=10')
   ]);
   const latest=snapshots?.[0]||null;
-  return {ok:true,service:'Väderkompassen API',version:env.APP_VERSION||'14.3.1',time:new Date().toISOString(),
+  return {ok:true,service:'Väderkompassen API',version:env.APP_VERSION||'14.3.2',time:new Date().toISOString(),
     latestSnapshot:latest?{id:latest.id,generated_at:latest.generated_at,activity:latest.activity,meta:latest.payload?.meta||null}:null,recentRuns:runs||[]};
 }
 async function saveSnapshot(req,env){
@@ -453,7 +453,7 @@ export default {
   async fetch(req,env,ctx){
     const c=cors(env); if(req.method==='OPTIONS')return new Response(null,{status:204,headers:c}); const url=new URL(req.url);
     try{
-      if(url.pathname==='/'||url.pathname==='/health')return json({ok:true,service:'Väderkompassen API',version:env.APP_VERSION||'14.3.1',time:new Date().toISOString()},200,c);
+      if(url.pathname==='/'||url.pathname==='/health')return json({ok:true,service:'Väderkompassen API',version:env.APP_VERSION||'14.3.2',time:new Date().toISOString()},200,c);
       if((url.pathname==='/v1/status'||url.pathname==='/status')&&req.method==='GET'){
         await authenticatedAdmin(req,env);
         return json(await status(env),200,c);
