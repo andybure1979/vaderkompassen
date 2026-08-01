@@ -882,7 +882,7 @@ async function mapWithConcurrency(items,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
   return results;
 }
-const diagnostics={version:"14.0.9",mode:"checking",lastLoad:null,sources:[]};
+const diagnostics={version:"14.0.10",mode:"checking",lastLoad:null,sources:[]};
 function setDataMode(mode,detail=""){
   diagnostics.mode=mode;
   const badge=$("dataModeBadge");
@@ -1660,7 +1660,7 @@ function renderDay(){
     card.querySelector(".rank-number").textContent=i+1;
     card.querySelector("h3").textContent=placeLabel(r);
     card.querySelector("p").textContent=`${r.area} · ${r.region} · ${qualityIcon(r.score)} ${activitySummary(r.score)}`;
-    card.querySelector(".mini-metrics").innerHTML=winnerMetricCards(r);
+    card.querySelector(".mini-metrics").innerHTML=`<span>🌡️ ${fmt(r.temp,0)}°</span><span>🌧️ ${fmt(r.rain)} mm</span><span>☀️ ${fmt(r.sun)} h</span><span>💨 ${fmt(r.wind)} m/s</span>${specialMetricHtml(r)}<span>🎯 ${r.confidence}%</span>`;
     card.querySelector(".rank-score").textContent=r.score;
     const rankCard=card.querySelector(".rank-card");
     rankCard.tabIndex=0;rankCard.setAttribute("role","button");rankCard.setAttribute("aria-label",`Visa detaljer för ${placeLabel(r)}`);
@@ -1753,7 +1753,7 @@ $("settingsForm").addEventListener("submit",event=>{
   saveSettingsFromDialog();
 });
 if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
-  const reg=await navigator.serviceWorker.register(`sw.js?v=14.0.9`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=14.0.10`);
   reg.update();
   reg.addEventListener("updatefound",()=>{const worker=reg.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller){$("updateBanner").classList.remove("hidden");}})});
   navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload());

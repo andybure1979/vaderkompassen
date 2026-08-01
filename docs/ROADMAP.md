@@ -13,6 +13,7 @@
 
 - **14.0.8** Intelligent textsystem med aktivitetsspecifika och varierade rekommendationer.
 - **14.0.9** Mobilanpassade, aktivitetsrelevanta faktaboxar i topplistan.
+- **14.0.10** Kompakt V13-stil för topplistans faktavärden med tio kategorier kvar.
 
 ## Nästa
 
