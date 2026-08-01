@@ -1,3 +1,9 @@
+## v14.0.13 – Förbättrad modell för Fiskeväder
+
+Fiskeväder använder en gemensam, datanormaliserad poängmodell i frontend och Cloudflare Worker. Modellen bedömer vindstyrka, vindriktning, nederbörd, moln/sol och lufttemperatur samt faktisk vattentemperatur och våghöjd när dessa finns. Saknad marin data ger inget konstgjort avdrag, och inlandsplatser behålls tillsammans med kustplatser.
+
+Molnighet och vindbyar bevaras från prognoskällor som tillhandahåller värdena. Ingen Supabase-migration krävs. Andra aktiviteters poäng och ranking är oförändrade.
+
 ## v14.0.12 – Faktavärden från V13-topplistan
 
 Vinnarkortet och topplistan visar nu samma faktauppsättning som topplistekorten i den visuella V13-referensen. Alla kategorier visar temperatur, regn, sol, vind och prognossäkerhet. Havs-, surf- och skidkategorier kompletteras med samma specialvärden som i referensen.

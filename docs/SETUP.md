@@ -1,10 +1,10 @@
 # Installation och drift
 
-## Väderkompassen v14.0.12
+## Väderkompassen v14.0.13
 
 1. Kör SQL-migrationerna i ordningen nedan.
 2. Publicera hela projektet till GitHub.
-3. Kontrollera att webbplatsen visar `Väderkompassen v14.0.12` i sidfoten.
+3. Kontrollera att webbplatsen visar `Väderkompassen v14.0.13` i sidfoten.
 4. Testa registrering, inloggning, start av provperiod och avslutad automatisk förnyelse.
 
 ## Manuella databassteg
@@ -61,3 +61,7 @@ Ingen databasändring krävs. Kontrollera för flera kategorier att vinnarkortet
 ## V13-topplistans faktauppsättning i v14.0.12
 
 Ingen databasändring krävs. Kontrollera att grundvärdena och specialvärdena följer V13-referensens topplistekort och visas identiskt i vinnarkort och topplista.
+
+## Förbättrad Fiskevädermodell i v14.0.13
+
+Ingen databasändring krävs. Kör `npm test`, publicera frontend och Worker samtidigt och verifiera att inlandsplatser inte filtreras bort när kustplatser har marina data.

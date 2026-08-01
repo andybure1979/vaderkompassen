@@ -1,5 +1,17 @@
 # Ändringslogg
 
+## 14.0.13
+
+- Ny normaliserad fiskepoäng med vindstyrka, vindriktning, nederbörd, moln/sol och lufttemperatur.
+- Faktisk vattentemperatur och våghöjd används endast när respektive data finns.
+- Inlands-, fjäll-, älv- och kustfiskeplatser kan visas samtidigt.
+- Bevarar faktisk molnighet och vindbyar från prognoskällorna.
+- Gemensam fiskemodul används av frontend och Cloudflare Worker.
+- Nya gemensamma scenariotester för fiskepoängen.
+- Fiskevädrets texter och faktaboxar följer den nya faktorprioriteringen.
+- Andra aktiviteters poäng och ranking är oförändrade.
+- Ingen Supabase-migration krävs.
+
 ## 14.0.12
 
 - Matchar faktauppsättningen i V13-referensens topplistekort.

@@ -31,7 +31,7 @@ const MODELS = {
   "ICON":{type:"openMeteo",model:"icon_seamless"},
   "GFS":{type:"openMeteo",model:"gfs_seamless"}
 };
-const DAILY = "temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,sunshine_duration,wind_speed_10m_max,wind_direction_10m_dominant";
+const DAILY = "temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,sunshine_duration,cloud_cover_mean,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant";
 
 const MARINE_COORDS = {
   "Malmö":[55.58,12.93],"Ystad":[55.40,13.84],"Simrishamn":[55.55,14.39],"Helsingborg":[56.04,12.64],
@@ -313,8 +313,7 @@ function activityScore(r){
       return .16*bell(temp,19,13)+.24*dry+.10*sunny+.30*bell(wind,4,5)+.20*waves;
     }
     case "fishing":{
-      const waves=Number.isFinite(r.waveHeight)?bell(r.waveHeight,.5,1.5):50;
-      return .18*bell(temp,16,14)+.25*dry+.10*sunny+.27*bell(wind,3.5,5)+.20*waves;
+      return globalThis.VK_FISHING.score(r).score;
     }
     case "cycling": return .30*bell(temp,19,11)+.35*dry+.15*sunny+.20*bell(wind,2.5,5);
     case "hiking": return .30*bell(temp,17,12)+.35*dry+.15*sunny+.20*bell(wind,3,6);
@@ -609,7 +608,8 @@ function factorAssessments(r){
   }else if(a==="boat"){
     add("temperature",bell(temp,19,13),.16,Number.isFinite(temp));add("dry",dry,.24);add("sun",sunny,.10);add("wind",bell(wind,4,5),.30,Number.isFinite(wind));add("waves",clamp(100-r.waveHeight*45),.20,Number.isFinite(r.waveHeight));
   }else if(a==="fishing"){
-    add("temperature",bell(temp,16,14),.18,Number.isFinite(temp));add("dry",dry,.25);add("sun",sunny,.10);add("wind",bell(wind,3.5,5),.27,Number.isFinite(wind));add("waves",bell(r.waveHeight,.5,1.5),.20,Number.isFinite(r.waveHeight));
+    const scored=globalThis.VK_FISHING.score(r),total=scored.factors.reduce((sum,f)=>sum+f.weight,0)||1;
+    scored.factors.forEach(f=>add(f.id,f.value,f.weight/total));
   }else if(a==="cycling"){
     add("temperature",bell(temp,19,11),.30,Number.isFinite(temp));add("dry",dry,.35);add("sun",sunny,.15);add("wind",bell(wind,2.5,5),.20,Number.isFinite(wind));
   }else if(a==="hiking"){
@@ -728,6 +728,10 @@ function factorObservation(r,id){
     case "sun":return `Prognosen anger ${fmt(r.sun)} soltimmar.`;
     case "cloud":return `Prognosen anger ${fmt(r.sun)} soltimmar; färre soltimmar ger högre inomhusbetyg.`;
     case "wind":return `Vinden är ${fmt(r.wind)} m/s.`;
+    case "windDirection":return `Vindriktningen är ${compassDirection(r.windDirection)} ${fmt(r.windDirection,0)}°.`;
+    case "windGust":return `Vindbyarna når ${fmt(r.windGust)} m/s.`;
+    case "cloudCover":return `Molnigheten är ${fmt(r.cloudCover,0)} %.`;
+    case "waterTemperature":return `Vattentemperaturen är ${fmt(r.waterTemperature,0)}°.`;
     case "waves":return `Våghöjden är ${fmt(r.waveHeight)} m.`;
     case "period":return `Vågperioden är ${fmt(r.wavePeriod,0)} sekunder.`;
     case "direction":return `Vindriktningen är ${fmt(r.windDirection,0)}° och frånlandskomponenten ${Math.round(surfOffshoreScore(r))}/100.`;
@@ -742,6 +746,18 @@ function factorObservation(r,id){
 }
 function factorTextOptions(r,item){
   const observation=factorObservation(r,item.id);
+  if(settings.activity==="fishing"&&item.id==="wind"&&item.tone==="positive"&&r.wind>=1.5&&r.wind<=4.5)return [
+    `${observation} Vindstyrkan ligger i intervallet för lätt krusning på vattnet.`,
+    `${observation} Den lätta vinden ger ett av fiskemodellens största positiva bidrag.`
+  ];
+  if(settings.activity==="fishing"&&item.id==="windDirection"&&item.tone==="negative"&&Number.isFinite(r.windDirection))return [
+    `${observation} Den nordliga riktningen drar ned fiskebetyget.`,
+    `${observation} Nordanvinden är en av dagens tydligaste begränsningar.`
+  ];
+  if(settings.activity==="fishing"&&item.id==="cloudCover"&&item.tone==="positive"&&r.cloudCover>=35&&r.cloudCover<=70&&Number(r.rain)<5)return [
+    `${observation} Blandningen av moln och ljus ger ett positivt bidrag till fiskebetyget.`,
+    `${observation} Molnigheten ligger i fiskemodellens bästa intervall.`
+  ];
   if(item.tone==="positive")return [
     `${observation} Faktorn ger ett av de största positiva bidragen till betyget.`,
     `${observation} Det är en av faktorerna som bidrar mest positivt.`,
@@ -769,6 +785,7 @@ function factorReason(r,item){
   const meta={
     temperature:["🌡️","Temperatur",`${fmt(r.temp,0)}°`],dry:["🌧️","Nederbörd",`${fmt(r.rain)} mm · ${fmt(r.risk,0)} %`],rain:["🌧️","Nederbörd",`${fmt(r.rain)} mm`],
     precipitationRisk:["🌦️","Nederbördsrisk",`${fmt(r.risk,0)} %`],sun:["☀️","Sol",`${fmt(r.sun)} h`],cloud:["☁️","Soltid",`${fmt(r.sun)} h`],wind:["💨","Vind",`${fmt(r.wind)} m/s`],
+    windDirection:["🧭","Vindriktning",`${compassDirection(r.windDirection)} ${fmt(r.windDirection,0)}°`],windGust:["💨","Vindbyar",`${fmt(r.windGust)} m/s`],cloudCover:["☁️","Molnighet",`${fmt(r.cloudCover,0)} %`],waterTemperature:["🌡️","Vattentemperatur",`${fmt(r.waterTemperature,0)}°`],
     waves:["🌊","Våghöjd",`${fmt(r.waveHeight)} m`],period:["↔️","Vågperiod",`${fmt(r.wavePeriod,0)} s`],direction:["🧭","Frånlandsvind",`${Math.round(surfOffshoreScore(r))}/100`],
     swell:["🏄","Dyning",`${fmt(r.swellHeight)} m`],seaTemperature:["🌊","Havstemperatur",`${fmt(r.seaTemp,0)}°`],snow:["❄️","Snödjup",`${fmt(r.snowDepth,0)} cm`],
     freshSnow:["🌨️","Nysnö",`${fmt(r.newSnow)} cm`],freezingLevel:["🏔️","Nollgradersnivå",`${fmt(r.freezingLevel,0)} m`],thunder:["⛈️","Åskrisk",`${fmt(r.thunderRisk,0)} %`]
@@ -792,7 +809,7 @@ function decisionSentence(r){
   if(a==="ski")return `Bäst kombination av snö, temperatur och prognossäkerhet.`;
   if(a==="coast")return `Bäst kustläge utifrån vind, vågor och väder.`;
   if(a==="boat")return `Bäst båtläge utifrån vind, vågor och nederbörd.`;
-  if(a==="fishing")return `Bäst fiskeläge utifrån vind, nederbörd och temperatur.`;
+  if(a==="fishing")return `Bäst fiskeläge utifrån vind, vindriktning, nederbörd och temperatur.`;
   if(a==="cycling")return `Bäst cykelläge utifrån vind, regn och temperatur.`;
   if(a==="hiking")return `Bäst vandringsläge utifrån regn, vind och temperatur.`;
   return `Bäst helhetsläge bland de platser och områden du valt.`;
@@ -882,7 +899,7 @@ async function mapWithConcurrency(items,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
   return results;
 }
-const diagnostics={version:"14.0.12",mode:"checking",lastLoad:null,sources:[]};
+const diagnostics={version:"14.0.13",mode:"checking",lastLoad:null,sources:[]};
 function setDataMode(mode,detail=""){
   diagnostics.mode=mode;
   const badge=$("dataModeBadge");
@@ -1068,7 +1085,7 @@ async function fetchModelBatch(label,model,places){
   catch(error){throw new Error(`${label}: ${error.message}`)}
   let data=await res.json();if(!Array.isArray(data))data=[data];
   const rows=[];
-  data.forEach((item,pi)=>{const d=item.daily||{};(d.time||[]).forEach((day,i)=>rows.push({place:places[pi][0],area:places[pi][1],region:places[pi][2],lat:places[pi][3],lon:places[pi][4],day,model:label,temp:validNumber(d.temperature_2m_max?.[i]),min:validNumber(d.temperature_2m_min?.[i]),rain:validNumber(d.precipitation_sum?.[i]),risk:validNumber(d.precipitation_probability_max?.[i]),sun:validNumber(d.sunshine_duration?.[i])===null?null:validNumber(d.sunshine_duration?.[i])/3600,wind:validNumber(d.wind_speed_10m_max?.[i]),windDirection:validNumber(d.wind_direction_10m_dominant?.[i])}));});
+  data.forEach((item,pi)=>{const d=item.daily||{};(d.time||[]).forEach((day,i)=>rows.push({place:places[pi][0],area:places[pi][1],region:places[pi][2],lat:places[pi][3],lon:places[pi][4],day,model:label,temp:validNumber(d.temperature_2m_max?.[i]),min:validNumber(d.temperature_2m_min?.[i]),rain:validNumber(d.precipitation_sum?.[i]),risk:validNumber(d.precipitation_probability_max?.[i]),sun:validNumber(d.sunshine_duration?.[i])===null?null:validNumber(d.sunshine_duration?.[i])/3600,cloudCover:validNumber(d.cloud_cover_mean?.[i]),wind:validNumber(d.wind_speed_10m_max?.[i]),windGust:validNumber(d.wind_gusts_10m_max?.[i]),windDirection:validNumber(d.wind_direction_10m_dominant?.[i])}));});
   return rows;
 }
 async function fetchOpenMeteo(label,model,places){
@@ -1099,20 +1116,21 @@ async function fetchSmhiPlace(place){
   const data=await res.json(),days={};
   (data.timeSeries||[]).forEach(step=>{
     const day=smhiDayKey(step.validTime),hour=new Date(step.validTime).getUTCHours();
-    const t=smhiParameter(step,"t"),precip=smhiParameter(step,"pmean")??smhiParameter(step,"pmedian"),wind=smhiParameter(step,"ws"),windDirection=smhiParameter(step,"wd"),cloud=smhiParameter(step,"tcc_mean")??smhiParameter(step,"tcc"),pcat=smhiParameter(step,"pcat");
-    const d=days[day]||={temps:[],rain:0,wetHours:0,sunHours:0,winds:[],windDirections:[]};
+    const t=smhiParameter(step,"t"),precip=smhiParameter(step,"pmean")??smhiParameter(step,"pmedian"),wind=smhiParameter(step,"ws"),gust=smhiParameter(step,"gust"),windDirection=smhiParameter(step,"wd"),cloud=smhiParameter(step,"tcc_mean")??smhiParameter(step,"tcc"),pcat=smhiParameter(step,"pcat");
+    const d=days[day]||={temps:[],rain:0,wetHours:0,sunHours:0,winds:[],gusts:[],clouds:[],windDirections:[]};
     if(Number.isFinite(t))d.temps.push(t);
     if(Number.isFinite(precip))d.rain+=Math.max(0,precip);
     if((Number.isFinite(precip)&&precip>.05)||(Number.isFinite(pcat)&&pcat>0))d.wetHours++;
     if(Number.isFinite(wind))d.winds.push(wind);
+    if(Number.isFinite(gust))d.gusts.push(gust);
     if(Number.isFinite(windDirection))d.windDirections.push(windDirection);
-    if(hour>=4&&hour<=20&&Number.isFinite(cloud))d.sunHours+=clamp(100-(cloud/8*100))/100;
+    if(Number.isFinite(cloud)){d.clouds.push(cloud/8*100);if(hour>=4&&hour<=20)d.sunHours+=clamp(100-(cloud/8*100))/100}
   });
   return Object.entries(days).slice(0,7).map(([day,d])=>({
     place:name,area,region,lat,lon,day,model:"SMHI",
     temp:d.temps.length?Math.max(...d.temps):null,min:d.temps.length?Math.min(...d.temps):null,
     rain:d.rain,risk:clamp(d.wetHours/24*100),sun:d.sunHours,
-    wind:d.winds.length?Math.max(...d.winds):null,windDirection:circularMean(d.windDirections)
+    cloudCover:d.clouds.length?mean(d.clouds):null,wind:d.winds.length?Math.max(...d.winds):null,windGust:d.gusts.length?Math.max(...d.gusts):null,windDirection:circularMean(d.windDirections)
   }));
 }
 async function fetchSmhi(places){
@@ -1162,7 +1180,7 @@ async function fetchMarine(places){
       place:p[0],day,kind:"marine",
       waveHeight:validNumber(d.wave_height_max?.[i]),waveDirection:validNumber(d.wave_direction_dominant?.[i]),wavePeriod:validNumber(d.wave_period_max?.[i]),
       swellHeight:validNumber(d.swell_wave_height_max?.[i]),swellDirection:validNumber(d.swell_wave_direction_dominant?.[i]),swellPeriod:validNumber(d.swell_wave_period_max?.[i]),
-      seaTemp:validNumber(seaByDay[day])
+      seaTemp:validNumber(seaByDay[day]),waterTemperature:validNumber(seaByDay[day])
     }));
   });
   return rows;
@@ -1240,20 +1258,21 @@ async function fetchMetNoPlace(place){
   (data.properties?.timeseries||[]).forEach(step=>{
     const day=metNoDayKey(step.time),instant=step.data?.instant?.details||{};
     const next=step.data?.next_1_hours?.details||step.data?.next_6_hours?.details||{};
-    const d=days[day]||={temps:[],rain:0,wetHours:0,sunHours:0,winds:[],windDirections:[]};
-    const t=validNumber(instant.air_temperature),wind=validNumber(instant.wind_speed),wd=validNumber(instant.wind_from_direction),cloud=validNumber(instant.cloud_area_fraction),precip=validNumber(next.precipitation_amount);
+    const d=days[day]||={temps:[],rain:0,wetHours:0,sunHours:0,winds:[],gusts:[],clouds:[],windDirections:[]};
+    const t=validNumber(instant.air_temperature),wind=validNumber(instant.wind_speed),gust=validNumber(instant.wind_speed_of_gust),wd=validNumber(instant.wind_from_direction),cloud=validNumber(instant.cloud_area_fraction),precip=validNumber(next.precipitation_amount);
     if(Number.isFinite(t))d.temps.push(t);
     if(Number.isFinite(wind))d.winds.push(wind);
+    if(Number.isFinite(gust))d.gusts.push(gust);
     if(Number.isFinite(wd))d.windDirections.push(wd);
     if(Number.isFinite(precip)){d.rain+=Math.max(0,precip);if(precip>.05)d.wetHours++}
     const hour=new Date(step.time).getUTCHours();
-    if(hour>=4&&hour<=20&&Number.isFinite(cloud))d.sunHours+=clamp(100-cloud)/100;
+    if(Number.isFinite(cloud)){d.clouds.push(cloud);if(hour>=4&&hour<=20)d.sunHours+=clamp(100-cloud)/100}
   });
   return Object.entries(days).slice(0,7).map(([day,d])=>({
     place:name,area,region,lat,lon,day,model:"MET Norway",
     temp:d.temps.length?Math.max(...d.temps):null,min:d.temps.length?Math.min(...d.temps):null,
     rain:d.rain,risk:clamp(d.wetHours/24*100),sun:d.sunHours,
-    wind:d.winds.length?Math.max(...d.winds):null,windDirection:circularMean(d.windDirections)
+    cloudCover:d.clouds.length?mean(d.clouds):null,wind:d.winds.length?Math.max(...d.winds):null,windGust:d.gusts.length?Math.max(...d.gusts):null,windDirection:circularMean(d.windDirections)
   }));
 }
 async function fetchMetNo(places){
@@ -1363,10 +1382,10 @@ function aggregate(rows,marineRows=[],snowRows=[]){
     const f=g[0],extra=extras[`${f.day}|${f.place}`]||{},item={
       day:f.day,place:f.place,area:f.area,region:f.region,lat:f.lat,lon:f.lon,
       temp:weightedMean(g,"temp"),min:weightedMean(g,"min"),rain:weightedMean(g,"rain"),
-      risk:weightedMean(g,"risk"),sun:weightedMean(g,"sun"),wind:weightedMean(g,"wind"),windDirection:circularMean(g.map(x=>x.windDirection)),models:valid.length,
+      risk:weightedMean(g,"risk"),sun:weightedMean(g,"sun"),cloudCover:weightedMean(g,"cloudCover"),wind:weightedMean(g,"wind"),windGust:weightedMean(g,"windGust"),windDirection:circularMean(g.map(x=>x.windDirection)),models:valid.length,
       waveHeight:validNumber(extra.waveHeight),waveDirection:validNumber(extra.waveDirection),wavePeriod:validNumber(extra.wavePeriod),
       swellHeight:validNumber(extra.swellHeight),swellDirection:validNumber(extra.swellDirection),swellPeriod:validNumber(extra.swellPeriod),
-      seaTemp:validNumber(extra.seaTemp),snowDepth:validNumber(extra.snowDepth),
+      seaTemp:validNumber(extra.seaTemp),waterTemperature:validNumber(extra.waterTemperature),snowDepth:validNumber(extra.snowDepth),
       newSnow:validNumber(extra.newSnow),freezingLevel:validNumber(extra.freezingLevel)
     };
     item.usedSources=[...new Set(valid.map(x=>x.model))];
@@ -1380,7 +1399,7 @@ function aggregate(rows,marineRows=[],snowRows=[]){
 function rankedList(){
   const serverRanked=cloudRankings[activeDate];
   let list=activityPlaces((serverRanked?.length?serverRanked:dailyResults[activeDate])||[]);
-  if(["coast","surf","boat","fishing"].includes(settings.activity)){
+  if(["coast","surf","boat"].includes(settings.activity)){
     const specialized=list.filter(x=>x.hasMarine);if(specialized.length)list=specialized;
   }
   if(settings.activity==="ski"){
@@ -1427,6 +1446,18 @@ function activityMetricItems(r,limit=12){
   const add=(icon,value,label,detail="",valid=true)=>{if(valid)cards.push({icon,value,label,detail})};
   const dir=Number.isFinite(r.windDirection)?`${compassDirection(r.windDirection)} ${Math.round(r.windDirection)}°`:"";
   const waveDir=Number.isFinite(r.waveDirection)?`${compassDirection(r.waveDirection)} ${Math.round(r.waveDirection)}°`:"";
+
+  if(settings.activity==="fishing"){
+    add("💨",`${fmt(r.wind)} m/s`,"vindstyrka","",Number.isFinite(r.wind));
+    add("🧭",`${compassDirection(r.windDirection)} ${fmt(r.windDirection,0)}°`,"vindriktning","",Number.isFinite(r.windDirection));
+    add("🌧️",`${fmt(r.rain)} mm`,"nederbörd","",Number.isFinite(r.rain));
+    add("🌡️",`${fmt(r.temp,0)}°`,"lufttemperatur","",Number.isFinite(r.temp));
+    add("☁️",`${fmt(r.cloudCover,0)} %`,"molnighet","",Number.isFinite(r.cloudCover));
+    add("🌡️",`${fmt(r.waterTemperature,0)}°`,"vattentemperatur","",Number.isFinite(r.waterTemperature));
+    add("🌊",`${fmt(r.waveHeight)} m`,"våghöjd","",Number.isFinite(r.waveHeight)&&r.hasMarine!==false);
+    add("💨",`${fmt(r.windGust)} m/s`,"vindbyar","",Number.isFinite(r.windGust));
+    return cards.slice(0,limit);
+  }
 
   add("🌡️",`${fmt(r.temp,0)}°`,"temperatur");
   add("🌧️",`${fmt(r.rain)} mm`,"regn");
@@ -1734,7 +1765,7 @@ $("settingsForm").addEventListener("submit",event=>{
   saveSettingsFromDialog();
 });
 if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
-  const reg=await navigator.serviceWorker.register(`sw.js?v=14.0.12`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=14.0.13`);
   reg.update();
   reg.addEventListener("updatefound",()=>{const worker=reg.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller){$("updateBanner").classList.remove("hidden");}})});
   navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload());

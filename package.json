@@ -1,9 +1,10 @@
 {
   "name": "vaderkompassen",
-  "version": "14.0.12",
+  "version": "14.0.13",
   "private": true,
   "description": "Väderkompassen – beslutsstöd för dagens aktivitet",
   "scripts": {
+    "test": "node --test tests/fishing-score.test.mjs",
     "deploy": "wrangler deploy",
     "dev": "wrangler dev"
   },

@@ -1,4 +1,5 @@
 import { PLACES } from './places.js';
+import '../../fishing-score.js';
 
 const COAST_PLACES = new Set([
   'Malmö','Ystad','Simrishamn','Helsingborg','Båstad','Halmstad','Varberg','Falkenberg','Göteborg','Strömstad','Uddevalla','Smögen',
@@ -45,7 +46,7 @@ const finite=v=>Number.isFinite(Number(v))?Number(v):null;
 async function fetchWeatherBatch(batch,attempt=0){
   const q=new URLSearchParams({
     latitude:batch.map(p=>p[3]).join(','),longitude:batch.map(p=>p[4]).join(','),
-    daily:'temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,sunshine_duration,wind_speed_10m_max,wind_direction_10m_dominant,snowfall_sum',
+    daily:'temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,sunshine_duration,cloud_cover_mean,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant,snowfall_sum',
     hourly:'snow_depth,freezing_level_height',timezone:'auto',forecast_days:'7',wind_speed_unit:'ms'
   });
   try{
@@ -65,7 +66,7 @@ async function fetchWeatherBatch(batch,attempt=0){
           temp:finite(data.daily.temperature_2m_max?.[d]),min:finite(data.daily.temperature_2m_min?.[d]),
           rain:finite(data.daily.precipitation_sum?.[d]),risk:finite(data.daily.precipitation_probability_max?.[d]),
           sun:finite(data.daily.sunshine_duration?.[d])!=null?finite(data.daily.sunshine_duration[d])/3600:null,
-          wind:finite(data.daily.wind_speed_10m_max?.[d]),windDirection:finite(data.daily.wind_direction_10m_dominant?.[d]),
+          cloudCover:finite(data.daily.cloud_cover_mean?.[d]),wind:finite(data.daily.wind_speed_10m_max?.[d]),windGust:finite(data.daily.wind_gusts_10m_max?.[d]),windDirection:finite(data.daily.wind_direction_10m_dominant?.[d]),
           models:1,usedSources:['Open-Meteo'],primarySource:'Open-Meteo',confidence:82,
           waveHeight:null,waveDirection:null,wavePeriod:null,swellHeight:null,swellDirection:null,swellPeriod:null,seaTemp:null,
           snowDepth:snowDepth||null,newSnow:finite(data.daily.snowfall_sum?.[d]),
@@ -98,7 +99,7 @@ async function fetchMarineBatch(batch,attempt=0){
         return {day,place:p[0],waveHeight:finite(data.daily.wave_height_max?.[d]),waveDirection:finite(data.daily.wave_direction_dominant?.[d]),
           wavePeriod:finite(data.daily.wave_period_max?.[d]),swellHeight:finite(data.daily.swell_wave_height_max?.[d]),
           swellDirection:finite(data.daily.swell_wave_direction_dominant?.[d]),swellPeriod:finite(data.daily.swell_wave_period_max?.[d]),
-          seaTemp:vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null};
+          seaTemp:vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null,waterTemperature:vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null};
       });
     });
   }catch(error){
@@ -140,7 +141,7 @@ function serverScore(r,activity='general'){
     case 'coast': return .20*bell(temp,22,12)+.20*dry+.18*sunny+.14*bell(wind,5,6)+.18*(Number.isFinite(r.seaTemp)?bell(r.seaTemp,20,10):45)+.10*(Number.isFinite(r.waveHeight)?bell(r.waveHeight,.6,1.5):45);
     case 'surf': {const wave=Number.isFinite(r.waveHeight)?clamp((r.waveHeight-.3)/2.7*100):0;const period=Number.isFinite(r.wavePeriod)?clamp((r.wavePeriod-4)/10*100):0;const swell=Number.isFinite(r.swellHeight)?clamp((r.swellHeight-.2)/2.8*100):0;return .38*wave+.27*period+.25*offshoreScore(r)+.10*swell;}
     case 'boat': return .16*bell(temp,19,13)+.24*dry+.10*sunny+.30*bell(wind,4,5)+.20*(Number.isFinite(r.waveHeight)?clamp(100-r.waveHeight*45):0);
-    case 'fishing': return .18*bell(temp,16,14)+.25*dry+.10*sunny+.27*bell(wind,3.5,5)+.20*(Number.isFinite(r.waveHeight)?bell(r.waveHeight,.5,1.5):50);
+    case 'fishing': return globalThis.VK_FISHING.score(r).score;
     case 'cycling': return .30*bell(temp,19,11)+.35*dry+.15*sunny+.20*bell(wind,2.5,5);
     case 'hiking': return .30*bell(temp,17,12)+.35*dry+.15*sunny+.20*bell(wind,3,6);
     case 'ski': return .32*(Number.isFinite(r.snowDepth)?clamp(r.snowDepth/80*100):0)+.25*(Number.isFinite(r.newSnow)?clamp(r.newSnow/15*100):0)+.18*bell(temp,-3,12)+.15*bell(wind,3,7)+.10*(Number.isFinite(r.freezingLevel)?clamp(100-r.freezingLevel/18):50);
