@@ -1,5 +1,18 @@
 # Ändringslogg
 
+## 14.1.0a
+
+- Normaliserar aktivitet, regioner och områden till en stabil `/v1/forecast`-nyckel.
+- Cachelagrar lyckade forecast-svar i Cloudflare Cache API i 300 sekunder.
+- Samordnar samtidiga identiska cachemissar till ett Supabase-flöde.
+- Delar serialiserad JSON och metadata mellan väntande anrop; varje request får en egen `Response`.
+- Minskar Supabase-select till `payload,source_status` för regionala snapshots.
+- Redovisar HIT/MISS och coalescing i response-headers samt detaljerad prestandamätning i svarets metadata vid cachemiss.
+- Frontend återanvänder identiska pågående anrop och avbryter äldre anrop när URL:n ändras.
+- Behåller poäng, ranking och gränsen på 75 resultat per dag.
+- Root-deploy använder `wrangler.jsonc` med `cloudflare/src/index.js` som Worker-källa.
+- Ingen Supabase-migration krävs.
+
 ## 14.0.14
 
 - “Navigera till” öppnar en gemensam valdialog i stället för en karttjänst direkt.

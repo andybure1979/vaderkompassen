@@ -21,6 +21,7 @@ const SURF_PLACES = new Set(Object.keys(SURF_PROFILES));
 
 const JSON_HEADERS={"content-type":"application/json; charset=utf-8","cache-control":"no-store"};
 const json=(data,status=200,extra={})=>new Response(JSON.stringify(data),{status,headers:{...JSON_HEADERS,...extra}});
+const now=()=>performance.now();
 const cors=env=>({"access-control-allow-origin":env.ALLOWED_ORIGIN||"*","access-control-allow-methods":"GET,POST,OPTIONS","access-control-allow-headers":"content-type,authorization,x-admin-token"});
 const supabaseKeyType=env=>String(env.SUPABASE_SERVICE_ROLE_KEY||'').startsWith('sb_secret_')?'secret':'legacy-service-role';
 const sbHeaders=env=>{
@@ -31,11 +32,14 @@ const sbHeaders=env=>{
   return headers;
 };
 
-async function sb(env,path,init={}){
+async function sb(env,path,init={},timing=null){
   if(!env.SUPABASE_URL||!env.SUPABASE_SERVICE_ROLE_KEY)throw new Error("Supabase secrets saknas");
   const base=String(env.SUPABASE_URL).trim().replace(/\/+$/,'');
   const r=await fetch(`${base}/rest/v1/${path}`,{...init,headers:{...sbHeaders(env),...(init.headers||{})}});
-  const text=await r.text();let body=null;try{body=text?JSON.parse(text):null}catch{body=text}
+  const textStarted=now(),text=await r.text();
+  if(timing)timing.responseTextMs+=(now()-textStarted);
+  const parseStarted=now();let body=null;try{body=text?JSON.parse(text):null}catch{body=text}
+  if(timing)timing.parseMs+=(now()-parseStarted);
   if(!r.ok){const detail=typeof body==='string'?body:JSON.stringify(body);throw new Error(`Supabase ${r.status} (${supabaseKeyType(env)}): ${detail}`);}
   return body;
 }
@@ -149,6 +153,32 @@ function serverScore(r,activity='general'){
   }
 }
 const ACTIVITIES=['general','coast','surf','boat','fishing','cycling','hiking','ski'];
+const FORECAST_ACTIVITIES=new Set([...ACTIVITIES,'cinema','indoorPool']);
+const FORECAST_REGIONS=new Set(PLACES.map(place=>place[2]));
+const AREA_REGIONS=new Map();
+for(const place of PLACES){
+  const regions=AREA_REGIONS.get(place[1])||new Set();regions.add(place[2]);AREA_REGIONS.set(place[1],regions);
+}
+const inflightForecastRequests=new Map();
+const uniqueSorted=values=>[...new Set(values.map(value=>String(value).trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'sv'));
+export function normalizeForecastRequest(url){
+  const rawActivity=String(url.searchParams.get('activity')||'general').trim();
+  const activity=FORECAST_ACTIVITIES.has(rawActivity)?rawActivity:'general';
+  const regions=uniqueSorted((url.searchParams.get('regions')||'').split(',')).filter(region=>FORECAST_REGIONS.has(region));
+  const regionSet=regions.length?new Set(regions):null;
+  const areas=uniqueSorted((url.searchParams.get('areas')||'').split(',')).filter(area=>{
+    const mapped=AREA_REGIONS.get(area);if(!mapped)return false;
+    return !regionSet||[...mapped].some(region=>regionSet.has(region));
+  });
+  return {activity,regions,areas};
+}
+export function canonicalForecastUrl(origin,normalized){
+  const url=new URL('/v1/forecast',origin),params=new URLSearchParams();
+  params.set('activity',normalized.activity);
+  if(normalized.regions.length)params.set('regions',normalized.regions.join(','));
+  if(normalized.areas.length)params.set('areas',normalized.areas.join(','));
+  url.search=params.toString();return url;
+}
 function addServerScores(row){
   const serverScores=Object.fromEntries(ACTIVITIES.map(a=>[a,Math.round(serverScore(row,a))]));
   return {...row,serverScores};
@@ -171,7 +201,7 @@ async function buildSnapshot(env){
   const rows=[...freshRows,...fallbackRows].map(addServerScores),dailyResults={};
   for(const row of rows)(dailyResults[row.day]||=[]).push(row);
   const days=Object.keys(dailyResults).sort(),availablePlaces=new Set(rows.map(r=>r.place));
-  return {ok:true,version:'13.9.0',generatedAt:new Date().toISOString(),activeDate:days[0]||null,dailyResults,
+  return {ok:true,version:env.APP_VERSION||'14.1.0a',generatedAt:new Date().toISOString(),activeDate:days[0]||null,dailyResults,
     sourceStatus:[{name:'Open-Meteo',ok:freshPlaces.size>0,rows:freshRows.length,error:failures.map(x=>`${x.place}: ${x.error}`).join(' · ')}],
     meta:{placesRequested:PLACES.length,placesUpdated:freshPlaces.size,placesFresh:freshPlaces.size,placesFallback:availablePlaces.size-freshPlaces.size,placesAvailable:availablePlaces.size,days:days.length,batches:batches.length,failedBatches:failures.length,failedPlaces:failures.map(x=>x.place)}};
 }
@@ -202,72 +232,130 @@ async function saveBuiltSnapshot(env,snapshot){
   await sb(env,'forecast_snapshots',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify(rows)});
 }
 const FORECAST_ROWS_PER_DAY=75;
-async function latestSnapshot(env,url){
-  const requested=url.searchParams.get('activity')||'general';
-  const regionValues=(url.searchParams.get('regions')||'').split(',').filter(Boolean);
-  const areaValues=(url.searchParams.get('areas')||'').split(',').filter(Boolean);
-  const areas=areaValues.length?new Set(areaValues):null;
+async function latestSnapshot(env,normalized,performanceMetrics){
+  const requested=normalized.activity,regionValues=normalized.regions;
+  const areas=normalized.areas.length?new Set(normalized.areas):null;
 
   // Hämta först endast tidsstämpeln för senaste kompletta körningen. Ingen stor JSON laddas här.
   const headQ=new URLSearchParams({select:'generated_at',activity:'eq.all',order:'generated_at.desc',limit:'1'});
-  const heads=await sb(env,`forecast_snapshots?${headQ}`); if(!heads?.length)return null;
+  const headStarted=now();
+  const heads=await sb(env,`forecast_snapshots?${headQ}`,{},performanceMetrics);
+  performanceMetrics.headQueryMs=now()-headStarted;
+  if(!heads?.length)return null;
   const generatedAt=heads[0].generated_at;
 
   // Läs därefter enbart de regionala delarna som användaren valt.
-  const shardQ=new URLSearchParams({select:'regions,payload,generated_at,source_status',activity:'eq.region',generated_at:`eq.${generatedAt}`});
+  const shardQ=new URLSearchParams({select:'payload,source_status',activity:'eq.region',generated_at:`eq.${generatedAt}`});
   // Filtrera regionala del-snapshots i PostgREST/Supabase i stället för i Workern.
   // Varje shard innehåller en JSONB-array med exakt en region. `cs` motsvarar JSONB-operatorn @>.
   if(regionValues.length){
     const clauses=regionValues.map(region=>`regions.cs.${JSON.stringify([region])}`);
     shardQ.set('or',`(${clauses.join(',')})`);
   }
-  const queryStarted=Date.now();
-  let storedRows=await sb(env,`forecast_snapshots?${shardQ}`);
-  const queryMs=Date.now()-queryStarted;
+  const queryStarted=now();
+  let storedRows=await sb(env,`forecast_snapshots?${shardQ}`,{},performanceMetrics);
+  performanceMetrics.snapshotQueryMs=now()-queryStarted;
 
   // Bakåtkompatibel reserv innan första 13.9.0-snapshoten har skapats.
   if(!storedRows?.length){
-    const fallbackQ=new URLSearchParams({select:'payload,generated_at,source_status',activity:'eq.all',order:'generated_at.desc',limit:'1'});
-    storedRows=await sb(env,`forecast_snapshots?${fallbackQ}`);
+    const fallbackQ=new URLSearchParams({select:'payload,source_status',activity:'eq.all',order:'generated_at.desc',limit:'1'});
+    const fallbackStarted=now();
+    storedRows=await sb(env,`forecast_snapshots?${fallbackQ}`,{},performanceMetrics);
+    performanceMetrics.snapshotQueryMs+=now()-fallbackStarted;
   }
   if(!storedRows?.length)return null;
 
   const coastOnly=requested==='coast',surfOnly=requested==='surf';
-  const dailyResults={};
+  const mergedResults={},dailyResults={};
   let payloadMeta=null,sourceStatus=[];
+  const mergeStarted=now();
   for(const stored of storedRows){
     const payload=stored.payload||{};
     payloadMeta ||= payload.meta||{};
     if(!sourceStatus.length)sourceStatus=stored.source_status||payload.sourceStatus||[];
     for(const [day,source] of Object.entries(payload.dailyResults||{})){
       if(!Array.isArray(source)||!source.length)continue;
-      const target=dailyResults[day]||(dailyResults[day]=[]);
-      for(const r of source){
-        if(areas&&!areas.has(r.area))continue;
-        if(coastOnly&&!COAST_PLACES.has(r.place))continue;
-        if(surfOnly&&!SURF_PLACES.has(r.place))continue;
-        target.push(r);
-      }
+      performanceMetrics.rowsRead+=source.length;
+      (mergedResults[day]||(mergedResults[day]=[])).push(...source);
     }
   }
-  const rankingStarted=Date.now();
+  performanceMetrics.mergeMs=now()-mergeStarted;
+  const filterStarted=now();
+  for(const [day,source] of Object.entries(mergedResults)){
+    const filtered=source.filter(r=>{
+      if(areas&&!areas.has(r.area))return false;
+      if(coastOnly&&!COAST_PLACES.has(r.place))return false;
+      if(surfOnly&&!SURF_PLACES.has(r.place))return false;
+      return true;
+    });
+    if(filtered.length){dailyResults[day]=filtered;performanceMetrics.rowsMatched+=filtered.length;}
+  }
+  performanceMetrics.filterMs=now()-filterStarted;
   for(const day of Object.keys(dailyResults)){
     const filtered=dailyResults[day];
     // Normalfallet använder förberäknade serverScores. Räkna bara om för äldre snapshots som saknar poäng.
+    const sortStarted=now();
     filtered.sort((a,b)=>{
       const scoreB=b.serverScores?.[requested];
       const scoreA=a.serverScores?.[requested];
       return (Number.isFinite(scoreB)?scoreB:serverScore(b,requested))-(Number.isFinite(scoreA)?scoreA:serverScore(a,requested))||(b.confidence||0)-(a.confidence||0);
     });
+    performanceMetrics.sortMs+=now()-sortStarted;
+    const sliceStarted=now();
     dailyResults[day]=filtered.slice(0,FORECAST_ROWS_PER_DAY);
+    performanceMetrics.sliceMs+=now()-sliceStarted;
+    performanceMetrics.rowsReturned+=dailyResults[day].length;
     if(!dailyResults[day].length)delete dailyResults[day];
   }
-  const rankingMs=Date.now()-rankingStarted;
+  performanceMetrics.shards=storedRows.length;
   const firstPayload=storedRows[0].payload||{};
-  return {ok:firstPayload.ok!==false,version:firstPayload.version||'13.9.0',generatedAt,
+  return {ok:firstPayload.ok!==false,version:env.APP_VERSION||firstPayload.version||'14.1.0a',generatedAt,
     activeDate:firstPayload.activeDate||Object.keys(dailyResults).sort()[0]||null,dailyResults,
-    sourceStatus,meta:{...(payloadMeta||{}),performance:{queryMs,rankingMs,shards:storedRows.length}},activity:requested,
-    rankingEngine:'cloud-v4-supabase-region-filter',resultLimitPerDay:FORECAST_ROWS_PER_DAY};
+    sourceStatus,meta:{...(payloadMeta||{}),performance:performanceMetrics},activity:requested,
+    rankingEngine:'cloud-v5-edge-cache-coalescing',resultLimitPerDay:FORECAST_ROWS_PER_DAY};
+}
+function forecastResponse(result,cacheState,coalesced){
+  const headers=new Headers(result.headers);
+  headers.set('X-Vaderkompassen-Cache',cacheState);
+  headers.set('X-Vaderkompassen-Coalesced',String(coalesced));
+  return new Response(result.body,{status:result.status,headers});
+}
+async function buildForecastResult(env,normalized,c,totalStarted){
+  const performanceMetrics={cache:'miss',coalesced:false,headQueryMs:0,snapshotQueryMs:0,responseTextMs:0,parseMs:0,mergeMs:0,filterMs:0,sortMs:0,sliceMs:0,serializationMs:0,totalMs:0,shards:0,rowsRead:0,rowsMatched:0,rowsReturned:0};
+  const data=await latestSnapshot(env,normalized,performanceMetrics);
+  const status=data?200:404;
+  const payload=data||{ok:false,error:'Ingen molnprognos sparad ännu'};
+  const serializationStarted=now();
+  let body=JSON.stringify(payload);
+  performanceMetrics.serializationMs=now()-serializationStarted;
+  performanceMetrics.totalMs=now()-totalStarted;
+  body=body.replace('"serializationMs":0',`"serializationMs":${performanceMetrics.serializationMs.toFixed(3)}`)
+    .replace('"totalMs":0',`"totalMs":${performanceMetrics.totalMs.toFixed(3)}`);
+  return {body,status,headers:{...JSON_HEADERS,...c,'cache-control':status===200?'public, max-age=300':'no-store'}};
+}
+async function forecast(req,env,ctx,url,c){
+  const totalStarted=now(),normalized=normalizeForecastRequest(url);
+  const canonicalUrl=canonicalForecastUrl(url.origin,normalized);
+  const cacheRequest=new Request(canonicalUrl,{method:'GET'}),cache=caches.default;
+  const cached=await cache.match(cacheRequest);
+  if(cached){
+    const headers=new Headers(cached.headers);
+    headers.set('X-Vaderkompassen-Cache','HIT');headers.set('X-Vaderkompassen-Coalesced','false');
+    return new Response(cached.body,{status:cached.status,headers});
+  }
+  const key=canonicalUrl.toString();
+  let promise=inflightForecastRequests.get(key),coalesced=Boolean(promise);
+  if(!promise){
+    promise=(async()=>{
+      try{return await buildForecastResult(env,normalized,c,totalStarted)}
+      finally{if(inflightForecastRequests.get(key)===promise)inflightForecastRequests.delete(key)}
+    })();
+    inflightForecastRequests.set(key,promise);
+  }
+  const result=await promise;
+  const response=forecastResponse(result,'MISS',coalesced);
+  if(result.status===200&&!coalesced)ctx.waitUntil(cache.put(cacheRequest,forecastResponse(result,'MISS',false)));
+  return response;
 }
 async function status(env){
   const [snapshots,runs]=await Promise.all([
@@ -301,7 +389,7 @@ async function runUpdate(env,reason='scheduled'){
 }
 
 export default {
-  async fetch(req,env){
+  async fetch(req,env,ctx){
     const c=cors(env); if(req.method==='OPTIONS')return new Response(null,{status:204,headers:c}); const url=new URL(req.url);
     try{
       if(url.pathname==='/'||url.pathname==='/health')return json({ok:true,service:'Väderkompassen API',version:env.APP_VERSION||'13.9.0',time:new Date().toISOString()},200,c);
@@ -311,7 +399,7 @@ export default {
         return json({ok:Boolean(state.latestSnapshot),worker:true,database:true,forecast:Boolean(state.latestSnapshot),version:state.version,time:state.time,latestSnapshot:state.latestSnapshot,supabase:{configured:Boolean(env.SUPABASE_URL&&env.SUPABASE_SERVICE_ROLE_KEY),keyType:supabaseKeyType(env),host:(()=>{try{return new URL(env.SUPABASE_URL).host}catch{return null}})()}},state.latestSnapshot?200:503,c);
       }
       if((url.pathname==='/v1/forecast'||url.pathname==='/forecast')&&req.method==='GET'){
-        const data=await latestSnapshot(env,url);return data?json(data,200,{...c,'cache-control':'public, max-age=300'}):json({ok:false,error:'Ingen molnprognos sparad ännu'},404,c);
+        return await forecast(req,env,ctx,url,c);
       }
       if(url.pathname==='/v1/admin/snapshot'&&req.method==='POST')return authorized(req,env)?saveSnapshot(req,env):json({ok:false,error:'Obehörig'},401,c);
       if((url.pathname==='/v1/admin/run'||url.pathname==='/admin/update')&&req.method==='POST'){

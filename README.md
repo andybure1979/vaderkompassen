@@ -1,3 +1,9 @@
+## v14.1.0a – Edge-cache och samordnade prognosanrop
+
+`/v1/forecast` normaliserar aktivitet, regioner och områden innan en kanonisk cache-nyckel byggs. Färdiga 200-svar cachelagras i Cloudflare Cache API i 300 sekunder, och samtidiga identiska cachemissar delar ett enda Supabase-flöde utan att dela förbrukningsbara `Response.body`-objekt.
+
+Frontend återanvänder identiska pågående prognosanrop och avbryter ett äldre anrop när inställningar eller aktivitet ger en annan URL. Worker-svaret rapporterar cache och coalescing i headers samt detaljerade mätvärden för cachemissens beräkning. Root-kommandot `npm run deploy` använder `wrangler.jsonc` och `cloudflare/src/index.js`. Ingen Supabase-migration krävs.
+
 ## v14.0.14 – Välj karttjänst vid navigering
 
 “Navigera till” öppnar nu en gemensam, tillgänglig valdialog för Google Maps, Apple Kartor och Topo GPS. Google och Apple får destinationens validerade koordinater. Topo GPS-alternativet visas inaktivt tills tjänstens koordinatformat för universal links har kunnat verifieras i officiell dokumentation.

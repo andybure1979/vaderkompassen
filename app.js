@@ -899,7 +899,7 @@ async function mapWithConcurrency(items,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
   return results;
 }
-const diagnostics={version:"14.0.14",mode:"checking",lastLoad:null,sources:[]};
+const diagnostics={version:"14.1.0a",mode:"checking",lastLoad:null,sources:[]};
 function setDataMode(mode,detail=""){
   diagnostics.mode=mode;
   const badge=$("dataModeBadge");
@@ -997,6 +997,7 @@ async function fetchPlacesPersistently(source,places,worker){
 
 
 const CLOUD_CONFIG=window.VK_CONFIG||{};
+const cloudRequestManager=globalThis.VK_CLOUD_REQUESTS.createManager();
 function cloudApiEnabled(){return Boolean(CLOUD_CONFIG.preferCloud&&String(CLOUD_CONFIG.apiBaseUrl||"").trim())}
 async function fetchCloudSnapshot(places){
   if(!cloudApiEnabled())return null;
@@ -1006,23 +1007,30 @@ async function fetchCloudSnapshot(places){
     activity:settings.activity
   });
   const base=String(CLOUD_CONFIG.apiBaseUrl).replace(/\/$/,"");
-  const controller=new AbortController();
-  const timer=setTimeout(()=>controller.abort(),Number(CLOUD_CONFIG.apiTimeoutMs)||10000);
-  try{
-    const response=await fetch(`${base}/v1/forecast?${params}`,{headers:{Accept:"application/json"},signal:controller.signal,cache:"no-store"});
-    if(response.status===404||response.status===204)return null;
-    if(!response.ok)throw new Error(`Moln-API HTTP ${response.status}`);
-    const payload=await response.json();
-    if(!payload?.dailyResults||!Object.keys(payload.dailyResults).length)throw new Error("Moln-API saknar prognosdata");
-    const allowed=new Set(places.map(p=>p[0]));
-    const filtered={};
-    for(const [day,rows] of Object.entries(payload.dailyResults)){
-      filtered[day]=(Array.isArray(rows)?rows:[]).filter(row=>allowed.has(row.place));
-      if(!filtered[day].length)delete filtered[day];
-    }
-    if(!Object.keys(filtered).length)return null;
-    return {...payload,dailyResults:filtered};
-  }finally{clearTimeout(timer)}
+  const requestUrl=`${base}/v1/forecast?${params}`;
+  return cloudRequestManager.run(requestUrl,async activeSignal=>{
+    const controller=new AbortController(),abort=()=>controller.abort();
+    activeSignal.addEventListener("abort",abort,{once:true});
+    const timer=setTimeout(()=>controller.abort(new DOMException("Moln-API timeout","TimeoutError")),Number(CLOUD_CONFIG.apiTimeoutMs)||10000);
+    try{
+      const response=await fetch(requestUrl,{headers:{Accept:"application/json"},signal:controller.signal,cache:"no-store"});
+      if(response.status===404||response.status===204)return null;
+      if(!response.ok)throw new Error(`Moln-API HTTP ${response.status}`);
+      const payload=await response.json();
+      if(!payload?.dailyResults||!Object.keys(payload.dailyResults).length)throw new Error("Moln-API saknar prognosdata");
+      const allowed=new Set(places.map(p=>p[0]));
+      const filtered={};
+      for(const [day,rows] of Object.entries(payload.dailyResults)){
+        filtered[day]=(Array.isArray(rows)?rows:[]).filter(row=>allowed.has(row.place));
+        if(!filtered[day].length)delete filtered[day];
+      }
+      if(!Object.keys(filtered).length)return null;
+      return {...payload,dailyResults:filtered};
+    }catch(error){
+      if(controller.signal.aborted&&controller.signal.reason?.name==="TimeoutError")throw controller.signal.reason;
+      throw error;
+    }finally{clearTimeout(timer);activeSignal.removeEventListener("abort",abort)}
+  });
 }
 function applyCloudSnapshot(snapshot,places){
   const previouslySelectedDate=activeDate;
@@ -1299,6 +1307,7 @@ async function load({background=false}={}){
         if(!isCurrent())return;
         if(snapshot){applyCloudSnapshot(snapshot,places);return}
       }catch(cloudError){
+        if(cloudError?.name==="AbortError")return;
         diagnostics.cloudError=cloudError.message;
         if(!CLOUD_CONFIG.allowLocalFallback)throw cloudError;
         console.warn("Moln-API otillgängligt – använder lokal reservmotor:",cloudError);
@@ -1798,7 +1807,7 @@ $("settingsForm").addEventListener("submit",event=>{
   saveSettingsFromDialog();
 });
 if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
-  const reg=await navigator.serviceWorker.register(`sw.js?v=14.0.14`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=14.1.0a`);
   reg.update();
   reg.addEventListener("updatefound",()=>{const worker=reg.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller){$("updateBanner").classList.remove("hidden");}})});
   navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload());

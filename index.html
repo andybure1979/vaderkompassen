@@ -10,7 +10,7 @@
   <title>Väderkompassen – vart ska du åka?</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icon-180.png">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><link rel="stylesheet" href="styles.css?v=14.0.14">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><link rel="stylesheet" href="styles.css?v=14.1.0a">
 </head>
 <body><div id="updateBanner" class="update-banner hidden"><span>En ny version finns.</span><button id="updateNow">Uppdatera nu</button></div>
 <header><div class="brand"><h1><span class="brand-mark">◈</span> Väderkompassen</h1><p>Vart ska du åka idag?</p></div><div class="header-actions"><button id="accountBtn" class="account-btn" type="button" aria-label="Konto"><span id="accountIcon">👤</span><span id="accountLabel">Logga in</span></button><button id="settingsBtn" class="icon-btn" aria-label="Inställningar">⚙️</button></div></header>
@@ -41,7 +41,7 @@
   <section class="ranking-section" id="rankingSection"><div class="section-heading"><div><h2>Topplista</h2></div><span id="modelCount"></span></div><div id="ranking" class="ranking"></div></section>
   <details id="aboutSection" class="about"><summary>Hur tolkas prognosen och hur sätts aktivitetsbetyget</summary><p>Varje aktivitet har en egen balans mellan temperatur, regn, sol och vind. Surfväder gynnas exempelvis av mer vind, medan cykel- och båtväder gynnas av lugnare vind. Skidväder premierar kyla och nederbörd. Bioväder och badhusväder är medvetet omvända: de visar de platser där utomhusvädret är som sämst, eftersom ruskväder passar extra bra för en inomhusaktivitet. I automatläget är väderprognosen en viktad sammanvägning: SMHI väger tyngst för svenska orter, Yr/MET Norway för norska orter och DMI för Danmark. I eget läge används bara de valda prognoskällorna och de väger lika. Övriga modeller används som stöd och för att bedöma osäkerheten. Kust- och surfbetyg använder våghöjd, vågperiod, dyning och havstemperatur. Skidbetyget använder modellberäknat snödjup, nysnö och nollgradersnivå. Uppgifterna är prognoser och ersätter inte lokala säkerhetsrapporter.</p></details>
 </main>
-<footer class="app-footer" aria-label="Versionsinformation"><span>Väderkompassen v14.0.14</span></footer>
+<footer class="app-footer" aria-label="Versionsinformation"><span>Väderkompassen v14.1.0a</span></footer>
 <div id="navigationNotice" class="navigation-notice hidden" role="status" aria-live="polite"></div>
 <dialog id="navigationDialog" class="navigation-dialog" aria-labelledby="navigationTitle"><form method="dialog">
   <div class="dialog-head"><div><span class="section-kicker">VÄLJ KARTTJÄNST</span><h2 id="navigationTitle">Navigera till</h2></div><button id="navigationClose" type="button" class="icon-btn" aria-label="Stäng navigeringsval">✕</button></div>
@@ -126,5 +126,5 @@
   <div id="adminResults" class="admin-results"><p class="empty-state">Sök efter en användare för att ändra åtkomst.</p></div>
 </form></dialog>
 <template id="rankTemplate"><article class="rank-card"><div class="rank-number"></div><div class="rank-main"><h3></h3><p></p><div class="mini-metrics" aria-label="Viktigaste vädervärden"></div><button type="button" class="rank-navigation">📍 Navigera</button></div><div class="rank-score"></div></article></template>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js?v=14.0.14"></script><script src="fishing-score.js?v=14.0.14"></script><script src="navigation.js?v=14.0.14"></script><script src="auth.js?v=14.0.14" defer></script><script src="app.js?v=14.0.14" defer></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js?v=14.1.0a"></script><script src="fishing-score.js?v=14.1.0a"></script><script src="navigation.js?v=14.1.0a"></script><script src="cloud-request.js?v=14.1.0a"></script><script src="auth.js?v=14.1.0a" defer></script><script src="app.js?v=14.1.0a" defer></script>
 </body></html>
