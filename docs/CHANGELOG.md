@@ -1,5 +1,15 @@
 # Ändringslogg
 
+## 14.0.9
+
+- Topplistans kort visar 4–12 aktivitetsrelevanta prognosvärden.
+- Högst fyra faktaboxar visas per rad, med mobilanpassad storlek och läsbarhet.
+- Faktaboxarnas ramar och skuggor är borttagna.
+- Rekommendationstexten visas utan faktaboxar.
+- Service-worker-cache och versionsmärkta frontendresurser är uppdaterade till v14.0.9.
+- Poängmodell och ranking är oförändrade.
+- Ingen Supabase-migration krävs.
+
 ## 14.0.8
 
 - Inför ett deterministiskt textbibliotek med många varierade formuleringar.
