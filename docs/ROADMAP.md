@@ -21,6 +21,7 @@
 - **14.2.0** Prenumerationsgrund med serverentitlement, korrekt uppsägning och testprovider utan debitering.
 - **14.3.0** Säker Adminvy med separat VIP-entitlement, användaradministration, driftkontroll och revisionslogg.
 - **14.3.1** Worker runtime-fix för 10 ms CPU och begränsat antal externa cron-anrop.
+- **14.3.2** Åtkomlig Premiumstatus för Admin, VIP och befintliga prenumerationslägen.
 
 ## Nästa
 

@@ -1,3 +1,7 @@
+## v14.3.2 – Åtkomlig Premiumstatus
+
+Alla inloggade konton med aktiv kontostatus kan öppna Premiumdialogen från profilen. Free-konton som får starta provperiod ser “Prova Premium gratis i 3 dagar”; Admin, VIP, aktiva, uppsagda, utgångna och redan använda triallägen ser “Visa Premiumstatus”. Prenumerationsmodell, betalningsbegränsningar och backend är oförändrade.
+
 ## v14.3.1 – Worker runtime-fix
 
 Forecast-cachemissar använder den service-role-skyddade Supabase-funktionen `get_ranked_forecast()` för filtrering och sortering av befintliga `serverScores`. Workern tar därför emot högst 75 färdigrankade resultat per dag i stället för hela regionala JSON-snapshots. Cronbygget använder fasta batcher utan rekursiva nätverksförsök, så externa API-fel kan inte förbruka hela Workers Free-budgeten på 50 subrequests.
