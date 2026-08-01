@@ -1660,7 +1660,7 @@ function renderDay(){
     card.querySelector(".rank-number").textContent=i+1;
     card.querySelector("h3").textContent=placeLabel(r);
     card.querySelector("p").textContent=`${r.area} · ${r.region} · ${qualityIcon(r.score)} ${activitySummary(r.score)}`;
-    card.querySelector(".mini-metrics").innerHTML=winnerMetricCards(r,5);
+    card.querySelector(".mini-metrics").innerHTML=winnerMetricCards(r);
     card.querySelector(".rank-score").textContent=r.score;
     const rankCard=card.querySelector(".rank-card");
     rankCard.tabIndex=0;rankCard.setAttribute("role","button");rankCard.setAttribute("aria-label",`Visa detaljer för ${placeLabel(r)}`);
