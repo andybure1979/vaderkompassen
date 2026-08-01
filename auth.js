@@ -273,6 +273,7 @@
     $("profileBadge").textContent = labels[0];
     $("profileBadge").dataset.role = role;
     $("profileAccessTitle").textContent = labels[1];
+    const accountStatus=entitlement?.account_status||profile?.account_status||"active";
 
     const trialEnd=entitlement?.trial_ends_at||profile?.trial_ends_at;
     const trialDays = daysLeft(trialEnd);
@@ -280,18 +281,20 @@
       ? `${trialDays} dag${trialDays === 1 ? "" : "ar"} kvar`
       : trialEnd ? "Avslutad" : "Ingen provperiod aktiverad";
     const renewalCancelled = Boolean(entitlement?.cancel_at_period_end||entitlement?.subscription_status==="cancelled_active"||profile?.cancel_at_period_end);
-    $("profileSubscription").textContent = role === "trial"
+    $("profileSubscription").textContent = accountStatus!=="active"
+      ? accountStatus==="blocked"?"Kontot är blockerat. Kontakta support om du tror att detta är fel.":"Kontot är tillfälligt pausat. Kontakta support för mer information."
+      : role === "trial"
       ? renewalCancelled ? `Uppsagd – Premium gäller till ${new Date(trialEnd).toLocaleDateString("sv-SE")}` : `${entitlement?.provider||"Test"} · ingen debitering`
       : role === "premium"
         ? renewalCancelled ? "Premium – avslutas vid periodens slut" : `Premium via ${entitlement?.provider||"provider"}${entitlement?.current_period_ends_at?` · nästa period ${new Date(entitlement.current_period_ends_at).toLocaleDateString("sv-SE")}`:""}`
         : role==="vip"?"Kostnadsfri Premiumåtkomst":role==="admin"?"Full Premiumåtkomst":entitlement?.subscription_status==="expired"?"Din Premiumperiod har avslutats.":"Du använder gratisversionen";
-    $("profileAccessText").textContent = role === "trial"
+    $("profileAccessText").textContent = accountStatus!=="active" ? "Åtkomsten är inte aktiv" : role === "trial"
       ? `Full Premium i ${trialDays} dag${trialDays === 1 ? "" : "ar"}`
       : hasPremiumAccess() ? "Full tillgång utan reklam" : "Grundläggande tillgång";
     const mayStartTrial = cfg.subscriptionMode==="manual_test"&&role === "free" && (entitlement?entitlement.can_start_trial:!profile?.trial_used_at);
     $("upgradePremium").classList.toggle("hidden", !mayStartTrial);
     $("upgradePremium").textContent = "Prova Premium gratis i 3 dagar";
-    $("openAdmin").classList.toggle("hidden", role !== "admin");
+    $("openAdmin").classList.toggle("hidden", role !== "admin" || accountStatus!=="active");
   }
 
   function openAccount() {
@@ -392,39 +395,6 @@
     $("profileDialog").close();
   }
 
-  function renderAdminRows(rows) {
-    const wrap = $("adminResults");
-    wrap.innerHTML = "";
-    if (!rows?.length) {
-      wrap.innerHTML = '<p class="empty-state">Inga användare hittades.</p>';
-      return;
-    }
-    rows.forEach(user => {
-      const card = document.createElement("article");
-      card.className = "admin-user-card";
-      card.innerHTML = `<div><strong>${escapeHtml(user.email || "Okänd e-post")}</strong><small>${escapeHtml(user.display_name || "Inget namn")}</small></div><select aria-label="Åtkomst för ${escapeHtml(user.email || "användare")}">${["free","vip","admin"].map(r => `<option value="${r}"${r === user.role ? " selected" : ""}>${ROLE_LABELS[r][0]}</option>`).join("")}</select><button type="button" class="secondary">Spara</button>`;
-      card.querySelector("button").onclick = async () => {
-        const role = card.querySelector("select").value;
-        setMessage("adminMessage", "Sparar …");
-        const { error } = await client.rpc("admin_set_user_role", { target_user_id: user.id, new_role: role });
-        setMessage("adminMessage", error ? error.message : "Åtkomsten är uppdaterad.", Boolean(error));
-      };
-      wrap.appendChild(card);
-    });
-  }
-
-  async function searchAdmin() {
-    setMessage("adminMessage", "Söker …");
-    const { data, error } = await client.rpc("admin_search_users", { search_text: $("adminSearch").value.trim() });
-    if (error) return setMessage("adminMessage", error.message, true);
-    setMessage("adminMessage");
-    renderAdminRows(data);
-  }
-
-  function escapeHtml(value) {
-    return String(value).replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"})[c]);
-  }
-
   function bind() {
     $("accountBtn")?.addEventListener("click", openAccount);
     $("authForm")?.addEventListener("submit", signInWithPassword);
@@ -438,13 +408,10 @@
     $("premiumPurchase")?.addEventListener("click", startPremiumTrial);
     $("premiumCancel")?.addEventListener("click", manageSubscription);
     $("restorePurchases")?.addEventListener("click", restorePurchases);
-    $("openAdmin")?.addEventListener("click", () => { $("profileDialog").close(); $("adminDialog").showModal(); });
-    $("adminSearchBtn")?.addEventListener("click", searchAdmin);
-    $("adminSearch")?.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); searchAdmin(); } });
+    $("openAdmin")?.addEventListener("click", () => { $("profileDialog").close(); window.dispatchEvent(new CustomEvent("vk:open-admin")); });
     bindDialogDismiss("authDialog", "authClose");
     bindDialogDismiss("profileDialog", "profileClose");
     bindDialogDismiss("premiumInfoDialog", "premiumInfoClose");
-    bindDialogDismiss("adminDialog", "adminClose");
   }
 
   async function init() {

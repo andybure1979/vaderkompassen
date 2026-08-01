@@ -1,5 +1,15 @@
 # Databas – prenumerationer
 
+## v14.3.0
+
+Kör `supabase/migrations/20260801_1430_admin_console.sql` efter `20260801_1420_subscription_foundation.sql`.
+
+Migrationen lägger till kontostatus i `profiles` samt tabellerna `admin_entitlements`, `admin_audit_log` och `admin_user_notes`. Ingen av tabellerna har direkt åtkomst för `anon` eller `authenticated`; all adminåtkomst går genom validerande SECURITY DEFINER-RPC:er med fast `search_path`.
+
+Viktiga RPC:er är `admin_get_dashboard_summary`, `admin_search_users`, `admin_get_user_detail`, `admin_grant_vip`, `admin_revoke_vip`, `admin_set_user_role`, `admin_set_account_status`, `admin_add_user_note` och `admin_list_audit`. `is_current_user_admin()` utgår endast från `auth.uid()` och betrodd profilstatus.
+
+Administrativa entitlements ger åtkomst utan att skapa en rad med provider `apple` eller `google`. Fullständiga providerpayloads, köpidentifierare och autentiseringshemligheter returneras inte till adminvyn.
+
 ## v14.2.0
 
 Kör `supabase/migrations/20260801_1420_subscription_foundation.sql` efter tidigare identitets- och trialmigrationer.

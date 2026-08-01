@@ -1,3 +1,9 @@
+## v14.3.0 – Adminvy
+
+Adminanvändare får en mobil- och desktopanpassad administrationspanel för systemöversikt, paginerad användarsökning, abonnemangsstatus, separata VIP-entitlements, kontostatus, interna anteckningar, driftkontroll och revisionshistorik. UI-kontrollen kompletteras alltid av Admin-verifiering i SECURITY DEFINER-RPC:er och Worker-endpointen.
+
+VIP och kostnadsfri Premium är administrativa entitlements och aldrig betalprenumerationer. Adminvyn kan inte fabricera Apple-/Googleköp, tokens eller kvitton. Statistik utan säker datakälla visas som “Data är inte tillgänglig ännu.” Kör `supabase/migrations/20260801_1430_admin_console.sql` efter v14.2.0-migrationen före publicering.
+
 ## v14.2.0 – Prenumerationsgrund
 
 Premiumstatus är nu en separat Supabase-domän med serverberäknad entitlement, permanent trialhistorik, strikt RLS och auditlogg. Webbversionens explicita `manual_test`-provider kan starta en enda tre dagar lång testprovperiod och säga upp den till periodens slut. Den blir aldrig automatiskt betald och ingen verklig debitering, kvitto- eller kortlagring sker.
