@@ -1422,7 +1422,7 @@ function specialMetricHtml(r){
   }
   return "";
 }
-function winnerMetricCards(r){
+function winnerMetricCards(r,limit=12){
   const cards=[];
   const add=(icon,value,label,detail="",valid=true)=>{if(valid)cards.push({icon,value,label,detail})};
   const dir=Number.isFinite(r.windDirection)?`${compassDirection(r.windDirection)} ${Math.round(r.windDirection)}°`:"";
@@ -1476,7 +1476,7 @@ function winnerMetricCards(r){
     add("☔",`${fmt(r.risk,0)} %`,"regnrisk");add("💨",`${fmt(r.wind)} m/s`,"vind",dir);
     add("🎯",`${fmt(r.confidence,0)} %`,"säkerhet");
   }
-  return cards.slice(0,12).map(({icon,value,label,detail})=>`<article><span>${icon}</span><strong>${value}</strong><small>${label}</small>${detail?`<em>${detail}</em>`:""}</article>`).join("");
+  return cards.slice(0,limit).map(({icon,value,label,detail})=>`<article><span>${icon}</span><strong>${value}</strong><small>${label}</small>${detail?`<em>${detail}</em>`:""}</article>`).join("");
 }
 function winnerDetailsHtml(r){
   const rows=[];
@@ -1625,7 +1625,7 @@ function renderDetail(){
   $("detailPlace").textContent=placeLabel(r);
   $("detailRegion").textContent=`${r.area} · ${r.region}`;
   $("detailSummary").textContent=`${qualityIcon(r.score)} ${activitySummary(r.score)}`;
-  $("detailReason").innerHTML=`${recommendationIntro(r)}${reasonsHtml(r)}`;
+  $("detailReason").textContent=recommendationIntro(r);
   $("detailScore").textContent=r.score;
   $("detailMetrics").innerHTML=winnerMetricCards(r);
   $("detailData").innerHTML=winnerDetailsHtml(r);
@@ -1644,7 +1644,7 @@ function renderDay(){
     ? `${best.area} · ${best.region} · Tyngst: ${best.primarySource}`
     : `${best.area} · ${best.region} · ${best.usedSources.length} valda källor`;
   $("bestSummary").textContent=`${qualityIcon(best.score)} ${activitySummary(best.score)}`;
-  $("bestReason").innerHTML=`${recommendationIntro(best)}${reasonsHtml(best)}`;
+  $("bestReason").textContent=recommendationIntro(best);
   $("bestScore").textContent=best.score;$("hero").dataset.score=best.score;
   $("metrics").innerHTML=winnerMetricCards(best);
   $("mapLink").href=`https://maps.apple.com/?q=${encodeURIComponent(placeLabel(best))}&ll=${best.lat},${best.lon}`;
@@ -1660,7 +1660,7 @@ function renderDay(){
     card.querySelector(".rank-number").textContent=i+1;
     card.querySelector("h3").textContent=placeLabel(r);
     card.querySelector("p").textContent=`${r.area} · ${r.region} · ${qualityIcon(r.score)} ${activitySummary(r.score)}`;
-    card.querySelector(".mini-metrics").innerHTML=reasonsHtml(r,true);
+    card.querySelector(".mini-metrics").innerHTML=winnerMetricCards(r,5);
     card.querySelector(".rank-score").textContent=r.score;
     const rankCard=card.querySelector(".rank-card");
     rankCard.tabIndex=0;rankCard.setAttribute("role","button");rankCard.setAttribute("aria-label",`Visa detaljer för ${placeLabel(r)}`);
