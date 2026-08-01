@@ -1,5 +1,17 @@
 # Ändringslogg
 
+## 14.0.12
+
+- Matchar faktauppsättningen i V13-referensens topplistekort.
+- Alla kategorier visar temperatur, regn, sol, vind och prognossäkerhet.
+- Kust, Båt och Fiske kompletteras med vågor, vågriktning, vågperiod, dyning och havstemperatur.
+- Surf kompletteras med vågor, vågriktning, vågperiod, vindriktning och frånlandsvind.
+- Skidor kompletteras med snödjup, nysnö och nollgradersnivå.
+- Vinnarkortet och topplistan använder samma faktalista.
+- Uppdaterar frontendresurser och service-worker-cache till v14.0.12.
+- Poängmodell och ranking är oförändrade.
+- Ingen Supabase-migration krävs.
+
 ## 14.0.11
 
 - Vinnarkortet och topplistan använder samma aktivitetsanpassade faktalista.

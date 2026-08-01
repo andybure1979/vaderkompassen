@@ -882,7 +882,7 @@ async function mapWithConcurrency(items,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
   return results;
 }
-const diagnostics={version:"14.0.11",mode:"checking",lastLoad:null,sources:[]};
+const diagnostics={version:"14.0.12",mode:"checking",lastLoad:null,sources:[]};
 function setDataMode(mode,detail=""){
   diagnostics.mode=mode;
   const badge=$("dataModeBadge");
@@ -1428,54 +1428,29 @@ function activityMetricItems(r,limit=12){
   const dir=Number.isFinite(r.windDirection)?`${compassDirection(r.windDirection)} ${Math.round(r.windDirection)}°`:"";
   const waveDir=Number.isFinite(r.waveDirection)?`${compassDirection(r.waveDirection)} ${Math.round(r.waveDirection)}°`:"";
 
+  add("🌡️",`${fmt(r.temp,0)}°`,"temperatur");
+  add("🌧️",`${fmt(r.rain)} mm`,"regn");
+  add("☀️",`${fmt(r.sun)} h`,"sol");
+  add("💨",`${fmt(r.wind)} m/s`,"vind");
+
   if(settings.activity==="surf"){
-    add("🌊",`${fmt(r.waveHeight)} m`,"våghöjd",`${fmt(r.wavePeriod,0)} s`,Number.isFinite(r.waveHeight));
-    add("🧭",waveDir,"vågriktning","",Number.isFinite(r.waveDirection));
-    add("🏄",`${fmt(r.swellHeight)} m`,"dyning",`${fmt(r.swellPeriod,0)} s`,Number.isFinite(r.swellHeight));
-    add("💨",`${fmt(r.wind)} m/s`,"vind",dir);
-    add("🏖️",`${Math.round(surfOffshoreScore(r))}/100`,"frånlandsvind","",Number.isFinite(r.windDirection));
-    add("🌡️",`${fmt(r.seaTemp,0)}°`,"hav", "",Number.isFinite(r.seaTemp));
-    add("🌡️",`${fmt(r.temp,0)}°`,"luft");
-    add("🌧️",`${fmt(r.rain)} mm`,"regn");
-    add("☀️",`${fmt(r.sun)} h`,"sol");
-    add("☔",`${fmt(r.risk,0)} %`,"regnrisk");
-    add("🎯",`${fmt(r.confidence,0)} %`,"säkerhet");
+    add("🌊",`${fmt(r.waveHeight)} m`,"våghöjd");
+    add("🧭",`Våg ${waveDir||"–"}`,"vågriktning");
+    add("↔️",`${fmt(r.wavePeriod,0)} s`,"vågperiod");
+    add("💨",dir||"–","vindriktning");
+    add("🏖️",`${Math.round(surfOffshoreScore(r))}/100`,"frånlandsvind");
   }else if(["coast","boat","fishing"].includes(settings.activity)){
-    add("🌊",`${fmt(r.waveHeight)} m`,"våghöjd",`${fmt(r.wavePeriod,0)} s`,Number.isFinite(r.waveHeight));
-    add("🧭",waveDir,"vågriktning","",Number.isFinite(r.waveDirection));
-    add("💨",`${fmt(r.wind)} m/s`,"vind",dir);
-    add("🌡️",`${fmt(r.seaTemp,0)}°`,"hav", "",Number.isFinite(r.seaTemp));
-    add("🌡️",`${fmt(r.temp,0)}°`,"luft");
-    add("🌧️",`${fmt(r.rain)} mm`,"regn");
-    add("☔",`${fmt(r.risk,0)} %`,"regnrisk");
-    add("☀️",`${fmt(r.sun)} h`,"sol");
-    add("🎯",`${fmt(r.confidence,0)} %`,"säkerhet");
+    add("🌊",`${fmt(r.waveHeight)} m`,"våghöjd");
+    add("🧭",`Våg ${waveDir||"–"}`,"vågriktning");
+    add("↔️",`${fmt(r.wavePeriod,0)} s`,"vågperiod");
+    add("🏄",`${fmt(r.swellHeight)} m`,"dyning");
+    add("🌡️",`${fmt(r.seaTemp,0)}°`,"havstemperatur");
   }else if(settings.activity==="ski"){
-    add("❄️",`${fmt(r.snowDepth,0)} cm`,"snödjup","",Number.isFinite(r.snowDepth));
-    add("🌨️",`${fmt(r.newSnow)} cm`,"nysnö","",Number.isFinite(r.newSnow));
-    add("🏔️",`${fmt(r.freezingLevel,0)} m`,"nollgradersnivå","",Number.isFinite(r.freezingLevel));
-    add("🌡️",`${fmt(r.temp,0)}°`,"max");
-    add("🥶",`${fmt(r.min,0)}°`,"min");
-    add("💨",`${fmt(r.wind)} m/s`,"vind",dir);
-    add("🌧️",`${fmt(r.rain)} mm`,"nederbörd");
-    add("☀️",`${fmt(r.sun)} h`,"sol");
-    add("🎯",`${fmt(r.confidence,0)} %`,"säkerhet");
-  }else if(settings.activity==="cycling"){
-    add("🌡️",`${fmt(r.temp,0)}°`,"max");add("🥶",`${fmt(r.min,0)}°`,"min");
-    add("🌧️",`${fmt(r.rain)} mm`,"regn");add("☔",`${fmt(r.risk,0)} %`,"regnrisk");
-    add("💨",`${fmt(r.wind)} m/s`,"vind",dir);add("☀️",`${fmt(r.sun)} h`,"sol");
-    add("🎯",`${fmt(r.confidence,0)} %`,"säkerhet");
-  }else if(settings.activity==="hiking"){
-    add("🌡️",`${fmt(r.temp,0)}°`,"max");add("🥶",`${fmt(r.min,0)}°`,"min");
-    add("🌧️",`${fmt(r.rain)} mm`,"regn");add("☔",`${fmt(r.risk,0)} %`,"regnrisk");
-    add("☀️",`${fmt(r.sun)} h`,"sol");add("💨",`${fmt(r.wind)} m/s`,"vind",dir);
-    add("🎯",`${fmt(r.confidence,0)} %`,"säkerhet");
-  }else{
-    add("🌡️",`${fmt(r.temp,0)}°`,"max");add("🥶",`${fmt(r.min,0)}°`,"min");
-    add("☀️",`${fmt(r.sun)} h`,"sol");add("🌧️",`${fmt(r.rain)} mm`,"regn");
-    add("☔",`${fmt(r.risk,0)} %`,"regnrisk");add("💨",`${fmt(r.wind)} m/s`,"vind",dir);
-    add("🎯",`${fmt(r.confidence,0)} %`,"säkerhet");
+    add("❄️",`${fmt(r.snowDepth,0)} cm`,"snödjup");
+    add("🌨️",`${fmt(r.newSnow)} cm`,"nysnö");
+    add("🏔️",`${fmt(r.freezingLevel,0)} m`,"nollgradersnivå");
   }
+  add("🎯",`${fmt(r.confidence,0)} %`,"säkerhet");
   return cards.slice(0,limit);
 }
 function winnerMetricCards(r,limit=12){
@@ -1759,7 +1734,7 @@ $("settingsForm").addEventListener("submit",event=>{
   saveSettingsFromDialog();
 });
 if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
-  const reg=await navigator.serviceWorker.register(`sw.js?v=14.0.11`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=14.0.12`);
   reg.update();
   reg.addEventListener("updatefound",()=>{const worker=reg.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller){$("updateBanner").classList.remove("hidden");}})});
   navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload());

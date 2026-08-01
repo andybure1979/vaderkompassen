@@ -1,3 +1,9 @@
+## v14.0.12 – Faktavärden från V13-topplistan
+
+Vinnarkortet och topplistan visar nu samma faktauppsättning som topplistekorten i den visuella V13-referensen. Alla kategorier visar temperatur, regn, sol, vind och prognossäkerhet. Havs-, surf- och skidkategorier kompletteras med samma specialvärden som i referensen.
+
+Poängmodell och ranking är oförändrade. Ingen Supabase-migration krävs.
+
 ## v14.0.11 – Synkroniserade faktavärden
 
 Vinnarkortet och varje topplistekort hämtar nu sina prognosvärden från samma aktivitetsanpassade faktalista. Samma kategori visar därför samma fakta i båda vyerna; endast presentationen skiljer sig mellan stora boxar och kompakt V13-stil.

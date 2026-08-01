@@ -15,6 +15,7 @@
 - **14.0.9** Mobilanpassade, aktivitetsrelevanta faktaboxar i topplistan.
 - **14.0.10** Kompakt V13-stil för topplistans faktavärden med tio kategorier kvar.
 - **14.0.11** Synkroniserade faktavärden mellan vinnarkort och topplista.
+- **14.0.12** Faktauppsättning som matchar V13-topplistans visuella referens.
 
 ## Nästa
 
