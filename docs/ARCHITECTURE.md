@@ -1,5 +1,15 @@
 # Arkitektur
 
+## Admin i v14.3.0
+
+`admin.js` visar adminvyn endast när `get_user_entitlement()` anger rollen `admin`. Det är UI-skydd; varje känslig databasfunktion verifierar dessutom `auth.uid()` genom `is_current_user_admin()`. Tabellerna `admin_entitlements`, `admin_audit_log` och `admin_user_notes` har RLS och saknar direkt klientåtkomst.
+
+VIP/Premium för familj och vänner lagras i `admin_entitlements`, med valfritt serverkontrollerat slutdatum. Det skapar eller ändrar aldrig en Apple-/Googleprenumeration. Roll, entitlement och abonnemang är separata domäner. Alla administrativa ändringar kräver anledning och loggas atomiskt av RPC:n.
+
+`GET /v1/admin/health` verifierar användarens Supabase-bearer-token och aktiva Admin-roll server-side. Workern använder sin service-role endast internt och returnerar inga nycklar eller miljövärden. Hälsokontrollen är begränsad per Admin i Worker-instansen.
+
+Den äldre `/v1/status` är också Admin-skyddad. `Admin/index.html` innehåller inte längre en fristående oskyddad driftklient utan hänvisar till den integrerade adminpanelen.
+
 ## Premium och åtkomst i v14.2.0
 
 Premiumåtkomsten hämtas från `get_user_entitlement()` och konsumeras centralt i `auth.js`:

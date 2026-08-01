@@ -1,11 +1,11 @@
 # Installation och drift
 
-## Väderkompassen v14.2.0
+## Väderkompassen v14.3.0
 
 1. Kör SQL-migrationerna i ordningen nedan.
 2. Publicera hela projektet till GitHub.
-3. Kontrollera att webbplatsen visar `Väderkompassen v14.2.0` i sidfoten.
-4. Testa registrering, start av testprovperiod och uppsägning till periodens slut.
+3. Kontrollera att webbplatsen visar `Väderkompassen v14.3.0` i sidfoten.
+4. Testa Admin-behörighet, användarsökning, VIP, audit och Worker-hälsa enligt checklistan nedan.
 
 ## Manuella databassteg
 
@@ -16,8 +16,28 @@ Kör migrationerna i Supabase SQL Editor i följande ordning:
 3. `supabase/migrations/20260731_1405_subscription_trial_flow.sql`
 4. `supabase/migrations/20260731_140501_trial_activation_fix.sql`
 5. `supabase/migrations/20260801_1420_subscription_foundation.sql`
+6. `supabase/migrations/20260801_1430_admin_console.sql`
 
 Den nya migrationen återställer äldre, automatiskt skapade testprovperioder till Gratis. Dessa användare kan därefter själva starta sin enda provperiod.
+
+## Adminvy i v14.3.0
+
+Det första Admin-kontot ska redan ha `profiles.role = 'admin'` från identitetsinstallationen. Kontrollera rollen manuellt i Supabase innan adminvyn används; migrationen gör aldrig någon användare till Admin automatiskt. Logga in med kontot, öppna profilen och välj **Öppna adminpanel**.
+
+`GET /v1/admin/health` skickar användarens kortlivade Supabase access-token som bearer-token. Workern verifierar token och kontrollerar aktiv Admin-roll mot Supabase. `SUPABASE_SERVICE_ROLE_KEY` stannar som Worker-secret och får aldrig läggas i `config.js`, dokumentation eller frontend.
+
+Efter deploy, kontrollera:
+
+1. Free, Premium och VIP ser ingen adminlänk och får fel vid direkt RPC-anrop.
+2. Admin kan öppna panelen, söka med minst två tecken och paginera.
+3. Permanent och tidsbegränsad VIP ger Premium via `admin_entitlements`; återkallning tar bort den.
+4. Rolländring kräver anledning, och `GE ADMIN` krävs för ny Admin.
+5. Sista Admin, självlåsning och egen blockering stoppas av backend.
+6. Suspend/block/reactivate och intern anteckning skapar auditposter.
+7. Hälsokontrollen kräver bearer-token och begränsas till ett anrop per tio sekunder.
+8. Prognoser, ranking, karta, Auth, Premium, molnsynk och Performance 2.0 fungerar oförändrat.
+
+Apple-/Googleverifiering, provider-synk, Cloudflare Logs API, tillförlitligt antal aktiva användare, cache-hit-rate, CPU-fel och CSV-export är inte anslutna i v14.3.0. Adminvyn visar inte påhittade värden för dessa funktioner.
 
 ## Äldre Premiumfält
 

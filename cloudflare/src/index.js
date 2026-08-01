@@ -22,7 +22,7 @@ const SURF_PLACES = new Set(Object.keys(SURF_PROFILES));
 const JSON_HEADERS={"content-type":"application/json; charset=utf-8","cache-control":"no-store"};
 const json=(data,status=200,extra={})=>new Response(JSON.stringify(data),{status,headers:{...JSON_HEADERS,...extra}});
 const now=()=>performance.now();
-const cors=env=>({"access-control-allow-origin":env.ALLOWED_ORIGIN||"*","access-control-allow-methods":"GET,POST,OPTIONS","access-control-allow-headers":"content-type,authorization,x-admin-token","X-Vaderkompassen-Worker-Version":env.APP_VERSION||"14.2.0"});
+const cors=env=>({"access-control-allow-origin":env.ALLOWED_ORIGIN||"*","access-control-allow-methods":"GET,POST,OPTIONS","access-control-allow-headers":"content-type,authorization,x-admin-token","X-Vaderkompassen-Worker-Version":env.APP_VERSION||"14.3.0"});
 const supabaseKeyType=env=>String(env.SUPABASE_SERVICE_ROLE_KEY||'').startsWith('sb_secret_')?'secret':'legacy-service-role';
 const sbHeaders=env=>{
   const key=String(env.SUPABASE_SERVICE_ROLE_KEY||'').trim();
@@ -45,6 +45,30 @@ async function sb(env,path,init={},timing=null){
   return body;
 }
 function authorized(req,env){const h=req.headers.get("x-admin-token")||req.headers.get("authorization")?.replace(/^Bearer\s+/i,"");return Boolean(env.ADMIN_TOKEN&&h===env.ADMIN_TOKEN)}
+const adminHealthCooldown=new Map();
+async function authenticatedAdmin(req,env){
+  const token=req.headers.get("authorization")?.replace(/^Bearer\s+/i,"").trim();
+  if(!token)throw Object.assign(new Error("Adminsession saknas"),{status:401});
+  const base=String(env.SUPABASE_URL||'').trim().replace(/\/+$/,'');
+  const authResponse=await fetch(`${base}/auth/v1/user`,{headers:{apikey:String(env.SUPABASE_SERVICE_ROLE_KEY||''),authorization:`Bearer ${token}`}});
+  if(!authResponse.ok)throw Object.assign(new Error("Ogiltig eller utgången session"),{status:401});
+  const user=await authResponse.json();
+  const profiles=await sb(env,`profiles?id=eq.${encodeURIComponent(user.id)}&select=id,role,account_status&limit=1`);
+  const profile=profiles?.[0];
+  if(profile?.role!=="admin"||profile?.account_status!=="active")throw Object.assign(new Error("Endast Admin"),{status:403});
+  return profile;
+}
+async function adminHealth(req,env){
+  const admin=await authenticatedAdmin(req,env),last=adminHealthCooldown.get(admin.id)||0,current=Date.now();
+  if(current-last<10000)throw Object.assign(new Error("Hälsokontrollen kan köras högst var tionde sekund"),{status:429});
+  adminHealthCooldown.set(admin.id,current);
+  const started=performance.now();
+  const latest=await sb(env,'forecast_snapshots?select=id,generated_at,region&order=generated_at.desc&limit=1');
+  const responseMs=Math.round((performance.now()-started)*10)/10,row=latest?.[0]||null;
+  const generated=row?.generated_at||null,ageMinutes=generated?Math.max(0,Math.round((Date.now()-new Date(generated).getTime())/60000)):null;
+  try{await sb(env,'admin_audit_log',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify({actor_user_id:admin.id,action:'admin_health_check',entity_type:'worker',reason:'Manuell hälsokontroll från adminvyn',new_value:{ok:Boolean(row),responseMs}})});}catch(error){console.warn('Kunde inte logga admin health:',error.message)}
+  return {ok:Boolean(row),checkedAt:new Date().toISOString(),workerVersion:env.APP_VERSION||'14.3.0',environment:env.ENVIRONMENT||'production',buildId:env.BUILD_ID||null,forecast:{status:row?'ok':'warning',responseMs,cache:null,rowsRead:row?1:0,rowsReturned:row?1:0},snapshot:{status:row&&ageMinutes<=90?'ok':row?'warning':'error',generatedAt:generated,ageMinutes,shards:null},supabase:{status:'ok'},auth:{status:'ok'},subscriptions:{status:'ok'}};
+}
 const chunks=(a,n)=>Array.from({length:Math.ceil(a.length/n)},(_,i)=>a.slice(i*n,(i+1)*n));
 const finite=v=>Number.isFinite(Number(v))?Number(v):null;
 
@@ -202,7 +226,7 @@ async function buildSnapshot(env){
   const rows=[...freshRows,...fallbackRows].map(addServerScores),dailyResults={};
   for(const row of rows)(dailyResults[row.day]||=[]).push(row);
   const days=Object.keys(dailyResults).sort(),availablePlaces=new Set(rows.map(r=>r.place));
-  return {ok:true,version:env.APP_VERSION||'14.2.0',generatedAt:new Date().toISOString(),activeDate:days[0]||null,dailyResults,
+  return {ok:true,version:env.APP_VERSION||'14.3.0',generatedAt:new Date().toISOString(),activeDate:days[0]||null,dailyResults,
     sourceStatus:[{name:'Open-Meteo',ok:freshPlaces.size>0,rows:freshRows.length,error:failures.map(x=>`${x.place}: ${x.error}`).join(' · ')}],
     meta:{placesRequested:PLACES.length,placesUpdated:freshPlaces.size,placesFresh:freshPlaces.size,placesFallback:availablePlaces.size-freshPlaces.size,placesAvailable:availablePlaces.size,days:days.length,batches:batches.length,failedBatches:failures.length,failedPlaces:failures.map(x=>x.place)}};
 }
@@ -332,7 +356,7 @@ async function latestSnapshot(env,normalized,performanceMetrics){
   }
   performanceMetrics.shards=storedRows.length;
   const firstPayload=storedRows[0].payload||{};
-  return {ok:firstPayload.ok!==false,version:env.APP_VERSION||firstPayload.version||'14.2.0',generatedAt,
+  return {ok:firstPayload.ok!==false,version:env.APP_VERSION||firstPayload.version||'14.3.0',generatedAt,
     activeDate:firstPayload.activeDate||Object.keys(dailyResults).sort()[0]||null,dailyResults,
     sourceStatus,meta:responseMeta(payloadMeta,performanceMetrics),activity:requested,
     rankingEngine:'cloud-v6-performance-2',resultLimitPerDay:FORECAST_ROWS_PER_DAY};
@@ -394,7 +418,7 @@ async function status(env){
     sb(env,'worker_runs?select=started_at,finished_at,status,message,details&order=started_at.desc&limit=10')
   ]);
   const latest=snapshots?.[0]||null;
-  return {ok:true,service:'Väderkompassen API',version:env.APP_VERSION||'14.2.0',time:new Date().toISOString(),
+  return {ok:true,service:'Väderkompassen API',version:env.APP_VERSION||'14.3.0',time:new Date().toISOString(),
     latestSnapshot:latest?{id:latest.id,generated_at:latest.generated_at,activity:latest.activity,meta:latest.payload?.meta||null}:null,recentRuns:runs||[]};
 }
 async function saveSnapshot(req,env){
@@ -423,8 +447,11 @@ export default {
   async fetch(req,env,ctx){
     const c=cors(env); if(req.method==='OPTIONS')return new Response(null,{status:204,headers:c}); const url=new URL(req.url);
     try{
-      if(url.pathname==='/'||url.pathname==='/health')return json({ok:true,service:'Väderkompassen API',version:env.APP_VERSION||'14.2.0',time:new Date().toISOString()},200,c);
-      if((url.pathname==='/v1/status'||url.pathname==='/status')&&req.method==='GET')return json(await status(env),200,c);
+      if(url.pathname==='/'||url.pathname==='/health')return json({ok:true,service:'Väderkompassen API',version:env.APP_VERSION||'14.3.0',time:new Date().toISOString()},200,c);
+      if((url.pathname==='/v1/status'||url.pathname==='/status')&&req.method==='GET'){
+        await authenticatedAdmin(req,env);
+        return json(await status(env),200,c);
+      }
       if(url.pathname==='/v1/verify'&&req.method==='GET'){
         const state=await status(env);
         return json({ok:Boolean(state.latestSnapshot),worker:true,database:true,forecast:Boolean(state.latestSnapshot),version:state.version,time:state.time,latestSnapshot:state.latestSnapshot,supabase:{configured:Boolean(env.SUPABASE_URL&&env.SUPABASE_SERVICE_ROLE_KEY),keyType:supabaseKeyType(env),host:(()=>{try{return new URL(env.SUPABASE_URL).host}catch{return null}})()}},state.latestSnapshot?200:503,c);
@@ -436,12 +463,13 @@ export default {
         if(!authorized(req,env))return json({ok:false,error:'Obehörig'},401,c);
         return json({ok:false,error:'Provider verification not configured',provider:url.pathname.includes('/apple/')?'apple':url.pathname.includes('/google/')?'google':'unknown'},501,c);
       }
+      if(url.pathname==='/v1/admin/health'&&req.method==='GET')return json(await adminHealth(req,env),200,c);
       if(url.pathname==='/v1/admin/snapshot'&&req.method==='POST')return authorized(req,env)?saveSnapshot(req,env):json({ok:false,error:'Obehörig'},401,c);
       if((url.pathname==='/v1/admin/run'||url.pathname==='/admin/update')&&req.method==='POST'){
         if(!authorized(req,env))return json({ok:false,error:'Obehörig'},401,c); const meta=await runUpdate(env,'manual');return json({ok:true,meta},200,c);
       }
       return json({ok:false,error:'Endpoint saknas'},404,c);
-    }catch(e){console.error(e);return json({ok:false,error:e.message},500,c)}
+    }catch(e){if(!e.status||e.status>=500)console.error(e);return json({ok:false,error:e.message},e.status||500,c)}
   },
   async scheduled(_event,env,ctx){ctx.waitUntil(runUpdate(env,'cron'));}
 };

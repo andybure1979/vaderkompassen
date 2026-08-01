@@ -1,5 +1,15 @@
 # Ändringslogg
 
+## 14.3.0 – Adminvy
+
+- Ny fullskärmsadminvy med översikt, användarsökning, abonnemang, drift, revisionshistorik och systeminformation.
+- Säker, paginerad serversökning och användardetalj utan tokens, hemligheter eller fullständiga providerpayloads.
+- Separata permanenta eller tidsbegränsade VIP-entitlements som aldrig skapar Apple-/Googleköp.
+- Skyddade och atomiskt loggade åtgärder för roll, VIP, kontostatus och interna anteckningar.
+- Strikt RLS, fasta `search_path`, obligatorisk Admin-kontroll och skydd mot sista-admin/självlåsning.
+- Bearer-skyddad Worker-hälsokontroll med tio sekunders begränsning och utan miljöhemligheter.
+- Statistik utan pålitlig datakälla markeras uttryckligen som otillgänglig.
+
 ## 14.2.0 – Prenumerationsgrund
 
 - Separat `subscriptions`-modell, permanent `trial_entitlements` och append-only `subscription_audit_log`.

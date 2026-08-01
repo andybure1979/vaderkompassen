@@ -19,6 +19,7 @@
 - **14.0.13** Förbättrad, datanormaliserad modell för Fiskeväder.
 - **14.1.0** Performance 2.0 med edge-cache, samordnade prognosanrop, säkra frontend-aborter och kompakt forecast-payload.
 - **14.2.0** Prenumerationsgrund med serverentitlement, korrekt uppsägning och testprovider utan debitering.
+- **14.3.0** Säker Adminvy med separat VIP-entitlement, användaradministration, driftkontroll och revisionslogg.
 
 ## Nästa
 
