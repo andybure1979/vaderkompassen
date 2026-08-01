@@ -1,5 +1,11 @@
 # Arkitektur
 
+## Forecast inom Workers Free-gränser i v14.3.1
+
+Vid cachemiss anropar Workern `get_ranked_forecast()` med service role. PostgreSQL väljer senaste regionala shards, filtrerar och sorterar på snapshotens befintliga `serverScores`. Workern vidarebefordrar den kompakta JSON-strängen till Cache API utan att först läsa, slå samman och sortera hela regionala payloads.
+
+Bakåtkompatibel Worker-bearbetning finns kvar för inomhuskategorier och under övergången innan migrationen är installerad. Cronjobbet använder högst en extern hämtning per fast batch; misslyckade batcher fylls från föregående snapshot.
+
 ## Admin i v14.3.0
 
 `admin.js` visar adminvyn endast när `get_user_entitlement()` anger rollen `admin`. Det är UI-skydd; varje känslig databasfunktion verifierar dessutom `auth.uid()` genom `is_current_user_admin()`. Tabellerna `admin_entitlements`, `admin_audit_log` och `admin_user_notes` har RLS och saknar direkt klientåtkomst.

@@ -1,10 +1,10 @@
 # Installation och drift
 
-## Väderkompassen v14.3.0
+## Väderkompassen v14.3.1
 
 1. Kör SQL-migrationerna i ordningen nedan.
 2. Publicera hela projektet till GitHub.
-3. Kontrollera att webbplatsen visar `Väderkompassen v14.3.0` i sidfoten.
+3. Kontrollera att webbplatsen visar `Väderkompassen v14.3.1` i sidfoten.
 4. Testa Admin-behörighet, användarsökning, VIP, audit och Worker-hälsa enligt checklistan nedan.
 
 ## Manuella databassteg
@@ -17,6 +17,7 @@ Kör migrationerna i Supabase SQL Editor i följande ordning:
 4. `supabase/migrations/20260731_140501_trial_activation_fix.sql`
 5. `supabase/migrations/20260801_1420_subscription_foundation.sql`
 6. `supabase/migrations/20260801_1430_admin_console.sql`
+7. `supabase/migrations/20260801_1431_forecast_runtime_limits.sql`
 
 Den nya migrationen återställer äldre, automatiskt skapade testprovperioder till Gratis. Dessa användare kan därefter själva starta sin enda provperiod.
 
@@ -38,6 +39,15 @@ Efter deploy, kontrollera:
 8. Prognoser, ranking, karta, Auth, Premium, molnsynk och Performance 2.0 fungerar oförändrat.
 
 Apple-/Googleverifiering, provider-synk, Cloudflare Logs API, tillförlitligt antal aktiva användare, cache-hit-rate, CPU-fel och CSV-export är inte anslutna i v14.3.0. Adminvyn visar inte påhittade värden för dessa funktioner.
+
+## Worker runtime-test i v14.3.1
+
+1. Kör `20260801_1431_forecast_runtime_limits.sql` före Worker-deploy.
+2. Deploya Workern och kontrollera att `/health` visar `14.3.1`.
+3. Kör Fiskeväder för Mellansverige med samtliga landskap och kontrollera headern `X-Vaderkompassen-Database-Ranked: true` vid cachemiss.
+4. Upprepa anropet och kontrollera `X-Vaderkompassen-Cache: HIT`.
+5. Kör cron manuellt och kontrollera att snapshot sparas även om en extern väderbatch misslyckas.
+6. Kontrollera Cloudflare-loggarna för frånvaro av `exceededCpu` och `Too many subrequests`.
 
 ## Äldre Premiumfält
 

@@ -20,6 +20,7 @@
 - **14.1.0** Performance 2.0 med edge-cache, samordnade prognosanrop, säkra frontend-aborter och kompakt forecast-payload.
 - **14.2.0** Prenumerationsgrund med serverentitlement, korrekt uppsägning och testprovider utan debitering.
 - **14.3.0** Säker Adminvy med separat VIP-entitlement, användaradministration, driftkontroll och revisionslogg.
+- **14.3.1** Worker runtime-fix för 10 ms CPU och begränsat antal externa cron-anrop.
 
 ## Nästa
 
