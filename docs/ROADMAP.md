@@ -23,6 +23,7 @@
 - **14.3.1** Worker runtime-fix för 10 ms CPU och begränsat antal externa cron-anrop.
 - **14.3.2** Åtkomlig Premiumstatus för Admin, VIP och befintliga prenumerationslägen.
 - **14.3.3** Solid adminbakgrund, cachebrytning och rättad användardetalj-RPC.
+- **14.3.4** Datavillkorad vattentemperatur i bad-, kust-, surf- och fiskekort.
 
 ## Nästa
 

@@ -1,10 +1,10 @@
 # Installation och drift
 
-## Väderkompassen v14.3.3
+## Väderkompassen v14.3.4
 
 1. Kör SQL-migrationerna i ordningen nedan.
 2. Publicera hela projektet till GitHub.
-3. Kontrollera att webbplatsen visar `Väderkompassen v14.3.3` i sidfoten.
+3. Kontrollera att webbplatsen visar `Väderkompassen v14.3.4` i sidfoten.
 4. Testa Admin-behörighet, användarsökning, VIP, audit och Worker-hälsa enligt checklistan nedan.
 
 ## Manuella databassteg
@@ -57,6 +57,10 @@ Logga in separat som Free, Trial, VIP och Admin. Öppna profilen och kontrollera
 ## Adminrättning i v14.3.3
 
 Kör `20260801_1433_admin_user_detail_fix.sql` i Supabase SQL Editor. Logga därefter in som Admin, öppna panelen och klicka på en användare. Användardetaljen ska öppnas utan felet `column reference "target_user_id" is ambiguous`. Kontrollera även att adminpanelen har en heltäckande ljus bakgrund och att sidfoten visar v14.3.3.
+
+## Vattentemperatur i v14.3.4
+
+Öppna Sol och bad, Kustväder, Surfväder och Fiskeväder för en kustplats med marin temperaturdata. Kontrollera att både vinnarkort och topplista visar vattentemperatur. Välj därefter en plats utan sådan data och kontrollera att ingen tom temperaturfakta visas. Ingen databasändring krävs för v14.3.4.
 
 ## Äldre Premiumfält
 

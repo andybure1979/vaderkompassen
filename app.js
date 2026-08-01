@@ -899,7 +899,7 @@ async function mapWithConcurrency(items,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
   return results;
 }
-const diagnostics={version:"14.3.3",mode:"checking",lastLoad:null,sources:[],forecastRequests:[]};
+const diagnostics={version:"14.3.4",mode:"checking",lastLoad:null,sources:[],forecastRequests:[]};
 function setDataMode(mode,detail=""){
   diagnostics.mode=mode;
   const badge=$("dataModeBadge");
@@ -1459,6 +1459,7 @@ function activityMetricItems(r,limit=12){
   const add=(icon,value,label,detail="",valid=true)=>{if(valid)cards.push({icon,value,label,detail})};
   const dir=Number.isFinite(r.windDirection)?`${compassDirection(r.windDirection)} ${Math.round(r.windDirection)}°`:"";
   const waveDir=Number.isFinite(r.waveDirection)?`${compassDirection(r.waveDirection)} ${Math.round(r.waveDirection)}°`:"";
+  const waterTemperature=Number.isFinite(r.waterTemperature)?r.waterTemperature:Number.isFinite(r.seaTemp)?r.seaTemp:null;
 
   if(settings.activity==="fishing"){
     add("💨",`${fmt(r.wind)} m/s`,"vindstyrka","",Number.isFinite(r.wind));
@@ -1466,7 +1467,7 @@ function activityMetricItems(r,limit=12){
     add("🌧️",`${fmt(r.rain)} mm`,"nederbörd","",Number.isFinite(r.rain));
     add("🌡️",`${fmt(r.temp,0)}°`,"lufttemperatur","",Number.isFinite(r.temp));
     add("☁️",`${fmt(r.cloudCover,0)} %`,"molnighet","",Number.isFinite(r.cloudCover));
-    add("🌡️",`${fmt(r.waterTemperature,0)}°`,"vattentemperatur","",Number.isFinite(r.waterTemperature));
+    add("💧",`${fmt(waterTemperature,0)}°`,"vattentemperatur","",Number.isFinite(waterTemperature));
     add("🌊",`${fmt(r.waveHeight)} m`,"våghöjd","",Number.isFinite(r.waveHeight)&&r.hasMarine!==false);
     add("💨",`${fmt(r.windGust)} m/s`,"vindbyar","",Number.isFinite(r.windGust));
     return cards.slice(0,limit);
@@ -1476,6 +1477,7 @@ function activityMetricItems(r,limit=12){
   add("🌧️",`${fmt(r.rain)} mm`,"regn");
   add("☀️",`${fmt(r.sun)} h`,"sol");
   add("💨",`${fmt(r.wind)} m/s`,"vind");
+  if(settings.activity==="general")add("💧",`${fmt(waterTemperature,0)}°`,"vattentemperatur","",Number.isFinite(waterTemperature));
 
   if(settings.activity==="surf"){
     add("🌊",`${fmt(r.waveHeight)} m`,"våghöjd");
@@ -1483,12 +1485,13 @@ function activityMetricItems(r,limit=12){
     add("↔️",`${fmt(r.wavePeriod,0)} s`,"vågperiod");
     add("💨",dir||"–","vindriktning");
     add("🏖️",`${Math.round(surfOffshoreScore(r))}/100`,"frånlandsvind");
-  }else if(["coast","boat","fishing"].includes(settings.activity)){
+    add("💧",`${fmt(waterTemperature,0)}°`,"vattentemperatur","",Number.isFinite(waterTemperature));
+  }else if(["coast","boat"].includes(settings.activity)){
     add("🌊",`${fmt(r.waveHeight)} m`,"våghöjd");
     add("🧭",`Våg ${waveDir||"–"}`,"vågriktning");
     add("↔️",`${fmt(r.wavePeriod,0)} s`,"vågperiod");
     add("🏄",`${fmt(r.swellHeight)} m`,"dyning");
-    add("🌡️",`${fmt(r.seaTemp,0)}°`,"havstemperatur");
+    add(settings.activity==="coast"?"💧":"🌡️",`${fmt(waterTemperature,0)}°`,settings.activity==="coast"?"vattentemperatur":"havstemperatur","",Number.isFinite(waterTemperature));
   }else if(settings.activity==="ski"){
     add("❄️",`${fmt(r.snowDepth,0)} cm`,"snödjup");
     add("🌨️",`${fmt(r.newSnow)} cm`,"nysnö");
@@ -1819,7 +1822,7 @@ if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
     reloading=true;
     location.reload();
   });
-  const reg=await navigator.serviceWorker.register(`sw.js?v=14.3.3`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=14.3.4`);
   reg.addEventListener("updatefound",()=>{
     const worker=reg.installing;
     worker?.addEventListener("statechange",()=>{

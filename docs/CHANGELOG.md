@@ -1,5 +1,13 @@
 # Ändringslogg
 
+## 14.3.4 – Vattentemperatur i aktivitetsfakta
+
+- Visar vattentemperatur för Sol och bad, Kustväder, Surfväder och Fiskeväder när data finns.
+- Använder `waterTemperature` med `seaTemp` som kompatibilitetsfallback.
+- Utelämnar faktan helt när prognosen saknar båda fälten.
+- Behåller befintlig kortdesign, poängmodell och ranking.
+- Uppdaterar frontend- och service-worker-cache till 14.3.4.
+
 ## 14.3.3 – Tydlig adminvy och rättad användardetalj
 
 - Ger adminpanelen samma solida `--surface`-bakgrund som övriga systemdialoger.
