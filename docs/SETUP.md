@@ -1,10 +1,10 @@
 # Installation och drift
 
-## Väderkompassen v14.3.2
+## Väderkompassen v14.3.3
 
 1. Kör SQL-migrationerna i ordningen nedan.
 2. Publicera hela projektet till GitHub.
-3. Kontrollera att webbplatsen visar `Väderkompassen v14.3.2` i sidfoten.
+3. Kontrollera att webbplatsen visar `Väderkompassen v14.3.3` i sidfoten.
 4. Testa Admin-behörighet, användarsökning, VIP, audit och Worker-hälsa enligt checklistan nedan.
 
 ## Manuella databassteg
@@ -18,6 +18,7 @@ Kör migrationerna i Supabase SQL Editor i följande ordning:
 5. `supabase/migrations/20260801_1420_subscription_foundation.sql`
 6. `supabase/migrations/20260801_1430_admin_console.sql`
 7. `supabase/migrations/20260801_1431_forecast_runtime_limits.sql`
+8. `supabase/migrations/20260801_1433_admin_user_detail_fix.sql`
 
 Den nya migrationen återställer äldre, automatiskt skapade testprovperioder till Gratis. Dessa användare kan därefter själva starta sin enda provperiod.
 
@@ -52,6 +53,10 @@ Apple-/Googleverifiering, provider-synk, Cloudflare Logs API, tillförlitligt an
 ## Premiumstatus i v14.3.2
 
 Logga in separat som Free, Trial, VIP och Admin. Öppna profilen och kontrollera att varje aktivt konto ser antingen “Prova Premium gratis i 3 dagar” eller “Visa Premiumstatus”. Knappen ska öppna samma Premiumdialog men med serverns faktiska entitlementstatus.
+
+## Adminrättning i v14.3.3
+
+Kör `20260801_1433_admin_user_detail_fix.sql` i Supabase SQL Editor. Logga därefter in som Admin, öppna panelen och klicka på en användare. Användardetaljen ska öppnas utan felet `column reference "target_user_id" is ambiguous`. Kontrollera även att adminpanelen har en heltäckande ljus bakgrund och att sidfoten visar v14.3.3.
 
 ## Äldre Premiumfält
 
