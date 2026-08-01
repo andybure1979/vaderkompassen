@@ -1,3 +1,9 @@
+## v14.2.0 – Prenumerationsgrund
+
+Premiumstatus är nu en separat Supabase-domän med serverberäknad entitlement, permanent trialhistorik, strikt RLS och auditlogg. Webbversionens explicita `manual_test`-provider kan starta en enda tre dagar lång testprovperiod och säga upp den till periodens slut. Den blir aldrig automatiskt betald och ingen verklig debitering, kvitto- eller kortlagring sker.
+
+Apple- och Google-providergränssnitt finns som tydliga native-stubbar. Planerat pris är 29 kr/månad, men verkliga produkter, priser, köp, återställning, backendverifiering och servernotiser ansluts senare i iOS-/Android-apparna. Kör migrationen `supabase/migrations/20260801_1420_subscription_foundation.sql` före publicering.
+
 ## v14.1.0 – Performance 2.0
 
 Performance 2.0 samlar den kanoniska forecast-cachen, request coalescing, säkra frontend-aborter och den kompakta payloaden i en slutversion. Den publicerade Worker-versionen kan verifieras i JSON-svaret och headern `X-Vaderkompassen-Worker-Version`; rankingmotorn identifieras som `cloud-v6-performance-2`.

@@ -1,5 +1,16 @@
 # Ändringslogg
 
+## 14.2.0 – Prenumerationsgrund
+
+- Separat `subscriptions`-modell, permanent `trial_entitlements` och append-only `subscription_audit_log`.
+- Serverbaserad `get_user_entitlement()` skiljer administrativ roll från abonnemangsstatus.
+- Säker `manual_test`-trial startas en gång och blir aldrig automatiskt betald Premium.
+- Uppsägning ger `cancelled_active` och behåller Premium till periodens slut.
+- Strikt RLS hindrar klienten från att skriva status, provider, perioder, trialhistorik eller auditlogg.
+- Provideradaptrar för Manual Test samt icke-funktionella Apple-/Google-native-stubbar.
+- Profilen anger uttryckligen att webbversionen inte genomför någon verklig debitering.
+- Idempotent migration bevarar Admin/VIP och flyttar äldre manuella testperioder utan att göra dem till betalda butiksköp.
+
 ## 14.1.0 – Performance 2.0
 
 - Samlar edge-cache, normaliserade requestnycklar, Worker-coalescing, frontend-abort och kompakt forecast-payload i den slutliga 14.1.0-versionen.

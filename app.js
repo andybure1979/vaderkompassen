@@ -899,7 +899,7 @@ async function mapWithConcurrency(items,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
   return results;
 }
-const diagnostics={version:"14.1.0",mode:"checking",lastLoad:null,sources:[],forecastRequests:[]};
+const diagnostics={version:"14.2.0",mode:"checking",lastLoad:null,sources:[],forecastRequests:[]};
 function setDataMode(mode,detail=""){
   diagnostics.mode=mode;
   const badge=$("dataModeBadge");
@@ -1811,7 +1811,7 @@ $("settingsForm").addEventListener("submit",event=>{
   saveSettingsFromDialog();
 });
 if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
-  const reg=await navigator.serviceWorker.register(`sw.js?v=14.1.0`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=14.2.0`);
   reg.update();
   reg.addEventListener("updatefound",()=>{const worker=reg.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller){$("updateBanner").classList.remove("hidden");}})});
   navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload());

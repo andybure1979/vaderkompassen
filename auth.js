@@ -10,10 +10,13 @@
 
   let session = null;
   let profile = null;
+  let entitlement = null;
   let pendingVerificationNotice = false;
   let cloudSettingsRequested = false;
 
-  const PREMIUM_PRICE_SEK = 29;
+  const PLANNED_PREMIUM_PRICE_SEK = 29;
+  const subscriptionProvider = window.VK_SUBSCRIPTIONS?.createProvider(cfg, client);
+  const entitlementProvider=()=>window.VK_SUBSCRIPTIONS?.createProvider({subscriptionMode:entitlement?.provider==="apple"?"apple_native":entitlement?.provider==="google"?"google_native":cfg.subscriptionMode},client);
   const PREMIUM_FEATURES = Object.freeze({
     adFree: "Reklamfri upplevelse",
     extendedActivities: "Fler aktiviteter",
@@ -73,6 +76,12 @@
   }
 
   function effectiveRole(p) {
+    if (entitlement) {
+      if (["admin", "vip"].includes(entitlement.role)) return entitlement.role;
+      if (entitlement.is_trial) return "trial";
+      if (entitlement.is_premium) return "premium";
+      return "free";
+    }
     if (!p) return "free";
     if (["admin", "vip", "premium"].includes(p.role)) return p.role;
     const trialActive = p.trial_ends_at && new Date(p.trial_ends_at).getTime() > Date.now();
@@ -82,6 +91,7 @@
   }
 
   function hasPremiumAccess(p = profile) {
+    if (entitlement)return Boolean(entitlement.is_premium);
     return ["trial", "premium", "vip", "admin"].includes(effectiveRole(p));
   }
 
@@ -111,36 +121,46 @@
 
   function renderPremiumInfo() {
     const role = effectiveRole(profile);
-    const trialDays = daysLeft(profile?.trial_ends_at);
-    const trialUsed = Boolean(profile?.trial_used_at);
-    const cancelled = Boolean(profile?.cancel_at_period_end || profile?.subscription_status === "cancelled");
-    if ($("premiumPrice")) $("premiumPrice").textContent = `${PREMIUM_PRICE_SEK} kr/månad`;
+    const trialEnd=entitlement?.trial_ends_at||profile?.trial_ends_at;
+    const periodEnd=entitlement?.current_period_ends_at||trialEnd;
+    const trialDays = daysLeft(trialEnd);
+    const trialUsed = entitlement?!entitlement.can_start_trial:Boolean(profile?.trial_used_at);
+    const cancelled = Boolean(entitlement?.cancel_at_period_end||entitlement?.subscription_status==="cancelled_active"||profile?.cancel_at_period_end);
+    const provider=entitlement?.provider||"manual_test";
+    if ($("premiumPrice")) $("premiumPrice").textContent = `Planerat pris: ${PLANNED_PREMIUM_PRICE_SEK} kr/månad`;
     if ($("premiumPriceNote")) $("premiumPriceNote").textContent = role === "trial"
       ? `${trialDays} dag${trialDays === 1 ? "" : "ar"} kvar av provperioden`
-      : "3 dagar gratis, därefter automatisk förnyelse";
+      : "Ingen verklig debitering sker i webbversionen";
+    if ($("premiumTerms")) $("premiumTerms").textContent="Testprovperioden avslutas efter tre dagar. Ingen debitering sker i denna webbversion. Riktiga köp ansluts senare i native-apparna.";
     if ($("premiumState")) {
-      $("premiumState").textContent = role === "trial"
+      $("premiumState").textContent = cancelled&&hasPremiumAccess()
+        ? `Uppsagd – Premium gäller till ${new Date(periodEnd).toLocaleDateString("sv-SE")}. Ingen debitering sker.`
+        : entitlement?.subscription_status==="expired"
+          ? "Din Premiumperiod har avslutats."
+        : role === "trial"
         ? cancelled
           ? `Provperioden är aktiv i ${trialDays} dag${trialDays === 1 ? "" : "ar"} till och förnyas inte.`
-          : `Provperioden är aktiv. Därefter övergår den automatiskt till Premium för ${PREMIUM_PRICE_SEK} kr/månad.`
+          : provider==="manual_test"?"Testprovperioden är aktiv. Ingen debitering sker efter testperioden.":"Provperioden är aktiv enligt butikens villkor."
         : role === "premium"
-          ? "Premium är aktivt och förnyas automatiskt."
-          : hasPremiumAccess()
+          ? `Premium är aktivt via ${provider}.`
+          : role==="vip"?"Kostnadsfri Premiumåtkomst.":role==="admin"?"Admin har full Premiumåtkomst.":hasPremiumAccess()
             ? "Du har full Premium-åtkomst."
             : trialUsed
               ? "Din kostnadsfria provperiod har redan använts."
               : "Du har inte aktiverat provperioden.";
     }
     if ($("premiumPurchase")) {
-      const canStart = Boolean(session?.user) && role === "free" && !trialUsed;
+      const canStart = Boolean(session?.user) && cfg.subscriptionMode==="manual_test" && role === "free" && !trialUsed;
       $("premiumPurchase").classList.toggle("hidden", !canStart);
       $("premiumPurchase").disabled = !canStart;
       $("premiumPurchase").textContent = "Starta 3 dagars gratis provperiod";
     }
     if ($("premiumCancel")) {
-      const canCancel = ["trial", "premium"].includes(role) && !cancelled;
+      const canCancel = entitlement?.can_manage_subscription && ["trial", "premium"].includes(role) && !cancelled;
       $("premiumCancel").classList.toggle("hidden", !canCancel);
+      $("premiumCancel").textContent=provider==="manual_test"?"Avsluta vid periodens slut":"Hantera prenumeration";
     }
+    $("restorePurchases")?.classList.toggle("hidden",!["apple","google"].includes(provider));
   }
 
   async function startPremiumTrial() {
@@ -148,7 +168,8 @@
       setMessage("premiumState", "Du måste vara inloggad för att starta provperioden.", true);
       return;
     }
-    if (!window.confirm(`Starta 3 dagar gratis? Därefter förnyas Premium automatiskt för ${PREMIUM_PRICE_SEK} kr/månad tills du avslutar.`)) return;
+    if (cfg.subscriptionMode!=="manual_test")return setMessage("premiumState","Premiumköp kräver native-appen.",true);
+    if (!window.confirm("Starta en tre dagar lång testprovperiod? Ingen debitering sker och perioden blir inte automatiskt betald Premium.")) return;
 
     const button = $("premiumPurchase");
     const originalText = button?.textContent || "Starta 3 dagars gratis provperiod";
@@ -159,18 +180,14 @@
     setMessage("premiumState", "Aktiverar provperioden …");
 
     try {
-      const { data, error } = await client.rpc("start_premium_trial");
-      if (error) throw error;
-
-      profile = Array.isArray(data) ? data[0] : data;
+      entitlement=await subscriptionProvider.startSubscription();
       await loadProfile();
-
-      if (effectiveRole(profile) !== "trial" || !profile?.trial_used_at) {
+      if (effectiveRole(profile) !== "trial" || !entitlement?.is_trial) {
         throw new Error("Provperioden kunde inte aktiveras. Kontrollera att den senaste Supabase-migrationen är körd.");
       }
 
       renderPremiumInfo();
-      setMessage("premiumState", `Provperioden är aktiv. Därefter övergår den automatiskt till Premium för ${PREMIUM_PRICE_SEK} kr/månad.`);
+      setMessage("premiumState", "Testprovperioden är aktiv i tre dagar. Ingen debitering sker i webbversionen.");
       window.dispatchEvent(new CustomEvent("vk:access-changed", { detail: getAccessState() }));
     } catch (error) {
       console.error("Kunde inte starta Premium-provperiod", error);
@@ -185,31 +202,42 @@
     }
   }
 
-  async function cancelPremiumRenewal() {
+  async function manageSubscription() {
     if (!client || !session?.user) return;
-    if (!window.confirm("Avsluta den automatiska förnyelsen? Du behåller Premium till provperiodens eller betalperiodens slut.")) return;
-    setMessage("premiumState", "Avslutar automatisk förnyelse …");
-    const { data, error } = await client.rpc("cancel_premium_subscription");
-    if (error) return setMessage("premiumState", error.message, true);
-    profile = Array.isArray(data) ? data[0] : data;
-    if (!profile) await loadProfile();
-    else renderAccount();
-    renderPremiumInfo();
-    window.dispatchEvent(new CustomEvent("vk:access-changed", { detail: getAccessState() }));
+    if(entitlement?.provider!=="manual_test"){
+      try{await entitlementProvider().openManageSubscription()}catch(error){setMessage("premiumState",error.message,true)}
+      return;
+    }
+    if (!window.confirm("Avsluta testprenumerationen vid periodens slut? Premium gäller till slutdatumet och ingen debitering sker.")) return;
+    setMessage("premiumState", "Registrerar uppsägningen …");
+    try{
+      entitlement=await subscriptionProvider.cancelAtPeriodEnd();
+      await loadProfile();renderPremiumInfo();
+      window.dispatchEvent(new CustomEvent("vk:access-changed", { detail: getAccessState() }));
+    }catch(error){setMessage("premiumState",error.message,true)}
+  }
+
+  async function restorePurchases(){
+    try{await entitlementProvider().restorePurchases()}catch(error){setMessage("premiumState",error.message,true)}
   }
 
   async function loadProfile() {
     if (!client || !session?.user) {
-      profile = null;
+      profile = null;entitlement=null;
       renderAccount();
       return null;
     }
     const { data, error } = await client.from("profiles").select("*").eq("id", session.user.id).single();
     if (error) {
       console.warn("Kunde inte läsa profil", error.message);
-      profile = null;
+      profile = null;entitlement=null;
     } else {
       profile = data;
+    }
+    if(profile){
+      const {data:access,error:accessError}=await client.rpc("get_user_entitlement");
+      entitlement=accessError?null:(Array.isArray(access)?access[0]:access);
+      if(accessError)console.warn("Kunde inte läsa entitlement; använder kompatibilitetsläge",accessError.message);
     }
     renderAccount();
     window.dispatchEvent(new CustomEvent("vk:access-changed", { detail: getAccessState() }));
@@ -223,6 +251,7 @@
       signedIn: Boolean(session?.user),
       user: session?.user || null,
       profile,
+      entitlement,
       role,
       premium: hasPremiumAccess(profile),
       admin: role === "admin"
@@ -245,20 +274,21 @@
     $("profileBadge").dataset.role = role;
     $("profileAccessTitle").textContent = labels[1];
 
-    const trialDays = daysLeft(profile?.trial_ends_at);
+    const trialEnd=entitlement?.trial_ends_at||profile?.trial_ends_at;
+    const trialDays = daysLeft(trialEnd);
     $("profileTrial").textContent = trialDays
       ? `${trialDays} dag${trialDays === 1 ? "" : "ar"} kvar`
-      : profile?.trial_ends_at ? "Avslutad" : "Ingen provperiod aktiverad";
-    const renewalCancelled = Boolean(profile?.cancel_at_period_end || profile?.subscription_status === "cancelled");
+      : trialEnd ? "Avslutad" : "Ingen provperiod aktiverad";
+    const renewalCancelled = Boolean(entitlement?.cancel_at_period_end||entitlement?.subscription_status==="cancelled_active"||profile?.cancel_at_period_end);
     $("profileSubscription").textContent = role === "trial"
-      ? renewalCancelled ? "Provperiod – avslutas automatiskt" : `Provperiod – därefter ${PREMIUM_PRICE_SEK} kr/månad`
+      ? renewalCancelled ? `Uppsagd – Premium gäller till ${new Date(trialEnd).toLocaleDateString("sv-SE")}` : `${entitlement?.provider||"Test"} · ingen debitering`
       : role === "premium"
-        ? renewalCancelled ? "Premium – avslutas vid periodens slut" : `Premium – ${PREMIUM_PRICE_SEK} kr/månad`
-        : hasPremiumAccess() ? "Premiumåtkomst" : "Du använder gratisversionen";
+        ? renewalCancelled ? "Premium – avslutas vid periodens slut" : `Premium via ${entitlement?.provider||"provider"}${entitlement?.current_period_ends_at?` · nästa period ${new Date(entitlement.current_period_ends_at).toLocaleDateString("sv-SE")}`:""}`
+        : role==="vip"?"Kostnadsfri Premiumåtkomst":role==="admin"?"Full Premiumåtkomst":entitlement?.subscription_status==="expired"?"Din Premiumperiod har avslutats.":"Du använder gratisversionen";
     $("profileAccessText").textContent = role === "trial"
       ? `Full Premium i ${trialDays} dag${trialDays === 1 ? "" : "ar"}`
       : hasPremiumAccess() ? "Full tillgång utan reklam" : "Grundläggande tillgång";
-    const mayStartTrial = role === "free" && !profile?.trial_used_at;
+    const mayStartTrial = cfg.subscriptionMode==="manual_test"&&role === "free" && (entitlement?entitlement.can_start_trial:!profile?.trial_used_at);
     $("upgradePremium").classList.toggle("hidden", !mayStartTrial);
     $("upgradePremium").textContent = "Prova Premium gratis i 3 dagar";
     $("openAdmin").classList.toggle("hidden", role !== "admin");
@@ -372,7 +402,7 @@
     rows.forEach(user => {
       const card = document.createElement("article");
       card.className = "admin-user-card";
-      card.innerHTML = `<div><strong>${escapeHtml(user.email || "Okänd e-post")}</strong><small>${escapeHtml(user.display_name || "Inget namn")}</small></div><select aria-label="Åtkomst för ${escapeHtml(user.email || "användare")}">${["free","trial","premium","vip","admin"].map(r => `<option value="${r}"${r === user.role ? " selected" : ""}>${ROLE_LABELS[r][0]}</option>`).join("")}</select><button type="button" class="secondary">Spara</button>`;
+      card.innerHTML = `<div><strong>${escapeHtml(user.email || "Okänd e-post")}</strong><small>${escapeHtml(user.display_name || "Inget namn")}</small></div><select aria-label="Åtkomst för ${escapeHtml(user.email || "användare")}">${["free","vip","admin"].map(r => `<option value="${r}"${r === user.role ? " selected" : ""}>${ROLE_LABELS[r][0]}</option>`).join("")}</select><button type="button" class="secondary">Spara</button>`;
       card.querySelector("button").onclick = async () => {
         const role = card.querySelector("select").value;
         setMessage("adminMessage", "Sparar …");
@@ -406,7 +436,8 @@
     $("saveProfileName")?.addEventListener("click", saveDisplayName);
     $("upgradePremium")?.addEventListener("click", () => openPremiumInfo());
     $("premiumPurchase")?.addEventListener("click", startPremiumTrial);
-    $("premiumCancel")?.addEventListener("click", cancelPremiumRenewal);
+    $("premiumCancel")?.addEventListener("click", manageSubscription);
+    $("restorePurchases")?.addEventListener("click", restorePurchases);
     $("openAdmin")?.addEventListener("click", () => { $("profileDialog").close(); $("adminDialog").showModal(); });
     $("adminSearchBtn")?.addEventListener("click", searchAdmin);
     $("adminSearch")?.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); searchAdmin(); } });
@@ -462,7 +493,8 @@
     openPremiumInfo,
     saveSettings,
     client,
-    premium: Object.freeze({ priceSek: PREMIUM_PRICE_SEK, features: PREMIUM_FEATURES })
+    manageSubscription,
+    premium: Object.freeze({ plannedPriceSek: PLANNED_PREMIUM_PRICE_SEK, features: PREMIUM_FEATURES })
   });
   document.addEventListener("DOMContentLoaded", init, { once: true });
 })();

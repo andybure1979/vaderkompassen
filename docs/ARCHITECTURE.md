@@ -1,23 +1,28 @@
 # Arkitektur
 
-## Premium och åtkomst
+## Premium och åtkomst i v14.2.0
 
-Premiumåtkomsten hanteras centralt i `auth.js`:
+Premiumåtkomsten hämtas från `get_user_entitlement()` och konsumeras centralt i `auth.js`:
 
 - `hasPremiumAccess()` – om användaren har full åtkomst.
 - `canAccess(feature)` – kontrollerar en namngiven Premium-funktion.
 - `requirePremium(feature)` – öppnar Premium-dialogen när åtkomst saknas.
 
-Rollerna är `free`, `trial`, `premium`, `vip` och `admin`.
+Administrativa roller är `free`, `vip` och `admin`. Trial/Premium är abonnemangsstatus, inte administrativa roller.
 
 ## Provperiod och prenumeration
 
-V14.0.5 använder skyddade Supabase RPC-funktioner:
+Datamodellen består av:
 
-- `start_premium_trial()` startar kontots enda tre dagar långa provperiod.
-- `cancel_premium_subscription()` avslutar automatisk förnyelse men behåller åtkomsten till periodens slut.
+- `subscriptions` – providerstatus och giltighetsperioder.
+- `trial_entitlements` – permanent spärr mot en andra intern trial.
+- `subscription_audit_log` – append-only händelselogg.
 
-`trial_used_at` är den permanenta spärren mot en andra provperiod. Efter en avslutad, ej uppsagd provperiod behandlar klientens centrala åtkomstmodell kontot som Premium. Fram till att App Store och Google Play ansluts används `subscription_provider = manual`; ingen faktisk betalning genomförs.
+`start_manual_test_trial()` och `cancel_manual_test_subscription()` är atomiska SECURITY DEFINER-RPC:er. Uppsägning ger `cancelled_active`; serverns `now()` avgör när åtkomsten upphör. Manual Test blir aldrig ett betalt abonnemang.
+
+`subscription-providers.js` definierar den framtida native-gränsen. Apple och Google är endast stubbar. Serverstubbar för verifiering returnerar `501 not configured` och kräver administrativ Worker-autentisering.
+
+Förberedda sökvägar är `/v1/subscriptions/apple/verify`, `/v1/subscriptions/apple/notifications-v2`, `/v1/subscriptions/google/verify`, `/v1/subscriptions/google/rtdn` och `/v1/subscriptions/sync`. De utför ingen verifiering innan riktiga providercredentials och signaturkontroller har konfigurerats.
 
 ## Dokumentation
 
