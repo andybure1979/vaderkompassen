@@ -1,5 +1,5 @@
-const CACHE="vaderkompassen-v14-1-0a";
-const ASSETS=["./","index.html","styles.css?v=14.1.0a","config.js?v=14.1.0a","fishing-score.js?v=14.1.0a","navigation.js?v=14.1.0a","cloud-request.js?v=14.1.0a","auth.js?v=14.1.0a","app.js?v=14.1.0a","manifest.webmanifest","icon-192.png","icon-512.png","icon-180.png"];
+const CACHE="vaderkompassen-v14-1-0b";
+const ASSETS=["./","index.html","styles.css?v=14.1.0b","config.js?v=14.1.0b","fishing-score.js?v=14.1.0b","navigation.js?v=14.1.0b","cloud-request.js?v=14.1.0b","auth.js?v=14.1.0b","app.js?v=14.1.0b","manifest.webmanifest","icon-192.png","icon-512.png","icon-180.png"];
 self.addEventListener("install",e=>{self.skipWaiting();e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)))});
 self.addEventListener("activate",e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==CACHE).map(x=>caches.delete(x)))).then(()=>self.clients.claim()))});
 self.addEventListener("message",e=>{if(e.data?.type==="SKIP_WAITING")self.skipWaiting()});

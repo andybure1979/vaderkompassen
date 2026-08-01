@@ -201,7 +201,7 @@ async function buildSnapshot(env){
   const rows=[...freshRows,...fallbackRows].map(addServerScores),dailyResults={};
   for(const row of rows)(dailyResults[row.day]||=[]).push(row);
   const days=Object.keys(dailyResults).sort(),availablePlaces=new Set(rows.map(r=>r.place));
-  return {ok:true,version:env.APP_VERSION||'14.1.0a',generatedAt:new Date().toISOString(),activeDate:days[0]||null,dailyResults,
+  return {ok:true,version:env.APP_VERSION||'14.1.0b',generatedAt:new Date().toISOString(),activeDate:days[0]||null,dailyResults,
     sourceStatus:[{name:'Open-Meteo',ok:freshPlaces.size>0,rows:freshRows.length,error:failures.map(x=>`${x.place}: ${x.error}`).join(' · ')}],
     meta:{placesRequested:PLACES.length,placesUpdated:freshPlaces.size,placesFresh:freshPlaces.size,placesFallback:availablePlaces.size-freshPlaces.size,placesAvailable:availablePlaces.size,days:days.length,batches:batches.length,failedBatches:failures.length,failedPlaces:failures.map(x=>x.place)}};
 }
@@ -309,7 +309,7 @@ async function latestSnapshot(env,normalized,performanceMetrics){
   }
   performanceMetrics.shards=storedRows.length;
   const firstPayload=storedRows[0].payload||{};
-  return {ok:firstPayload.ok!==false,version:env.APP_VERSION||firstPayload.version||'14.1.0a',generatedAt,
+  return {ok:firstPayload.ok!==false,version:env.APP_VERSION||firstPayload.version||'14.1.0b',generatedAt,
     activeDate:firstPayload.activeDate||Object.keys(dailyResults).sort()[0]||null,dailyResults,
     sourceStatus,meta:{...(payloadMeta||{}),performance:performanceMetrics},activity:requested,
     rankingEngine:'cloud-v5-edge-cache-coalescing',resultLimitPerDay:FORECAST_ROWS_PER_DAY};

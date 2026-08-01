@@ -1,3 +1,9 @@
+## v14.1.0b – Säkrare samordning av prognosanrop
+
+Frontend bygger en stabil request-nyckel av aktivitet, regioner och områden. Identiska pågående hämtningar återanvänds, medan ett ändrat urval avbryter den äldre hämtningen utan användarfel eller inaktuell UI-uppdatering. Lokal referensjämförelse och befintligt generationsskydd gör att ett äldre `finally` aldrig får rensa promise, controller eller laddningsstatus för ett nyare anrop.
+
+Cloudflare Workern fortsätter att samordna samtidiga identiska cachemissar via den kanoniska Cache API-nyckeln. Det delade resultatet är en färdigserialiserad sträng med status och headers; varje väntande request bygger en egen `Response`. Poäng, ranking, snapshotformat och gränsen på 75 resultat per dag är oförändrade. Ingen Supabase-migration krävs.
+
 ## v14.1.0a – Edge-cache och samordnade prognosanrop
 
 `/v1/forecast` normaliserar aktivitet, regioner och områden innan en kanonisk cache-nyckel byggs. Färdiga 200-svar cachelagras i Cloudflare Cache API i 300 sekunder, och samtidiga identiska cachemissar delar ett enda Supabase-flöde utan att dela förbrukningsbara `Response.body`-objekt.

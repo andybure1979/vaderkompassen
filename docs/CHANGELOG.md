@@ -1,5 +1,16 @@
 # Ändringslogg
 
+## 14.1.0b
+
+- Bygger frontendens forecast-nyckel med stabil parameterordning, trimning, unika värden och svensk sortering.
+- Återanvänder ett pågående Promise för samma logiska urval och avbryter en äldre hämtning när urvalet ändras.
+- Skyddar cleanup med lokal referensjämförelse så att ett äldre `finally` inte kan rensa ett nyare aktivt anrop.
+- Behåller `loadGeneration` som ägarskapsskydd för topplista, karta, lokal cache och laddningsstatus.
+- Lägger till begränsad diagnostik för start, återanvändning, abort och avslut utan tokens eller payloads.
+- Utökar samtidighetstesterna till fem separata läsbara `Response`-objekt, en cache-put, gemensamma fel och säker frontend-cleanup.
+- Behåller poäng, ranking, aktivitetsmodeller, snapshotformat och max 75 resultat per dag.
+- Ingen Supabase-migration krävs.
+
 ## 14.1.0a
 
 - Normaliserar aktivitet, regioner och områden till en stabil `/v1/forecast`-nyckel.

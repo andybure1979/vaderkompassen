@@ -899,7 +899,7 @@ async function mapWithConcurrency(items,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
   return results;
 }
-const diagnostics={version:"14.1.0a",mode:"checking",lastLoad:null,sources:[]};
+const diagnostics={version:"14.1.0b",mode:"checking",lastLoad:null,sources:[],forecastRequests:[]};
 function setDataMode(mode,detail=""){
   diagnostics.mode=mode;
   const badge=$("dataModeBadge");
@@ -997,17 +997,17 @@ async function fetchPlacesPersistently(source,places,worker){
 
 
 const CLOUD_CONFIG=window.VK_CONFIG||{};
-const cloudRequestManager=globalThis.VK_CLOUD_REQUESTS.createManager();
+const cloudRequestManager=globalThis.VK_CLOUD_REQUESTS.createManager({onEvent:(event,key)=>{
+  diagnostics.forecastRequests.push({event,key,at:new Date().toISOString()});
+  diagnostics.forecastRequests.splice(20);
+}});
 function cloudApiEnabled(){return Boolean(CLOUD_CONFIG.preferCloud&&String(CLOUD_CONFIG.apiBaseUrl||"").trim())}
 async function fetchCloudSnapshot(places){
   if(!cloudApiEnabled())return null;
-  const params=new URLSearchParams({
-    regions:[...settings.regions].sort().join(","),
-    areas:[...settings.areas].sort().join(","),
-    activity:settings.activity
-  });
   const base=String(CLOUD_CONFIG.apiBaseUrl).replace(/\/$/,"");
-  const requestUrl=`${base}/v1/forecast?${params}`;
+  const requestUrl=globalThis.VK_CLOUD_REQUESTS.createRequestKey(base,{
+    activity:settings.activity,regions:settings.regions,areas:settings.areas
+  });
   return cloudRequestManager.run(requestUrl,async activeSignal=>{
     const controller=new AbortController(),abort=()=>controller.abort();
     activeSignal.addEventListener("abort",abort,{once:true});
@@ -1807,7 +1807,7 @@ $("settingsForm").addEventListener("submit",event=>{
   saveSettingsFromDialog();
 });
 if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
-  const reg=await navigator.serviceWorker.register(`sw.js?v=14.1.0a`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=14.1.0b`);
   reg.update();
   reg.addEventListener("updatefound",()=>{const worker=reg.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller){$("updateBanner").classList.remove("hidden");}})});
   navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload());

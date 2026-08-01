@@ -3,13 +3,13 @@ import assert from "node:assert/strict";
 import worker,{canonicalForecastUrl,normalizeForecastRequest} from "../cloudflare/src/index.js";
 
 class MemoryCache{
-  constructor(){this.items=new Map()}
+  constructor(){this.items=new Map();this.puts=0}
   async match(request){const response=this.items.get(request.url);return response?.clone()}
-  async put(request,response){this.items.set(request.url,response.clone())}
+  async put(request,response){this.puts++;this.items.set(request.url,response.clone())}
 }
-const env={SUPABASE_URL:"https://supabase.test",SUPABASE_SERVICE_ROLE_KEY:"test-key",ALLOWED_ORIGIN:"*",APP_VERSION:"14.1.0a"};
+const env={SUPABASE_URL:"https://supabase.test",SUPABASE_SERVICE_ROLE_KEY:"test-key",ALLOWED_ORIGIN:"*",APP_VERSION:"14.1.0b"};
 const rows=Array.from({length:80},(_,index)=>({day:"2026-08-01",place:`Plats ${index}`,area:"Skåne",region:"Södra Sverige",confidence:80,temp:20,rain:0,risk:0,sun:8,wind:3,serverScores:{general:index}}));
-const shard={payload:{ok:true,version:"14.1.0a",generatedAt:"2026-08-01T00:00:00Z",activeDate:"2026-08-01",dailyResults:{"2026-08-01":rows},meta:{}},source_status:[]};
+const shard={payload:{ok:true,version:"14.1.0b",generatedAt:"2026-08-01T00:00:00Z",activeDate:"2026-08-01",dailyResults:{"2026-08-01":rows},meta:{}},source_status:[]};
 
 function setup({delay=0,failSnapshot=false}={}){
   const calls={head:0,snapshot:0};globalThis.caches={default:new MemoryCache()};
@@ -51,6 +51,15 @@ test("samtidiga identiska cachemissar delar ett Supabase-flöde men egna Respons
   assert.equal(await a.text(),await b.text());
 });
 
+test("fem samtidiga requests får fem läsbara Response och en enda cache-put",async()=>{
+  const state=setup({delay:10}),req=request("activity=general&regions=S%C3%B6dra%20Sverige");
+  const responses=await Promise.all(Array.from({length:5},()=>worker.fetch(req,env,state.ctx)));
+  assert.equal(new Set(responses).size,5);assert.equal(state.calls.head,1);assert.equal(state.calls.snapshot,1);
+  const bodies=await Promise.all(responses.map(response=>response.text()));
+  assert.equal(new Set(bodies).size,1);
+  await Promise.all(state.pending);assert.equal(globalThis.caches.default.puts,1);
+});
+
 test("olika requests coalescas inte",async()=>{
   const state=setup({delay:5});
   await Promise.all([worker.fetch(request("activity=general&regions=S%C3%B6dra%20Sverige"),env,state.ctx),worker.fetch(request("activity=general&regions=Mellansverige"),env,state.ctx)]);
@@ -63,6 +72,17 @@ test("Supabase-fel cachelagras inte och inflight rensas",async()=>{
   try{assert.equal((await worker.fetch(req,env,failed.ctx)).status,500)}finally{console.error=originalError}
   const retry=setup();const response=await worker.fetch(req,env,retry.ctx);
   assert.equal(response.status,200);assert.equal(retry.calls.head,1);assert.equal(retry.calls.snapshot,1);
+});
+
+test("samtidigt Supabase-fel delas, cachelagras inte och kan därefter återförsökas",async()=>{
+  const failed=setup({delay:5,failSnapshot:true}),req=request("activity=general&regions=S%C3%B6dra%20Sverige");
+  const originalError=console.error;console.error=()=>{};
+  let responses;
+  try{responses=await Promise.all([worker.fetch(req,env,failed.ctx),worker.fetch(req,env,failed.ctx)])}finally{console.error=originalError}
+  assert.deepEqual(responses.map(response=>response.status),[500,500]);
+  assert.equal(failed.calls.head,1);assert.equal(failed.calls.snapshot,1);assert.equal(globalThis.caches.default.puts,0);
+  const retry=setup(),response=await worker.fetch(req,env,retry.ctx);
+  assert.equal(response.status,200);assert.equal(retry.calls.snapshot,1);
 });
 
 test("ranking och max 75 rader per dag behålls",async()=>{
