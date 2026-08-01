@@ -18,10 +18,11 @@
 - **14.0.12** Faktauppsättning som matchar V13-topplistans visuella referens.
 - **14.0.13** Förbättrad, datanormaliserad modell för Fiskeväder.
 - **14.1.0** Performance 2.0 med edge-cache, samordnade prognosanrop, säkra frontend-aborter och kompakt forecast-payload.
+- **14.2.0** Prenumerationsgrund med serverentitlement, korrekt uppsägning och testprovider utan debitering.
 
 ## Nästa
 
-- **14.1.x** Fortsatt förbättrat beslutsstöd, historik och personalisering utan favoriter.
-- **Senare** App Store- och Google Play-prenumerationer som extern betalningskälla.
+- **14.2.x** Native iOS-/Android-gräns, butikskatalog och testmiljöer.
+- **Senare** StoreKit 2, Google Play Billing, serververifiering, App Store Server Notifications V2 och Google RTDN.
 
 - **14.0.7** Förklarade rekommendationer och mänskliga omdömen.

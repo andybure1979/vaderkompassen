@@ -7,9 +7,9 @@ class MemoryCache{
   async match(request){const response=this.items.get(request.url);return response?.clone()}
   async put(request,response){this.puts++;this.items.set(request.url,response.clone())}
 }
-const env={SUPABASE_URL:"https://supabase.test",SUPABASE_SERVICE_ROLE_KEY:"test-key",ALLOWED_ORIGIN:"*",APP_VERSION:"14.1.0"};
+const env={SUPABASE_URL:"https://supabase.test",SUPABASE_SERVICE_ROLE_KEY:"test-key",ALLOWED_ORIGIN:"*",APP_VERSION:"14.2.0"};
 const rows=Array.from({length:80},(_,index)=>({day:"2026-08-01",place:["Varberg","Falkenberg","Halmstad"][index%3],area:"Skåne",region:"Södra Sverige",lat:55.6,lon:13,temp:20,min:12,rain:0,risk:0,sun:8,cloudCover:50,wind:3,windGust:5,windDirection:180,models:1,usedSources:["Open-Meteo"],primarySource:"Open-Meteo",confidence:80,serverScores:{general:index,fishing:80-index,surf:index,hiking:index,ski:index},internal:"ska bort"}));
-const shard={payload:{ok:true,version:"14.1.0",generatedAt:"2026-08-01T00:00:00Z",activeDate:"2026-08-01",dailyResults:{"2026-08-01":rows},meta:{}},source_status:[]};
+const shard={payload:{ok:true,version:"14.2.0",generatedAt:"2026-08-01T00:00:00Z",activeDate:"2026-08-01",dailyResults:{"2026-08-01":rows},meta:{}},source_status:[]};
 
 function setup({delay=0,failSnapshot=false}={}){
   const calls={head:0,snapshot:0};globalThis.caches={default:new MemoryCache()};
@@ -91,7 +91,7 @@ test("ranking och max 75 rader per dag behålls",async()=>{
   assert.equal(result.length,75);assert.equal(result[0].serverScore,79);assert.equal(result.at(-1).serverScore,5);
   assert.equal("serverScores" in result[0],false);assert.equal("internal" in result[0],false);
   assert.equal(body.rankingEngine,"cloud-v6-performance-2");
-  assert.equal(response.headers.get("X-Vaderkompassen-Worker-Version"),"14.1.0");
+  assert.equal(response.headers.get("X-Vaderkompassen-Worker-Version"),"14.2.0");
   assert.deepEqual(Object.keys(body.meta.performance).sort(),["cache","coalesced","compactMs","fieldsPerRowApprox","filterMs","headQueryMs","mergeMs","parseMs","responseBytes","responseTextMs","rowsMatched","rowsRead","rowsReturned","serializationMs","shards","sliceMs","snapshotQueryMs","sortMs","supabaseBytes","totalMs"].sort());
   assert.ok(Number.isFinite(body.meta.performance.serializationMs));assert.ok(body.meta.performance.totalMs>=body.meta.performance.serializationMs);
   assert.ok(body.meta.performance.supabaseBytes>0);assert.ok(body.meta.performance.responseBytes>0);
@@ -123,3 +123,11 @@ for(const activity of ["cinema","indoorPool"]){
     assert.equal(result.length,75);assert.equal(result.every(row=>!("serverScore" in row)),true);
   });
 }
+
+test("providerverifieringsstubbar kräver admin-token och returnerar not configured",async()=>{
+  const state=setup(),url="https://worker.test/v1/subscriptions/apple/verify";
+  assert.equal((await worker.fetch(new Request(url,{method:"POST"}),env,state.ctx)).status,401);
+  const protectedEnv={...env,ADMIN_TOKEN:"admin-test"};
+  const response=await worker.fetch(new Request(url,{method:"POST",headers:{"x-admin-token":"admin-test"}}),protectedEnv,state.ctx);
+  assert.equal(response.status,501);assert.deepEqual(await response.json(),{ok:false,error:"Provider verification not configured",provider:"apple"});
+});

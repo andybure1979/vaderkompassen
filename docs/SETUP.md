@@ -1,11 +1,11 @@
 # Installation och drift
 
-## Väderkompassen v14.0.13
+## Väderkompassen v14.2.0
 
 1. Kör SQL-migrationerna i ordningen nedan.
 2. Publicera hela projektet till GitHub.
-3. Kontrollera att webbplatsen visar `Väderkompassen v14.0.13` i sidfoten.
-4. Testa registrering, inloggning, start av provperiod och avslutad automatisk förnyelse.
+3. Kontrollera att webbplatsen visar `Väderkompassen v14.2.0` i sidfoten.
+4. Testa registrering, start av testprovperiod och uppsägning till periodens slut.
 
 ## Manuella databassteg
 
@@ -15,19 +15,30 @@ Kör migrationerna i Supabase SQL Editor i följande ordning:
 2. `supabase/migrations/20260731_1403_profile_cloud_sync.sql`
 3. `supabase/migrations/20260731_1405_subscription_trial_flow.sql`
 4. `supabase/migrations/20260731_140501_trial_activation_fix.sql`
+5. `supabase/migrations/20260801_1420_subscription_foundation.sql`
 
 Den nya migrationen återställer äldre, automatiskt skapade testprovperioder till Gratis. Dessa användare kan därefter själva starta sin enda provperiod.
 
-## Premium i v14.0.6.1
+## Äldre Premiumfält
 
 - Nya konton börjar som `free`.
 - Provperioden startas via ett skyddat Supabase RPC-anrop.
 - `trial_used_at` gör att en andra provperiod inte kan aktiveras.
 - `cancel_at_period_end` anger att automatisk förnyelse har avslutats.
 - Under provperioden behålls Premium-åtkomst till slutdatumet även efter uppsägning.
-- Utan uppsägning behandlas kontot som Premium efter provperiodens slut.
+- De äldre profilfälten används endast för bakåtkompatibel migrering. V14.2.0 konverterar aldrig en intern trial automatiskt till betald Premium.
 
-Betalning är ännu inte ansluten till Apple App Store eller Google Play. Fältet `subscription_provider = manual` används tills butikskvitton blir sanningskälla. Ingen verklig debitering sker i denna version.
+## Testläge och betalningsbegränsning i v14.2.0
+
+- Webbtest aktiveras uttryckligen med `subscriptionMode: "manual_test"` i `config.js`.
+- Kör migrationen `20260801_1420_subscription_foundation.sql` innan frontend publiceras.
+- Starta testtrial från profilvyn och kontrollera `get_user_entitlement()` i Supabase.
+- Avsluta via “Avsluta vid periodens slut”; status ska bli `cancelled_active` medan `is_premium` är sann till slutdatumet.
+- Efter serverns slutdatum ska entitlement bli Free utan cron och utan automatisk konvertering.
+- Ingen verklig debitering sker och inga betaluppgifter eller fiktiva butikskvitton lagras.
+- Apple/Google kräver senare native iOS/Android, riktiga produkt-ID:n och butikshämtat pris.
+
+Framtida servermiljö behöver Apple issuer/key-id/private key/bundle-id samt Google service account/Play package-id och Pub/Sub-verifiering. Dessa hemligheter får aldrig läggas i frontend eller Git.
 
 ## Stabil Cloudflare-deploy i v14.0.6.2
 
