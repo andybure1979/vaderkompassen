@@ -6,6 +6,6 @@ compatibility_date = "2026-07-26"
 crons = ["*/30 * * * *"]
 
 [vars]
-APP_VERSION = "14.3.3"
+APP_VERSION = "14.3.4"
 ENVIRONMENT = "production"
 ALLOWED_ORIGIN = "*"

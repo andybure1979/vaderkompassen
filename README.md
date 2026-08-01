@@ -1,3 +1,7 @@
+## v14.3.4 – Vattentemperatur i aktivitetsfakta
+
+Sol och bad, Kustväder, Surfväder och Fiskeväder visar vattentemperatur i både vinnarkort och topplista när prognosfältet finns. Visningen använder `waterTemperature` och kan läsa `seaTemp` som kompatibilitetsfallback. Saknas båda visas ingen tom fakta. Kortdesign, poäng och ranking är oförändrade.
+
 ## v14.3.3 – Tydlig adminvy och rättad användardetalj
 
 Adminpanelen använder nu samma solida systembakgrund som övriga dialoger. Ny frontend- och service-worker-version bryter den tidigare CSS-cachen. `admin_get_user_detail()` använder entydigt kvalificerade kolumn- och parameterreferenser, så en Admin kan öppna användardetaljer utan PostgreSQL-felet `target_user_id is ambiguous`. Kör `supabase/migrations/20260801_1433_admin_user_detail_fix.sql` efter Adminmigrationen.
