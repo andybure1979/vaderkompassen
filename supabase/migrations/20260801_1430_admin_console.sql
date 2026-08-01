@@ -158,9 +158,9 @@ begin
     'entitlement',(select to_jsonb(e) from public.admin_entitlements e where e.user_id=p.id and e.revoked_at is null order by e.created_at desc limit 1),
     'trial_used',exists(select 1 from public.trial_entitlements t where t.user_id=p.id),
     'settings',jsonb_build_object('activity',p.app_settings->>'activity','regions',p.app_settings->'regions','settings_updated_at',p.settings_updated_at),
-    'history',(select coalesce(jsonb_agg(to_jsonb(a) order by a.created_at desc),'[]'::jsonb) from (select id,action,entity_type,reason,created_at from public.admin_audit_log where target_user_id=p.id order by created_at desc limit 20)a),
+    'history',(select coalesce(jsonb_agg(to_jsonb(a) order by a.created_at desc),'[]'::jsonb) from (select log.id,log.action,log.entity_type,log.reason,log.created_at from public.admin_audit_log log where log.target_user_id=p.id order by log.created_at desc limit 20)a),
     'notes',(select coalesce(jsonb_agg(to_jsonb(n) order by n.created_at desc),'[]'::jsonb) from (select id,note,created_by,created_at,updated_at from public.admin_user_notes where user_id=p.id order by created_at desc limit 20)n)
-  ) into result from public.profiles p join auth.users u on u.id=p.id where p.id=target_user_id;
+  ) into result from public.profiles p join auth.users u on u.id=p.id where p.id=admin_get_user_detail.target_user_id;
   if result is null then raise exception 'Användaren saknas'; end if;
   return result;
 end $$;

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 
 const sql=await readFile(new URL("../supabase/migrations/20260801_1430_admin_console.sql",import.meta.url),"utf8");
+const detailFix=await readFile(new URL("../supabase/migrations/20260801_1433_admin_user_detail_fix.sql",import.meta.url),"utf8");
 const frontend=await readFile(new URL("../admin.js",import.meta.url),"utf8");
 
 test("admintabeller har RLS och saknar direkta klientgrants",()=>{
@@ -40,4 +41,12 @@ test("frontend söker serverbaserat, debouncar och skickar bearer-token till hea
   assert.match(frontend,/admin_search_users/);
   assert.match(frontend,/authorization:`Bearer \$\{token\}`/);
   assert.doesNotMatch(frontend,/service.role|service_role/i);
+});
+
+test("användardetaljen skiljer funktionsargument från auditkolumn",()=>{
+  for(const migration of [sql,detailFix]){
+    assert.match(migration,/log\.target_user_id\s*=\s*p\.id/i);
+    assert.match(migration,/p\.id\s*=\s*admin_get_user_detail\.target_user_id/i);
+    assert.doesNotMatch(migration,/where\s+target_user_id\s*=\s*p\.id/i);
+  }
 });

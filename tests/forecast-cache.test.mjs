@@ -7,9 +7,9 @@ class MemoryCache{
   async match(request){const response=this.items.get(request.url);return response?.clone()}
   async put(request,response){this.puts++;this.items.set(request.url,response.clone())}
 }
-const env={SUPABASE_URL:"https://supabase.test",SUPABASE_SERVICE_ROLE_KEY:"test-key",ALLOWED_ORIGIN:"*",APP_VERSION:"14.3.2"};
+const env={SUPABASE_URL:"https://supabase.test",SUPABASE_SERVICE_ROLE_KEY:"test-key",ALLOWED_ORIGIN:"*",APP_VERSION:"14.3.3"};
 const rows=Array.from({length:80},(_,index)=>({day:"2026-08-01",place:["Varberg","Falkenberg","Halmstad"][index%3],area:"Skåne",region:"Södra Sverige",lat:55.6,lon:13,temp:20,min:12,rain:0,risk:0,sun:8,cloudCover:50,wind:3,windGust:5,windDirection:180,models:1,usedSources:["Open-Meteo"],primarySource:"Open-Meteo",confidence:80,serverScores:{general:index,fishing:80-index,surf:index,hiking:index,ski:index},internal:"ska bort"}));
-const shard={payload:{ok:true,version:"14.3.2",generatedAt:"2026-08-01T00:00:00Z",activeDate:"2026-08-01",dailyResults:{"2026-08-01":rows},meta:{}},source_status:[]};
+const shard={payload:{ok:true,version:"14.3.3",generatedAt:"2026-08-01T00:00:00Z",activeDate:"2026-08-01",dailyResults:{"2026-08-01":rows},meta:{}},source_status:[]};
 
 function setup({delay=0,failSnapshot=false,rankedBody=null}={}){
   const calls={head:0,snapshot:0,ranked:0};globalThis.caches={default:new MemoryCache()};
@@ -48,8 +48,8 @@ test("första identiska request är MISS och nästa HIT utan Supabase",async()=>
 });
 
 test("databasrankat svar går direkt till cache utan regional JSON-bearbetning",async()=>{
-  const ranked={ok:true,version:"14.3.2",generatedAt:"2026-08-01T00:00:00Z",dailyResults:{"2026-08-01":[{place:"Falun",serverScore:91}]},meta:{performance:{databaseRanked:true}}};
-  const state=setup({rankedBody:ranked}),response=await worker.fetch(request("activity=fishing&regions=Mellansverige&areas=Dalarna"),{...env,APP_VERSION:"14.3.2"},state.ctx);
+  const ranked={ok:true,version:"14.3.3",generatedAt:"2026-08-01T00:00:00Z",dailyResults:{"2026-08-01":[{place:"Falun",serverScore:91}]},meta:{performance:{databaseRanked:true}}};
+  const state=setup({rankedBody:ranked}),response=await worker.fetch(request("activity=fishing&regions=Mellansverige&areas=Dalarna"),{...env,APP_VERSION:"14.3.3"},state.ctx);
   assert.equal(response.status,200);assert.equal(response.headers.get("X-Vaderkompassen-Database-Ranked"),"true");
   assert.deepEqual(await response.json(),ranked);assert.equal(state.calls.ranked,1);assert.equal(state.calls.head,0);assert.equal(state.calls.snapshot,0);
 });
@@ -102,7 +102,7 @@ test("ranking och max 75 rader per dag behålls",async()=>{
   assert.equal(result.length,75);assert.equal(result[0].serverScore,79);assert.equal(result.at(-1).serverScore,5);
   assert.equal("serverScores" in result[0],false);assert.equal("internal" in result[0],false);
   assert.equal(body.rankingEngine,"cloud-v6-performance-2");
-  assert.equal(response.headers.get("X-Vaderkompassen-Worker-Version"),"14.3.2");
+  assert.equal(response.headers.get("X-Vaderkompassen-Worker-Version"),"14.3.3");
   assert.deepEqual(Object.keys(body.meta.performance).sort(),["cache","coalesced","compactMs","fieldsPerRowApprox","filterMs","headQueryMs","mergeMs","parseMs","responseBytes","responseTextMs","rowsMatched","rowsRead","rowsReturned","serializationMs","shards","sliceMs","snapshotQueryMs","sortMs","supabaseBytes","totalMs"].sort());
   assert.ok(Number.isFinite(body.meta.performance.serializationMs));assert.ok(body.meta.performance.totalMs>=body.meta.performance.serializationMs);
   assert.ok(body.meta.performance.supabaseBytes>0);assert.ok(body.meta.performance.responseBytes>0);

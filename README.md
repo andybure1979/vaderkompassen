@@ -1,3 +1,7 @@
+## v14.3.3 – Tydlig adminvy och rättad användardetalj
+
+Adminpanelen använder nu samma solida systembakgrund som övriga dialoger. Ny frontend- och service-worker-version bryter den tidigare CSS-cachen. `admin_get_user_detail()` använder entydigt kvalificerade kolumn- och parameterreferenser, så en Admin kan öppna användardetaljer utan PostgreSQL-felet `target_user_id is ambiguous`. Kör `supabase/migrations/20260801_1433_admin_user_detail_fix.sql` efter Adminmigrationen.
+
 ## v14.3.2 – Åtkomlig Premiumstatus
 
 Alla inloggade konton med aktiv kontostatus kan öppna Premiumdialogen från profilen. Free-konton som får starta provperiod ser “Prova Premium gratis i 3 dagar”; Admin, VIP, aktiva, uppsagda, utgångna och redan använda triallägen ser “Visa Premiumstatus”. Prenumerationsmodell, betalningsbegränsningar och backend är oförändrade.

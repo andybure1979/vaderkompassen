@@ -1,5 +1,12 @@
 # Ändringslogg
 
+## 14.3.3 – Tydlig adminvy och rättad användardetalj
+
+- Ger adminpanelen samma solida `--surface`-bakgrund som övriga systemdialoger.
+- Bryter CSS- och service-worker-cachen med versionsnyckeln 14.3.3.
+- Kvalificerar `target_user_id` i `admin_get_user_detail()` så användarkort kan öppnas utan ett tvetydigt kolumnfel.
+- Lägger till en idempotent korrigeringsmigration för redan installerade Adminmiljöer.
+
 ## 14.3.2 – Åtkomlig Premiumstatus
 
 - Rättar ett UI-villkor som dolde länken till Premiumdialogen för Admin, VIP och andra konton som inte kunde starta en ny trial.
