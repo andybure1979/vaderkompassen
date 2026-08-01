@@ -899,7 +899,7 @@ async function mapWithConcurrency(items,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
   return results;
 }
-const diagnostics={version:"14.1.0b",mode:"checking",lastLoad:null,sources:[],forecastRequests:[]};
+const diagnostics={version:"14.1.0c",mode:"checking",lastLoad:null,sources:[],forecastRequests:[]};
 function setDataMode(mode,detail=""){
   diagnostics.mode=mode;
   const badge=$("dataModeBadge");
@@ -1049,6 +1049,10 @@ function applyCloudSnapshot(snapshot,places){
   $("statusCard").classList.add("hidden");renderTabs();renderActivities();renderDay();
   saveWeatherCache({sourceStatus:snapshot.sourceStatus||[],cloud:true,generatedAt:updated});
   scheduleBackgroundRefresh(updated);
+}
+
+function getRowScore(row,activity=settings.activity){
+  return globalThis.VK_CLOUD_REQUESTS.getRowScore(row,activity,value=>Math.round(activityScore(value)));
 }
 
 window.vaderkompassenDiagnostics=diagnostics;
@@ -1414,8 +1418,8 @@ function rankedList(){
   if(settings.activity==="ski"){
     const specialized=list.filter(x=>x.hasSnow);if(specialized.length)list=specialized;
   }
-  if(serverRanked?.length)return list.map(x=>({...x,score:Number.isFinite(x.score)?x.score:(x.serverScores?.[settings.activity]??Math.round(activityScore(x)))}));
-  list=list.map(x=>({...x,score:x.serverScores?.[settings.activity]??Math.round(activityScore(x))}));
+  if(serverRanked?.length)return list.map(x=>({...x,score:getRowScore(x)}));
+  list=list.map(x=>({...x,score:getRowScore(x)}));
   return list.sort((a,b)=>b.score-a.score||b.confidence-a.confidence);
 }
 function renderTabs(){
@@ -1807,7 +1811,7 @@ $("settingsForm").addEventListener("submit",event=>{
   saveSettingsFromDialog();
 });
 if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
-  const reg=await navigator.serviceWorker.register(`sw.js?v=14.1.0b`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=14.1.0c`);
   reg.update();
   reg.addEventListener("updatefound",()=>{const worker=reg.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller){$("updateBanner").classList.remove("hidden");}})});
   navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload());

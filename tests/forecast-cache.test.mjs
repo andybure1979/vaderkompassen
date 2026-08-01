@@ -1,15 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import worker,{canonicalForecastUrl,normalizeForecastRequest} from "../cloudflare/src/index.js";
+import worker,{canonicalForecastUrl,compactForecastRow,FORECAST_ROW_FIELDS,normalizeForecastRequest} from "../cloudflare/src/index.js";
 
 class MemoryCache{
   constructor(){this.items=new Map();this.puts=0}
   async match(request){const response=this.items.get(request.url);return response?.clone()}
   async put(request,response){this.puts++;this.items.set(request.url,response.clone())}
 }
-const env={SUPABASE_URL:"https://supabase.test",SUPABASE_SERVICE_ROLE_KEY:"test-key",ALLOWED_ORIGIN:"*",APP_VERSION:"14.1.0b"};
-const rows=Array.from({length:80},(_,index)=>({day:"2026-08-01",place:`Plats ${index}`,area:"Skåne",region:"Södra Sverige",confidence:80,temp:20,rain:0,risk:0,sun:8,wind:3,serverScores:{general:index}}));
-const shard={payload:{ok:true,version:"14.1.0b",generatedAt:"2026-08-01T00:00:00Z",activeDate:"2026-08-01",dailyResults:{"2026-08-01":rows},meta:{}},source_status:[]};
+const env={SUPABASE_URL:"https://supabase.test",SUPABASE_SERVICE_ROLE_KEY:"test-key",ALLOWED_ORIGIN:"*",APP_VERSION:"14.1.0c"};
+const rows=Array.from({length:80},(_,index)=>({day:"2026-08-01",place:["Varberg","Falkenberg","Halmstad"][index%3],area:"Skåne",region:"Södra Sverige",lat:55.6,lon:13,temp:20,min:12,rain:0,risk:0,sun:8,cloudCover:50,wind:3,windGust:5,windDirection:180,models:1,usedSources:["Open-Meteo"],primarySource:"Open-Meteo",confidence:80,serverScores:{general:index,fishing:80-index,surf:index,hiking:index,ski:index},internal:"ska bort"}));
+const shard={payload:{ok:true,version:"14.1.0c",generatedAt:"2026-08-01T00:00:00Z",activeDate:"2026-08-01",dailyResults:{"2026-08-01":rows},meta:{}},source_status:[]};
 
 function setup({delay=0,failSnapshot=false}={}){
   const calls={head:0,snapshot:0};globalThis.caches={default:new MemoryCache()};
@@ -88,8 +88,37 @@ test("samtidigt Supabase-fel delas, cachelagras inte och kan därefter återför
 test("ranking och max 75 rader per dag behålls",async()=>{
   const state=setup(),response=await worker.fetch(request("activity=general&regions=S%C3%B6dra%20Sverige"),env,state.ctx),body=await response.json();
   const result=body.dailyResults["2026-08-01"];
-  assert.equal(result.length,75);assert.equal(result[0].serverScores.general,79);assert.equal(result.at(-1).serverScores.general,5);
+  assert.equal(result.length,75);assert.equal(result[0].serverScore,79);assert.equal(result.at(-1).serverScore,5);
+  assert.equal("serverScores" in result[0],false);assert.equal("internal" in result[0],false);
   assert.equal(body.rankingEngine,"cloud-v5-edge-cache-coalescing");
-  assert.deepEqual(Object.keys(body.meta.performance).sort(),["cache","coalesced","filterMs","headQueryMs","mergeMs","parseMs","responseTextMs","rowsMatched","rowsRead","rowsReturned","serializationMs","shards","sliceMs","snapshotQueryMs","sortMs","totalMs"].sort());
+  assert.deepEqual(Object.keys(body.meta.performance).sort(),["cache","coalesced","compactMs","fieldsPerRowApprox","filterMs","headQueryMs","mergeMs","parseMs","responseBytes","responseTextMs","rowsMatched","rowsRead","rowsReturned","serializationMs","shards","sliceMs","snapshotQueryMs","sortMs","supabaseBytes","totalMs"].sort());
   assert.ok(Number.isFinite(body.meta.performance.serializationMs));assert.ok(body.meta.performance.totalMs>=body.meta.performance.serializationMs);
+  assert.ok(body.meta.performance.supabaseBytes>0);assert.ok(body.meta.performance.responseBytes>0);
 });
+
+test("allowlisten bevarar UI-fält och giltiga nollvärden men utelämnar null och interna fält",()=>{
+  const source=Object.fromEntries(FORECAST_ROW_FIELDS.map(field=>[field,0]));
+  Object.assign(source,{day:"2026-08-01",place:"Test",area:"Skåne",region:"Södra Sverige",waveHeight:null,internal:"hemligt",serverScores:{general:77}});
+  const compact=compactForecastRow(source,77);
+  assert.equal(compact.rain,0);assert.equal(compact.hasMarine,0);assert.equal(compact.serverScore,77);
+  assert.equal("waveHeight" in compact,false);assert.equal("internal" in compact,false);assert.equal("serverScores" in compact,false);
+});
+
+for(const activity of ["general","fishing","surf","hiking","ski"]){
+  test(`kompakt ${activity}-svar behåller ordning och vald poäng`,async()=>{
+    const state=setup(),response=await worker.fetch(request(`activity=${activity}&regions=S%C3%B6dra%20Sverige`),env,state.ctx),body=await response.json();
+    const result=body.dailyResults["2026-08-01"];
+    assert.equal(result.length,75);
+    const expected=[...rows].sort((a,b)=>b.serverScores[activity]-a.serverScores[activity]||b.confidence-a.confidence).slice(0,75);
+    assert.deepEqual(result.map(row=>row.place),expected.map(row=>row.place));
+    assert.deepEqual(result.map(row=>row.serverScore),expected.map(row=>row.serverScores[activity]));
+  });
+}
+
+for(const activity of ["cinema","indoorPool"]){
+  test(`${activity} behåller frontendfallback när snapshoten saknar förberedd poäng`,async()=>{
+    const state=setup(),response=await worker.fetch(request(`activity=${activity}&regions=S%C3%B6dra%20Sverige`),env,state.ctx),body=await response.json();
+    const result=body.dailyResults["2026-08-01"];
+    assert.equal(result.length,75);assert.equal(result.every(row=>!("serverScore" in row)),true);
+  });
+}

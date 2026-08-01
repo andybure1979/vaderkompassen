@@ -1,3 +1,9 @@
+## v14.1.0c – Kompaktare prognossvar
+
+`/v1/forecast` skickar nu en uttrycklig, frontend-verifierad uppsättning radfält och endast den efterfrågade aktivitetens `serverScore`. Saknade marina, snö- och specialvärden utelämnas, medan giltiga värden som `0` och `false` bevaras. Topplista, vinnarkort, detaljsida, karta, navigation, faktaboxar och rekommendationstexter behåller de fält de faktiskt använder.
+
+Poängen hämtas en gång per rad före sortering. Först efter `slice(0, 75)` byggs kompakta svarsrader, och samma JSON-sträng används av Response, request coalescing och Cache API. Frontend kan fortsatt läsa äldre `serverScores`, och diagnostiken redovisar ungefärliga teckenmängder för Supabase- och API-svar. Snapshotformat, poäng och ranking är oförändrade. Ingen Supabase-migration krävs.
+
 ## v14.1.0b – Säkrare samordning av prognosanrop
 
 Frontend bygger en stabil request-nyckel av aktivitet, regioner och områden. Identiska pågående hämtningar återanvänds, medan ett ändrat urval avbryter den äldre hämtningen utan användarfel eller inaktuell UI-uppdatering. Lokal referensjämförelse och befintligt generationsskydd gör att ett äldre `finally` aldrig får rensa promise, controller eller laddningsstatus för ett nyare anrop.

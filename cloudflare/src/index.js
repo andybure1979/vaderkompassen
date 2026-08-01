@@ -38,6 +38,7 @@ async function sb(env,path,init={},timing=null){
   const r=await fetch(`${base}/rest/v1/${path}`,{...init,headers:{...sbHeaders(env),...(init.headers||{})}});
   const textStarted=now(),text=await r.text();
   if(timing)timing.responseTextMs+=(now()-textStarted);
+  if(timing)timing.supabaseBytes+=text.length;
   const parseStarted=now();let body=null;try{body=text?JSON.parse(text):null}catch{body=text}
   if(timing)timing.parseMs+=(now()-parseStarted);
   if(!r.ok){const detail=typeof body==='string'?body:JSON.stringify(body);throw new Error(`Supabase ${r.status} (${supabaseKeyType(env)}): ${detail}`);}
@@ -201,7 +202,7 @@ async function buildSnapshot(env){
   const rows=[...freshRows,...fallbackRows].map(addServerScores),dailyResults={};
   for(const row of rows)(dailyResults[row.day]||=[]).push(row);
   const days=Object.keys(dailyResults).sort(),availablePlaces=new Set(rows.map(r=>r.place));
-  return {ok:true,version:env.APP_VERSION||'14.1.0b',generatedAt:new Date().toISOString(),activeDate:days[0]||null,dailyResults,
+  return {ok:true,version:env.APP_VERSION||'14.1.0c',generatedAt:new Date().toISOString(),activeDate:days[0]||null,dailyResults,
     sourceStatus:[{name:'Open-Meteo',ok:freshPlaces.size>0,rows:freshRows.length,error:failures.map(x=>`${x.place}: ${x.error}`).join(' · ')}],
     meta:{placesRequested:PLACES.length,placesUpdated:freshPlaces.size,placesFresh:freshPlaces.size,placesFallback:availablePlaces.size-freshPlaces.size,placesAvailable:availablePlaces.size,days:days.length,batches:batches.length,failedBatches:failures.length,failedPlaces:failures.map(x=>x.place)}};
 }
@@ -232,6 +233,28 @@ async function saveBuiltSnapshot(env,snapshot){
   await sb(env,'forecast_snapshots',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify(rows)});
 }
 const FORECAST_ROWS_PER_DAY=75;
+export const FORECAST_ROW_FIELDS=['day','place','area','region','lat','lon','temp','min','rain','risk','sun','cloudCover','wind','windGust','windDirection','models','usedSources','primarySource','confidence','waveHeight','waveDirection','wavePeriod','swellHeight','swellDirection','swellPeriod','seaTemp','waterTemperature','snowDepth','newSnow','freezingLevel','hasMarine','hasSnow','spotName','thunderRisk'];
+export function compactForecastRow(row,score){
+  const compact={};
+  for(const field of FORECAST_ROW_FIELDS){
+    const value=row[field];
+    if(value!==null&&value!==undefined)compact[field]=value;
+  }
+  if(Number.isFinite(score))compact.serverScore=score;
+  return compact;
+}
+function requestedScore(row,activity){
+  const prepared=row.serverScores?.[activity];
+  return {sortScore:Number.isFinite(prepared)?prepared:serverScore(row,activity),responseScore:Number.isFinite(prepared)?prepared:null};
+}
+function responseMeta(meta,performance){
+  const compact={};
+  for(const field of ['placesRequested','placesUpdated','placesFresh','placesFallback','placesAvailable']){
+    if(meta?.[field]!==null&&meta?.[field]!==undefined)compact[field]=meta[field];
+  }
+  compact.performance=performance;
+  return compact;
+}
 async function latestSnapshot(env,normalized,performanceMetrics){
   const requested=normalized.activity,regionValues=normalized.regions;
   const areas=normalized.areas.length?new Set(normalized.areas):null;
@@ -293,25 +316,25 @@ async function latestSnapshot(env,normalized,performanceMetrics){
   performanceMetrics.filterMs=now()-filterStarted;
   for(const day of Object.keys(dailyResults)){
     const filtered=dailyResults[day];
-    // Normalfallet använder förberäknade serverScores. Räkna bara om för äldre snapshots som saknar poäng.
+    // Läs eller beräkna poängen exakt en gång per matchad rad före sorteringen.
+    const decorated=filtered.map(row=>({row,...requestedScore(row,requested)}));
     const sortStarted=now();
-    filtered.sort((a,b)=>{
-      const scoreB=b.serverScores?.[requested];
-      const scoreA=a.serverScores?.[requested];
-      return (Number.isFinite(scoreB)?scoreB:serverScore(b,requested))-(Number.isFinite(scoreA)?scoreA:serverScore(a,requested))||(b.confidence||0)-(a.confidence||0);
-    });
+    decorated.sort((a,b)=>b.sortScore-a.sortScore||(b.row.confidence||0)-(a.row.confidence||0));
     performanceMetrics.sortMs+=now()-sortStarted;
     const sliceStarted=now();
-    dailyResults[day]=filtered.slice(0,FORECAST_ROWS_PER_DAY);
+    const selected=decorated.slice(0,FORECAST_ROWS_PER_DAY);
     performanceMetrics.sliceMs+=now()-sliceStarted;
+    const compactStarted=now();
+    dailyResults[day]=selected.map(({row,responseScore})=>compactForecastRow(row,responseScore));
+    performanceMetrics.compactMs+=now()-compactStarted;
     performanceMetrics.rowsReturned+=dailyResults[day].length;
     if(!dailyResults[day].length)delete dailyResults[day];
   }
   performanceMetrics.shards=storedRows.length;
   const firstPayload=storedRows[0].payload||{};
-  return {ok:firstPayload.ok!==false,version:env.APP_VERSION||firstPayload.version||'14.1.0b',generatedAt,
+  return {ok:firstPayload.ok!==false,version:env.APP_VERSION||firstPayload.version||'14.1.0c',generatedAt,
     activeDate:firstPayload.activeDate||Object.keys(dailyResults).sort()[0]||null,dailyResults,
-    sourceStatus,meta:{...(payloadMeta||{}),performance:performanceMetrics},activity:requested,
+    sourceStatus,meta:responseMeta(payloadMeta,performanceMetrics),activity:requested,
     rankingEngine:'cloud-v5-edge-cache-coalescing',resultLimitPerDay:FORECAST_ROWS_PER_DAY};
 }
 function forecastResponse(result,cacheState,coalesced){
@@ -321,7 +344,7 @@ function forecastResponse(result,cacheState,coalesced){
   return new Response(result.body,{status:result.status,headers});
 }
 async function buildForecastResult(env,normalized,c,totalStarted){
-  const performanceMetrics={cache:'miss',coalesced:false,headQueryMs:0,snapshotQueryMs:0,responseTextMs:0,parseMs:0,mergeMs:0,filterMs:0,sortMs:0,sliceMs:0,serializationMs:0,totalMs:0,shards:0,rowsRead:0,rowsMatched:0,rowsReturned:0};
+  const performanceMetrics={cache:'miss',coalesced:false,headQueryMs:0,snapshotQueryMs:0,responseTextMs:0,parseMs:0,mergeMs:0,filterMs:0,sortMs:0,sliceMs:0,compactMs:0,serializationMs:0,totalMs:0,supabaseBytes:0,responseBytes:0,fieldsPerRowApprox:FORECAST_ROW_FIELDS.length+1,shards:0,rowsRead:0,rowsMatched:0,rowsReturned:0};
   const data=await latestSnapshot(env,normalized,performanceMetrics);
   const status=data?200:404;
   const payload=data||{ok:false,error:'Ingen molnprognos sparad ännu'};
@@ -331,7 +354,15 @@ async function buildForecastResult(env,normalized,c,totalStarted){
   performanceMetrics.totalMs=now()-totalStarted;
   body=body.replace('"serializationMs":0',`"serializationMs":${performanceMetrics.serializationMs.toFixed(3)}`)
     .replace('"totalMs":0',`"totalMs":${performanceMetrics.totalMs.toFixed(3)}`);
-  return {body,status,headers:{...JSON_HEADERS,...c,'cache-control':status===200?'public, max-age=300':'no-store'}};
+  if(status===200){
+    for(let attempt=0;attempt<2;attempt++){
+      performanceMetrics.responseBytes=body.length;
+      body=body.replace(/"responseBytes":\d+/,`"responseBytes":${performanceMetrics.responseBytes}`);
+    }
+  }
+  return {body,status,headers:{...JSON_HEADERS,...c,'cache-control':status===200?'public, max-age=300':'no-store',
+    'X-Vaderkompassen-Rows-Read':String(performanceMetrics.rowsRead),'X-Vaderkompassen-Rows-Returned':String(performanceMetrics.rowsReturned),
+    'X-Vaderkompassen-Response-Bytes':String(performanceMetrics.responseBytes)}};
 }
 async function forecast(req,env,ctx,url,c){
   const totalStarted=now(),normalized=normalizeForecastRequest(url);

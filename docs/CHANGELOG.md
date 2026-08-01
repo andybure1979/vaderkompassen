@@ -1,5 +1,18 @@
 # Ändringslogg
 
+## 14.1.0c
+
+- Begränsar regionala Supabase-svar till redan använda `payload,source_status`.
+- Bygger forecast-rader från en uttrycklig allowlist verifierad mot hela frontendens rendering och specialkategorier.
+- Skickar endast vald aktivitets `serverScore` i stället för hela `serverScores`.
+- Behåller frontendstöd för äldre svar med `serverScores` och lokalt beräknade resultat.
+- Dekorerar varje rad med poäng en gång, sorterar, begränsar till 75 och kompakterar först därefter.
+- Utelämnar saknade valfria fält men bevarar giltiga `0`, `false` och tomma strängar.
+- Begränsar response-meta till ortantal och prestandamätning; `sourceStatus` tas endast från första användbara shard.
+- Mäter ungefärliga teckenmängder som `supabaseBytes` och `responseBytes` samt tid för kompaktering.
+- Behåller Cache API, request coalescing, snapshotformat, poängalgoritmer och rankinglogik.
+- Ingen Supabase-migration krävs.
+
 ## 14.1.0b
 
 - Bygger frontendens forecast-nyckel med stabil parameterordning, trimning, unika värden och svensk sortering.

@@ -9,6 +9,13 @@ test("bygger stabil request key med trimning, unika värden och svensk sortering
   assert.equal(a,"https://worker.test/v1/forecast?activity=fishing&regions=Mellansverige%2CS%C3%B6dra+Sverige&areas=Sk%C3%A5ne%2CSm%C3%A5land");
 });
 
+test("läser kompakt score och stöder äldre serverScores",()=>{
+  assert.equal(cloudRequests.getRowScore({serverScore:84,score:12,serverScores:{fishing:3}},"fishing"),84);
+  assert.equal(cloudRequests.getRowScore({score:75,serverScores:{hiking:4}},"hiking"),75);
+  assert.equal(cloudRequests.getRowScore({serverScores:{surf:63}},"surf"),63);
+  assert.equal(cloudRequests.getRowScore({},"ski",()=>41),41);
+});
+
 test("återanvänder ett pågående Promise för identisk URL",async()=>{
   const manager=cloudRequests.createManager();let calls=0;
   const task=async()=>{calls++;await new Promise(resolve=>setTimeout(resolve,5));return "ok"};

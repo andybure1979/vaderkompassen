@@ -12,6 +12,13 @@
     if(normalizedAreas.length)params.set("areas",normalizedAreas.join(","));
     return `${String(baseUrl).replace(/\/$/,"")}/v1/forecast?${params}`;
   }
+  function getRowScore(row,activity,fallback){
+    if(Number.isFinite(row?.serverScore))return row.serverScore;
+    if(Number.isFinite(row?.score))return row.score;
+    const prepared=row?.serverScores?.[activity];
+    if(Number.isFinite(prepared))return prepared;
+    return typeof fallback==="function"?fallback(row,activity):null;
+  }
   function createManager({onEvent=()=>{}}={}){
     let active=null;
     function run(key,task){
@@ -30,7 +37,7 @@
     function abort(){active?.controller.abort();active=null;}
     return {run,abort};
   }
-  const api={createManager,createRequestKey};
+  const api={createManager,createRequestKey,getRowScore};
   root.VK_CLOUD_REQUESTS=api;
   if(typeof module!=="undefined"&&module.exports)module.exports=api;
 })(typeof globalThis!=="undefined"?globalThis:this);
