@@ -882,7 +882,7 @@ async function mapWithConcurrency(items,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
   return results;
 }
-const diagnostics={version:"14.0.10",mode:"checking",lastLoad:null,sources:[]};
+const diagnostics={version:"14.0.11",mode:"checking",lastLoad:null,sources:[]};
 function setDataMode(mode,detail=""){
   diagnostics.mode=mode;
   const badge=$("dataModeBadge");
@@ -1422,7 +1422,7 @@ function specialMetricHtml(r){
   }
   return "";
 }
-function winnerMetricCards(r,limit=12){
+function activityMetricItems(r,limit=12){
   const cards=[];
   const add=(icon,value,label,detail="",valid=true)=>{if(valid)cards.push({icon,value,label,detail})};
   const dir=Number.isFinite(r.windDirection)?`${compassDirection(r.windDirection)} ${Math.round(r.windDirection)}°`:"";
@@ -1476,7 +1476,13 @@ function winnerMetricCards(r,limit=12){
     add("☔",`${fmt(r.risk,0)} %`,"regnrisk");add("💨",`${fmt(r.wind)} m/s`,"vind",dir);
     add("🎯",`${fmt(r.confidence,0)} %`,"säkerhet");
   }
-  return cards.slice(0,limit).map(({icon,value,label,detail})=>`<article><span>${icon}</span><strong>${value}</strong><small>${label}</small>${detail?`<em>${detail}</em>`:""}</article>`).join("");
+  return cards.slice(0,limit);
+}
+function winnerMetricCards(r,limit=12){
+  return activityMetricItems(r,limit).map(({icon,value,label,detail})=>`<article><span>${icon}</span><strong>${value}</strong><small>${label}</small>${detail?`<em>${detail}</em>`:""}</article>`).join("");
+}
+function rankingMetricHtml(r,limit=12){
+  return activityMetricItems(r,limit).map(({icon,value,label,detail})=>`<span title="${label}">${icon} ${value}${detail?` · ${detail}`:""}</span>`).join("");
 }
 function winnerDetailsHtml(r){
   const rows=[];
@@ -1660,7 +1666,7 @@ function renderDay(){
     card.querySelector(".rank-number").textContent=i+1;
     card.querySelector("h3").textContent=placeLabel(r);
     card.querySelector("p").textContent=`${r.area} · ${r.region} · ${qualityIcon(r.score)} ${activitySummary(r.score)}`;
-    card.querySelector(".mini-metrics").innerHTML=`<span>🌡️ ${fmt(r.temp,0)}°</span><span>🌧️ ${fmt(r.rain)} mm</span><span>☀️ ${fmt(r.sun)} h</span><span>💨 ${fmt(r.wind)} m/s</span>${specialMetricHtml(r)}<span>🎯 ${r.confidence}%</span>`;
+    card.querySelector(".mini-metrics").innerHTML=rankingMetricHtml(r);
     card.querySelector(".rank-score").textContent=r.score;
     const rankCard=card.querySelector(".rank-card");
     rankCard.tabIndex=0;rankCard.setAttribute("role","button");rankCard.setAttribute("aria-label",`Visa detaljer för ${placeLabel(r)}`);
@@ -1753,7 +1759,7 @@ $("settingsForm").addEventListener("submit",event=>{
   saveSettingsFromDialog();
 });
 if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
-  const reg=await navigator.serviceWorker.register(`sw.js?v=14.0.10`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=14.0.11`);
   reg.update();
   reg.addEventListener("updatefound",()=>{const worker=reg.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller){$("updateBanner").classList.remove("hidden");}})});
   navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload());

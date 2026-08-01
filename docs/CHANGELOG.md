@@ -1,5 +1,14 @@
 # Ändringslogg
 
+## 14.0.11
+
+- Vinnarkortet och topplistan använder samma aktivitetsanpassade faktalista.
+- Samma kategori visar samma prognosvärden i båda vyerna.
+- Vinnarkortet behåller stora boxar och topplistan behåller kompakt V13-stil.
+- Uppdaterar frontendresurser och service-worker-cache till v14.0.11.
+- Poängmodell och ranking är oförändrade.
+- Ingen Supabase-migration krävs.
+
 ## 14.0.10
 
 - Behåller samtliga tio aktivitetskategorier och deras befintliga färgprofiler.
