@@ -18,10 +18,10 @@
   const subscriptionProvider = window.VK_SUBSCRIPTIONS?.createProvider(cfg, client);
   const entitlementProvider=()=>window.VK_SUBSCRIPTIONS?.createProvider({subscriptionMode:entitlement?.provider==="apple"?"apple_native":entitlement?.provider==="google"?"google_native":cfg.subscriptionMode},client);
   const PREMIUM_FEATURES = Object.freeze({
-    adFree: "Reklamfri upplevelse",
-    extendedActivities: "Fler aktiviteter",
+    forecastDays: "Alla prognosdagar",
+    multiRegion: "Jämför flera regioner",
     cloudSync: "Molnsynk mellan enheter",
-    personalRecommendations: "Personliga rekommendationer"
+    adFree: "Reklamfritt"
   });
 
   const ROLE_LABELS = {
@@ -91,7 +91,7 @@
   }
 
   function hasPremiumAccess(p = profile) {
-    if (entitlement)return Boolean(entitlement.is_premium);
+    if (entitlement)return Boolean(entitlement.is_premium||entitlement.is_trial||["premium","vip","admin"].includes(entitlement.role));
     return ["trial", "premium", "vip", "admin"].includes(effectiveRole(p));
   }
 
@@ -105,7 +105,7 @@
     if ($("premiumRequestedFeature")) {
       $("premiumRequestedFeature").textContent = requested
         ? `${requested} ingår i Premium.`
-        : "Premium ger dig hela Väderkompassen.";
+        : "Se skillnaden mellan Free och Premium.";
     }
     renderPremiumInfo();
     closeDialog("profileDialog");
@@ -241,6 +241,7 @@
     }
     renderAccount();
     window.dispatchEvent(new CustomEvent("vk:access-changed", { detail: getAccessState() }));
+    dispatchCloudSettings();
     return profile;
   }
 
@@ -290,7 +291,7 @@
         : role==="vip"?"Kostnadsfri Premiumåtkomst":role==="admin"?"Full Premiumåtkomst":entitlement?.subscription_status==="expired"?"Din Premiumperiod har avslutats.":"Du använder gratisversionen";
     $("profileAccessText").textContent = accountStatus!=="active" ? "Åtkomsten är inte aktiv" : role === "trial"
       ? `Full Premium i ${trialDays} dag${trialDays === 1 ? "" : "ar"}`
-      : hasPremiumAccess() ? "Full tillgång utan reklam" : "Grundläggande tillgång";
+      : hasPremiumAccess() ? "Alla dagar, flera regioner, molnsynk och reklamfritt" : "Idag, en region och lokala inställningar";
     const mayStartTrial = cfg.subscriptionMode==="manual_test"&&role === "free" && (entitlement?entitlement.can_start_trial:!profile?.trial_used_at);
     $("upgradePremium").classList.toggle("hidden", accountStatus!=="active");
     $("upgradePremium").textContent = mayStartTrial ? "Prova Premium gratis i 3 dagar" : "Visa Premiumstatus";
@@ -324,6 +325,7 @@
 
   async function saveSettings(appSettings) {
     if (!client || !session?.user || !appSettings || typeof appSettings !== "object") return false;
+    if (!hasPremiumAccess()) return false;
     const { data, error } = await client.from("profiles")
       .update({ app_settings: appSettings, settings_updated_at: new Date().toISOString() })
       .eq("id", session.user.id)
@@ -340,7 +342,7 @@
   }
 
   function dispatchCloudSettings() {
-    if (!session?.user || cloudSettingsRequested) return;
+    if (!session?.user || !hasPremiumAccess() || cloudSettingsRequested) return;
     cloudSettingsRequested = true;
     const cloud = profile?.app_settings;
     if (cloud && typeof cloud === "object" && Object.keys(cloud).length) {
@@ -420,6 +422,7 @@
     bind();
     if (!client) {
       renderAccount();
+      window.dispatchEvent(new CustomEvent("vk:access-changed", { detail: getAccessState() }));
       return;
     }
     const { data } = await client.auth.getSession();

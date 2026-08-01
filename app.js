@@ -192,6 +192,25 @@ window.addEventListener("vk:cloud-settings-empty",()=>{
 
 let dailyResults={}, cloudRankings={}, activeDate=null, map=null, markerLayer=null;
 const $=id=>document.getElementById(id);
+let accessState=window.VK_AUTH?.getAccessState?.()||{role:"free",premium:false,admin:false};
+const hasPremiumUiAccess=()=>Boolean(accessState?.premium);
+function requestPremium(feature){
+  if($("settingsDialog")?.open)$("settingsDialog").close();
+  window.VK_AUTH?.openPremiumInfo?.(feature);
+}
+function renderAccessUi(){
+  const premium=hasPremiumUiAccess();
+  $("premiumWeekLock")?.classList.toggle("hidden",premium||!Object.keys(dailyResults).length);
+  $("cloudSyncHint")?.classList.toggle("hidden",premium);
+  $("mainBottomBanner")?.classList.toggle("hidden",premium);
+}
+function singleRegionSettings(candidate){
+  const normalized=normalizeSettings(candidate);
+  if(hasPremiumUiAccess()||normalized.regions.length<=1)return normalized;
+  const region=normalized.regions[0];
+  const areas=normalized.areas.filter(area=>REGION_AREAS[region]?.includes(area));
+  return {...normalized,regions:[region],areas:areas.length?areas:[...REGION_AREAS[region]]};
+}
 const clamp=n=>Math.max(0,Math.min(100,n));
 const mean=a=>{const b=a.filter(Number.isFinite);return b.length?b.reduce((x,y)=>x+y,0)/b.length:null};
 const std=a=>{const b=a.filter(Number.isFinite);if(b.length<2)return 0;const m=mean(b);return Math.sqrt(b.reduce((s,x)=>s+(x-m)**2,0)/(b.length-1))};
@@ -845,10 +864,20 @@ function renderRegionChoices(){
       const l=document.createElement("label");l.className="check landscape-check";
       const i=document.createElement("input");i.type="checkbox";i.value=area;i.dataset.kind="area";i.dataset.region=region;
       i.checked=settings.areas.includes(area);
-      i.addEventListener("change",()=>syncRegionGroupState(group));
+      i.addEventListener("change",()=>{
+        if(i.checked&&!hasPremiumUiAccess()){
+          const alreadySelected=[...box.querySelectorAll('input[data-kind="area"]:checked')].some(other=>other!==i&&other.dataset.region!==region);
+          if(alreadySelected){i.checked=false;syncRegionGroupState(group);requestPremium("multiRegion");return;}
+        }
+        syncRegionGroupState(group);
+      });
       l.append(i,document.createTextNode(" "+area));children.appendChild(l);
     });
     ri.addEventListener("change",()=>{
+      if(ri.checked&&!hasPremiumUiAccess()){
+        const otherSelected=[...box.querySelectorAll('input[data-kind="area"]:checked')].some(area=>area.dataset.region!==region);
+        if(otherSelected){ri.checked=false;ri.indeterminate=false;requestPremium("multiRegion");return;}
+      }
       ri.indeterminate=false;
       children.querySelectorAll("input").forEach(i=>i.checked=ri.checked);
     });
@@ -857,6 +886,7 @@ function renderRegionChoices(){
   });
 }
 function selectCountry(country){
+  if(!hasPremiumUiAccess()){requestPremium("multiRegion");return;}
   const target=new Set(COUNTRY_REGIONS[country]||[]);
   document.querySelectorAll("#regionChoices .filter-region-group").forEach(group=>{
     const regionInput=group.querySelector('input[data-kind="region"]');
@@ -899,7 +929,7 @@ async function mapWithConcurrency(items,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
   return results;
 }
-const diagnostics={version:"14.3.4",mode:"checking",lastLoad:null,sources:[],forecastRequests:[]};
+const diagnostics={version:"14.3.5",mode:"checking",lastLoad:null,sources:[],forecastRequests:[]};
 function setDataMode(mode,detail=""){
   diagnostics.mode=mode;
   const badge=$("dataModeBadge");
@@ -1424,7 +1454,10 @@ function rankedList(){
 }
 function renderTabs(){
   const nav=$("dayTabs");nav.innerHTML="";
-  Object.keys(dailyResults).sort().forEach((day,i)=>{
+  const availableDays=Object.keys(dailyResults).sort();
+  const visibleDays=hasPremiumUiAccess()?availableDays:availableDays.slice(0,1);
+  if(!hasPremiumUiAccess()&&visibleDays.length&&activeDate!==visibleDays[0])activeDate=visibleDays[0];
+  visibleDays.forEach((day,i)=>{
     const d=new Date(day+"T12:00:00"),b=document.createElement("button");
     b.type="button";
     b.innerHTML=`${i===0?"Idag":d.toLocaleDateString("sv-SE",{weekday:"short"})}<small>${d.toLocaleDateString("sv-SE",{day:"numeric",month:"numeric"})}</small>`;
@@ -1438,6 +1471,7 @@ function renderTabs(){
     };
     nav.appendChild(b);
   });
+  renderAccessUi();
 }
 function specialMetricHtml(r){
   if(["coast","surf","boat","fishing"].includes(settings.activity)){
@@ -1701,6 +1735,14 @@ function renderDay(){
     navigationButton.onclick=event=>{event.stopPropagation();openNavigationChooser(r,event.currentTarget)};
     navigationButton.onkeydown=event=>event.stopPropagation();
     ranking.appendChild(card);
+    if(!hasPremiumUiAccess()&&i===2){
+      const ad=document.createElement("aside");
+      ad.className="ad-placeholder ad-native";
+      ad.dataset.placement="ranking_inline_native";
+      ad.setAttribute("aria-label","Annons");
+      ad.textContent="Annons";
+      ranking.appendChild(ad);
+    }
   });
 }
 function showStatus(t){$("status").textContent=t;$("statusCard").classList.remove("hidden","error");$("statusCard").querySelector(".spinner").style.display=""}
@@ -1744,7 +1786,7 @@ $("settingsBtn").onclick=()=>{syncSettings();$("settingsDialog").showModal()};
 $("settingsClose").onclick=()=>$("settingsDialog").close();
 $("tempTarget").oninput=e=>$("tempOut").textContent=`${e.target.value} °C`;
 $("sourceMode").onchange=renderSourceChoices;
-$("selectAllRegions").onclick=()=>{document.querySelectorAll("#regionChoices input").forEach(x=>{x.checked=true;x.indeterminate=false})};
+$("selectAllRegions").onclick=()=>{if(!hasPremiumUiAccess())return requestPremium("multiRegion");document.querySelectorAll("#regionChoices input").forEach(x=>{x.checked=true;x.indeterminate=false})};
 $("clearRegions").onclick=()=>{document.querySelectorAll("#regionChoices input").forEach(x=>{x.checked=false;x.indeterminate=false})};
 $("filterSweden").onclick=()=>selectCountry("Sverige");
 $("filterDenmark").onclick=()=>selectCountry("Danmark");
@@ -1772,6 +1814,10 @@ function saveSettingsFromDialog(){
     return false;
   }
   const selectedRegions=[...new Set(selectedAreaInputs.map(x=>x.dataset.region).filter(region=>REGIONS.includes(region)))];
+  if(!hasPremiumUiAccess()&&selectedRegions.length>1){
+    requestPremium("multiRegion");
+    return false;
+  }
   const nextSettings={...settings,temp:Number($("tempTarget").value),rain:Number($("rainWeight").value),
     sun:Number($("sunWeight").value),wind:Number($("windWeight").value),sourceMode,sources,
     regions:selectedRegions,areas:selectedAreas};
@@ -1813,6 +1859,20 @@ $("settingsForm").addEventListener("submit",event=>{
   event.preventDefault();
   saveSettingsFromDialog();
 });
+$("showPremiumWeek").onclick=()=>requestPremium("forecastDays");
+window.addEventListener("vk:access-changed",event=>{
+  accessState=event.detail||window.VK_AUTH?.getAccessState?.()||{role:"free",premium:false,admin:false};
+  let settingsChanged=false;
+  if(!hasPremiumUiAccess()){
+    const restricted=singleRegionSettings(settings);
+    settingsChanged=JSON.stringify(restricted)!==JSON.stringify(settings);
+    if(settingsChanged)persistSettings(restricted,{cloud:false});
+  }
+  renderAccessUi();
+  renderTabs();
+  if(settingsChanged)load({background:false});
+  else if(Object.keys(dailyResults).length)renderDay();
+});
 if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
   // Registrera listenern först: en redan nedladdad worker kan annars hinna ta
   // kontroll och den nya appversionen blir synlig först vid nästa öppning.
@@ -1822,7 +1882,7 @@ if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
     reloading=true;
     location.reload();
   });
-  const reg=await navigator.serviceWorker.register(`sw.js?v=14.3.4`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=14.3.5`);
   reg.addEventListener("updatefound",()=>{
     const worker=reg.installing;
     worker?.addEventListener("statechange",()=>{
@@ -1833,6 +1893,7 @@ if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
 });
 $("updateNow").onclick=()=>navigator.serviceWorker.getRegistration().then(r=>r?.waiting?.postMessage({type:"SKIP_WAITING"}));
 renderActivities();
+renderAccessUi();
 setDataMode("checking");
 if(!restoreWeatherCache())load();
 document.addEventListener("visibilitychange",()=>{

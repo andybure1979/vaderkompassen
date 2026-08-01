@@ -1,5 +1,15 @@
 # Ändringslogg
 
+## 14.3.5 – Enkel Free/Premium
+
+- Free visar endast dagens prognos och ett låst kort för resten av veckan.
+- Free kan välja en region åt gången och använder endast lokala inställningar.
+- Trial, Premium, VIP och Admin får alla prognosdagar, flera regioner, molnsynk och en reklamfri vy.
+- Förbereder de lokala reklamplatserna `ranking_inline_native` och `main_bottom_banner` för Free utan extern reklamkod.
+- Premiumdialogen jämför endast de fyra tydliga skillnaderna mellan Free och Premium.
+- Alla kategorier, prognosfält, poängmodeller, rankingar, karta, fakta, detaljer, navigation och vädertexter är gemensamma och oförändrade.
+- Ingen Supabase-migration krävs.
+
 ## 14.3.4 – Vattentemperatur i aktivitetsfakta
 
 - Visar vattentemperatur för Sol och bad, Kustväder, Surfväder och Fiskeväder när data finns.
