@@ -1,5 +1,14 @@
 # Ändringslogg
 
+## 14.0.14
+
+- “Navigera till” öppnar en gemensam valdialog i stället för en karttjänst direkt.
+- Google Maps och Apple Kartor öppnas med validerade latitud- och longitudvärden.
+- Topo GPS visas inaktivt eftersom ett dokumenterat koordinatformat för tjänstens universal link ännu saknas.
+- Dialogen kan stängas med kryss, Esc och tryck utanför samt återställer fokus till öppningsknappen.
+- Vinnarkort, detaljvy och kartpopup använder samma navigeringsflöde.
+- Ingen Supabase-migration krävs.
+
 ## 14.0.13
 
 - Ny normaliserad fiskepoäng med vindstyrka, vindriktning, nederbörd, moln/sol och lufttemperatur.

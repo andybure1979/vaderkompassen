@@ -1,3 +1,9 @@
+## v14.0.14 – Välj karttjänst vid navigering
+
+“Navigera till” öppnar nu en gemensam, tillgänglig valdialog för Google Maps, Apple Kartor och Topo GPS. Google och Apple får destinationens validerade koordinater. Topo GPS-alternativet visas inaktivt tills tjänstens koordinatformat för universal links har kunnat verifieras i officiell dokumentation.
+
+Dialogen används för vinnaren, detaljvyn och kartans popup, fungerar med tangentbord och återställer fokus när den stängs. Ingen navigering startar innan användaren väljer tjänst. Ingen Supabase-migration krävs.
+
 ## v14.0.13 – Förbättrad modell för Fiskeväder
 
 Fiskeväder använder en gemensam, datanormaliserad poängmodell i frontend och Cloudflare Worker. Modellen bedömer vindstyrka, vindriktning, nederbörd, moln/sol och lufttemperatur samt faktisk vattentemperatur och våghöjd när dessa finns. Saknad marin data ger inget konstgjort avdrag, och inlandsplatser behålls tillsammans med kustplatser.

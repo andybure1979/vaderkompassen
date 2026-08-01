@@ -899,7 +899,7 @@ async function mapWithConcurrency(items,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
   return results;
 }
-const diagnostics={version:"14.0.13",mode:"checking",lastLoad:null,sources:[]};
+const diagnostics={version:"14.0.14",mode:"checking",lastLoad:null,sources:[]};
 function setDataMode(mode,detail=""){
   diagnostics.mode=mode;
   const badge=$("dataModeBadge");
@@ -1554,7 +1554,7 @@ function ensureMap(){
 }
 function mapPopupHtml(r,position){
   const activity=ACTIVITIES[settings.activity];
-  return `<article class="map-popup-card"><div class="map-popup-top"><span class="map-popup-rank">${position}</span><div><strong>${placeLabel(r)}</strong><small>${r.area} · ${r.region}</small></div><b class="map-popup-score ${scoreClass(r.score)}">${r.score}</b></div><p>${activitySummary(r.score)} för ${activity.label.toLowerCase()}</p><div class="map-popup-metrics"><span>🌡️ <b>${fmt(r.temp,0)}°</b></span><span>💨 <b>${fmt(r.wind)} m/s</b></span>${settings.activity==="surf"?`<span>🌊 <b>${fmt(r.waveHeight)} m</b></span>`:`<span>☀️ <b>${fmt(r.sun)} h</b></span>`}</div><a href="https://maps.apple.com/?q=${encodeURIComponent(placeLabel(r))}&ll=${r.lat},${r.lon}" target="_blank" rel="noopener">Visa vägen →</a></article>`;
+  return `<article class="map-popup-card"><div class="map-popup-top"><span class="map-popup-rank">${position}</span><div><strong>${placeLabel(r)}</strong><small>${r.area} · ${r.region}</small></div><b class="map-popup-score ${scoreClass(r.score)}">${r.score}</b></div><p>${activitySummary(r.score)} för ${activity.label.toLowerCase()}</p><div class="map-popup-metrics"><span>🌡️ <b>${fmt(r.temp,0)}°</b></span><span>💨 <b>${fmt(r.wind)} m/s</b></span>${settings.activity==="surf"?`<span>🌊 <b>${fmt(r.waveHeight)} m</b></span>`:`<span>☀️ <b>${fmt(r.sun)} h</b></span>`}</div><button type="button" class="map-popup-navigation">Visa vägen →</button></article>`;
 }
 let mapViewSignature="";
 function currentMapSelectionSignature(){
@@ -1566,7 +1566,12 @@ function renderMap(list){
   list.slice(0,75).forEach((r,i)=>{
     const cls=scoreClass(r.score),icon=L.divIcon({className:"score-marker-wrap",html:`<div class="score-marker ${cls}${i===0?" winner":""}"><span>${r.score}</span></div>`,iconSize:[48,48],iconAnchor:[24,24],popupAnchor:[0,-23]});
     const m=L.marker([r.lat,r.lon],{icon,zIndexOffset:i===0?1000:Math.max(0,500-i)});
-    m.bindPopup(mapPopupHtml(r,i+1),{className:"vk-map-popup",maxWidth:290,minWidth:240,closeButton:true});m.addTo(markerLayer);
+    m.bindPopup(mapPopupHtml(r,i+1),{className:"vk-map-popup",maxWidth:290,minWidth:240,closeButton:true});
+    m.on("popupopen",event=>{
+      const button=event.popup.getElement()?.querySelector(".map-popup-navigation");
+      if(button)button.onclick=()=>openNavigationChooser(r,button);
+    });
+    m.addTo(markerLayer);
   });
   const selectionSignature=currentMapSelectionSignature();
   if(list.length&&mapViewSignature!==selectionSignature){
@@ -1641,7 +1646,6 @@ function renderDetail(){
   $("detailScore").textContent=r.score;
   $("detailMetrics").innerHTML=winnerMetricCards(r);
   $("detailData").innerHTML=winnerDetailsHtml(r);
-  $("detailMapLink").href=`https://maps.apple.com/?q=${encodeURIComponent(placeLabel(r))}&ll=${r.lat},${r.lon}`;
   $("detailPage").dataset.score=r.score;
 }
 function renderDay(){
@@ -1659,7 +1663,6 @@ function renderDay(){
   $("bestReason").textContent=recommendationIntro(best);
   $("bestScore").textContent=best.score;$("hero").dataset.score=best.score;
   $("metrics").innerHTML=winnerMetricCards(best);
-  $("mapLink").href=`https://maps.apple.com/?q=${encodeURIComponent(placeLabel(best))}&ll=${best.lat},${best.lon}`;
   ["hero","metrics","mapLink"].forEach(id=>$(id).classList.remove("hidden"));
   const hero=$("hero");
   hero.tabIndex=0;
@@ -1677,6 +1680,10 @@ function renderDay(){
     const rankCard=card.querySelector(".rank-card");
     rankCard.tabIndex=0;rankCard.setAttribute("role","button");rankCard.setAttribute("aria-label",`Visa detaljer för ${placeLabel(r)}`);
     rankCard.onclick=()=>openDetail(r);rankCard.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openDetail(r)}};
+    const navigationButton=card.querySelector(".rank-navigation");
+    navigationButton.setAttribute("aria-label",`Navigera till ${placeLabel(r)}`);
+    navigationButton.onclick=event=>{event.stopPropagation();openNavigationChooser(r,event.currentTarget)};
+    navigationButton.onkeydown=event=>event.stopPropagation();
     ranking.appendChild(card);
   });
 }
@@ -1688,6 +1695,32 @@ function syncSettings(){
   $("sourceMode").value=settings.sourceMode;renderRegionChoices();renderSourceChoices();
 }
 $("showMapBtn").onclick=toggleMap;
+let navigationPlace=null,navigationTrigger=null,navigationNoticeTimer=0;
+function navigationTarget(r){return r?{lat:r.lat,lon:r.lon,label:placeLabel(r)}:null;}
+function showNavigationNotice(message){
+  const notice=$("navigationNotice");notice.textContent=message;notice.classList.remove("hidden");
+  clearTimeout(navigationNoticeTimer);navigationNoticeTimer=setTimeout(()=>notice.classList.add("hidden"),4000);
+}
+function closeNavigationChooser(){if($("navigationDialog").open)$("navigationDialog").close();}
+function openNavigationChooser(place,triggerElement){
+  const target=navigationTarget(place);
+  if(!globalThis.VK_NAVIGATION?.coordinates(target)){showNavigationNotice("Koordinater saknas för den här platsen.");return false;}
+  navigationPlace=target;navigationTrigger=triggerElement||document.activeElement;
+  $("navigationTitle").textContent=`Navigera till ${target.label}`;
+  $("navigationDialog").showModal();$("navigationClose").focus();return true;
+}
+function openNavigationService(builder){
+  const url=globalThis.VK_NAVIGATION?.[builder]?.(navigationPlace);if(!url)return;
+  window.open(url,"_blank","noopener,noreferrer");closeNavigationChooser();
+}
+$("navigationClose").onclick=closeNavigationChooser;
+$("navigationGoogle").onclick=()=>openNavigationService("buildGoogleMapsUrl");
+$("navigationApple").onclick=()=>openNavigationService("buildAppleMapsUrl");
+$("navigationDialog").addEventListener("pointerdown",event=>{if(event.target===$("navigationDialog"))closeNavigationChooser()});
+$("navigationDialog").addEventListener("keydown",event=>{if(event.key==="Escape"){event.preventDefault();closeNavigationChooser()}});
+$("navigationDialog").addEventListener("close",()=>{const trigger=navigationTrigger;navigationPlace=null;navigationTrigger=null;trigger?.focus?.()});
+$("mapLink").onclick=event=>openNavigationChooser(rankedList()[0],event.currentTarget);
+$("detailMapLink").onclick=event=>openNavigationChooser(detailRow(),event.currentTarget);
 $("hero").onclick=()=>{const r=rankedList()[0];if(r&&!detailPlace)openDetail(r)};
 $("hero").onkeydown=e=>{if((e.key==="Enter"||e.key===" ")&&!detailPlace){e.preventDefault();const r=rankedList()[0];if(r)openDetail(r)}};
 $("detailBack").onclick=closeDetail;
@@ -1765,7 +1798,7 @@ $("settingsForm").addEventListener("submit",event=>{
   saveSettingsFromDialog();
 });
 if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
-  const reg=await navigator.serviceWorker.register(`sw.js?v=14.0.13`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=14.0.14`);
   reg.update();
   reg.addEventListener("updatefound",()=>{const worker=reg.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller){$("updateBanner").classList.remove("hidden");}})});
   navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload());
