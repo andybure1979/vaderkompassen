@@ -356,36 +356,7 @@ function qualityIcon(score){
   return "👎";
 }
 function decisionReasons(r){
-  const reasons=[];
-  const add=(icon,label,value)=>reasons.push({icon,label,value});
-  const a=settings.activity;
-  if(a==="cinema"||a==="indoorPool"){
-    if(r.rain>=5)add("🌧️","Mycket regn",`${fmt(r.rain)} mm`); else if(r.rain>=1)add("🌦️","Regnigt",`${fmt(r.rain)} mm`); else add("☁️","Uppehåll",`${fmt(r.rain)} mm`);
-    if(r.wind>=8)add("💨","Blåsigt",`${fmt(r.wind)} m/s`); else add("🍃","Vind",`${fmt(r.wind)} m/s`);
-    if(r.sun<=3)add("☁️","Lite sol",`${fmt(r.sun)} h`); else add("☀️","Sol",`${fmt(r.sun)} h`);
-    add("🌡️","Temperatur",`${fmt(r.temp,0)}°`);
-  }else if(a==="surf"){
-    if(Number.isFinite(r.waveHeight))add("🌊","Vågor",`${fmt(r.waveHeight)} m`);
-    if(Number.isFinite(r.wavePeriod))add("↔️","Vågperiod",`${fmt(r.wavePeriod,0)} s`);
-    add("💨","Vind",`${fmt(r.wind)} m/s ${Number.isFinite(r.windDirection)?compassDirection(r.windDirection):""}`.trim());
-    if(Number.isFinite(r.windDirection))add("🏖️","Frånland",`${Math.round(surfOffshoreScore(r))}/100`);
-  }else if(a==="ski"){
-    if(Number.isFinite(r.snowDepth))add("❄️","Snödjup",`${fmt(r.snowDepth,0)} cm`);
-    if(Number.isFinite(r.newSnow))add("🌨️","Nysnö",`${fmt(r.newSnow)} cm`);
-    add("🌡️","Temperatur",`${fmt(r.temp,0)}°`);
-    add("💨","Vind",`${fmt(r.wind)} m/s`);
-  }else if(["coast","boat","fishing"].includes(a)){
-    add("💨","Vind",`${fmt(r.wind)} m/s`);
-    if(Number.isFinite(r.waveHeight))add("🌊","Vågor",`${fmt(r.waveHeight)} m`);
-    add("🌧️","Regn",`${fmt(r.rain)} mm`);
-    add("☀️","Sol",`${fmt(r.sun)} h`);
-  }else{
-    add("🌡️","Temperatur",`${fmt(r.temp,0)}°`);
-    add("🌧️","Regn",`${fmt(r.rain)} mm`);
-    add("☀️","Sol",`${fmt(r.sun)} h`);
-    add("💨","Vind",`${fmt(r.wind)} m/s`);
-  }
-  return reasons.slice(0,4);
+  return selectedFactorAssessments(r).slice(0,4).map(item=>factorReason(r,item));
 }
 function reasonsHtml(r,compact=false){
   const reasons=decisionReasons(r);
@@ -399,41 +370,21 @@ function textHash(value){
   }
   return h>>>0;
 }
-function textPick(options,key,salt=""){
-  if(!options?.length)return "";
-  return options[textHash(`${key}|${salt}`)%options.length];
-}
 function recommendationTextKey(r){
-  return `${r.day}|${placeLabel(r)}|${settings.activity}|${Math.round(r.score)}`;
+  return `${placeLabel(r)}|${r.day}|${settings.activity}`;
 }
-function dominantWeatherFactor(r){
-  const a=settings.activity;
-  const factors=[];
-  const push=(id,strength)=>factors.push({id,strength:Number.isFinite(strength)?strength:0});
-  if(a==="cinema"||a==="indoorPool"){
-    push("rain",clamp((r.rain||0)*11));
-    push("wind",clamp(((r.wind||0)-3)*10));
-    push("cloud",clamp(100-(r.sun||0)*7));
-    push("temperature",clamp(Math.abs((r.temp||0)-20)*7));
-  }else if(a==="surf"){
-    push("waves",clamp((r.waveHeight||0)*42));
-    push("period",clamp(((r.wavePeriod||0)-4)*13));
-    push("wind",clamp(100-Math.abs((r.wind||0)-7)*11));
-    push("direction",Number.isFinite(r.windDirection)?surfOffshoreScore(r):0);
-  }else if(a==="ski"){
-    push("snow",clamp((r.snowDepth||0)*1.4));
-    push("freshSnow",clamp((r.newSnow||0)*7));
-    push("temperature",bell(r.temp,-3,12));
-    push("wind",bell(r.wind,3,7));
-  }else{
-    push("temperature",bell(r.temp,settings.temp,14));
-    push("dry",clamp(100-(r.rain||0)*12));
-    push("sun",clamp((r.sun||0)*7));
-    push("wind",clamp(100-Math.max(0,(r.wind||0)-3)*10));
+function textPick(options,r,textType,used=null){
+  if(!options?.length)return "";
+  const key=recommendationTextKey(r),start=textHash(`${key}|${textType}`)%options.length;
+  for(let offset=0;offset<options.length;offset++){
+    const option=options[(start+offset)%options.length];
+    const text=typeof option==="function"?option(r):option;
+    if(!used?.has(text)){used?.add(text);return text}
   }
-  return factors.sort((x,y)=>y.strength-x.strength)[0]?.id||"balance";
+  const fallback=options[start],text=typeof fallback==="function"?fallback(r):fallback;
+  used?.add(text);return text;
 }
-const ACTIVITY_TEXT={
+const ACTIVITY_TEXT_LIBRARY={
   general:[
     "Vädret hjälper verkligen till idag.",
     "Här finns en ovanligt fin helhet för dagens planer.",
@@ -505,34 +456,34 @@ const ACTIVITY_TEXT={
     "Skidorna har goda skäl att följa med hit."
   ],
   cinema:[
-    "Bioduken lockar lite extra när vädret beter sig så här.",
-    "Rusk utanför gör biomörkret ovanligt inbjudande.",
+    "Bioduken lockar lite extra i dagens utomhusväder.",
+    "Dagens väder ger biomörkret ett litet försprång.",
     "Det här är en dag då popcorn känns som rätt utrustning.",
-    "Regn och gråväder gör bio till ett starkt alternativ.",
-    "Vädret ute gör det lätt att välja en varm biosalong."
+    "Bio är ett starkt alternativ när utepoängen ser ut så här.",
+    "Vädret ute gör en biosalong lätt att välja."
   ],
   indoorPool:[
-    "När vädret sviker ute känns badhuset som ett riktigt bra val.",
-    "Rusk utanför gör varmt vatten extra lockande.",
+    "Dagens utomhusväder ger badhuset ett tydligt försprång.",
+    "Bassängen ser ut att vinna över utomhusplanerna idag.",
     "Det här är en dag då bassängen vinner över utomhusplanerna.",
-    "Gråvädret ger ett utmärkt skäl att bada inne.",
-    "Badhuset känns ovanligt rätt när utevädret är så här."
+    "Badkläder under tak känns som en rimlig väderstrategi.",
+    "Badhuset känns ovanligt rätt med dagens utepoäng."
   ]
 };
-const FACTOR_TEXT={
+const WEATHER_TEXT_LIBRARY={
   temperature:[
-    "Temperaturen ligger nära det optimala.",
-    "Det är framför allt den behagliga temperaturen som lyfter platsen.",
-    "Dagens temperatur passar aktiviteten mycket väl.",
-    "Lagom värme ger platsen ett tydligt plus.",
-    "Temperaturen bör göra det lätt att vara ute länge."
+    r=>`Temperaturen på ${fmt(r.temp,0)}° väger tungt i bedömningen.`,
+    r=>`${fmt(r.temp,0)}° ligger bra till för den valda aktiviteten.`,
+    r=>`Dagens ${fmt(r.temp,0)}° är en av platsens tydligaste styrkor.`,
+    r=>`Temperaturläget på ${fmt(r.temp,0)}° lyfter helheten.`,
+    r=>`Det är främst temperaturen, ${fmt(r.temp,0)}°, som talar för platsen.`
   ],
   dry:[
-    "Uppehållsvädret är dagens tydligaste styrka.",
-    "Regnet ser ut att hålla sig undan.",
-    "Den låga nederbörden väger tungt i rekommendationen.",
-    "Torrt väder gör planeringen betydligt enklare.",
-    "Det mesta talar för en dag utan störande regn."
+    r=>`Den låga nederbörden på ${fmt(r.rain)} mm är en tydlig styrka.`,
+    r=>`${fmt(r.rain)} mm nederbörd ger platsen ett plus.`,
+    r=>`Den begränsade regnmängden väger tungt i rekommendationen.`,
+    r=>`Prognosens ${fmt(r.rain)} mm gör utomhusplanen enklare.`,
+    r=>`Det är framför allt den låga nederbörden som lyfter platsen.`
   ],
   sun:[
     "Solen blir ett av dagens stora plus.",
@@ -542,32 +493,32 @@ const FACTOR_TEXT={
     "Solen hjälper platsen högt upp i listan."
   ],
   wind:[
-    "Den lugna vinden är en viktig del av rekommendationen.",
-    "Vinden väntas inte störa dagens planer.",
-    "Svaga vindar ger platsen ett tydligt övertag.",
-    "Det lugna vindläget gör dagen extra behaglig.",
-    "Vinden håller sig på en användbar nivå."
+    r=>`Vinden på ${fmt(r.wind)} m/s passar aktiviteten väl.`,
+    r=>`${fmt(r.wind)} m/s ger platsen ett tydligt vindplus.`,
+    r=>`Vindläget är en viktig del av rekommendationen.`,
+    r=>`Det är främst vinden på ${fmt(r.wind)} m/s som lyfter helheten.`,
+    r=>`Prognosens vindhastighet väger positivt i bedömningen.`
   ],
   rain:[
-    "Regnet gör inomhusalternativet extra lockande.",
-    "Nederbörden är en stark anledning att söka sig in.",
-    "Regnet arbetar helt klart för dagens inomhusplan.",
-    "Blött ute betyder bättre läge för något under tak.",
-    "Dagens regn ger den här rekommendationen extra kraft."
+    r=>`${fmt(r.rain)} mm nederbörd ger inomhusalternativet medvind.`,
+    r=>`Regnmängden är en stark anledning att söka sig in.`,
+    r=>`Nederbörden arbetar ovanligt lojalt för dagens inomhusplan.`,
+    r=>`Prognosens ${fmt(r.rain)} mm gör något under tak mer lockande.`,
+    r=>`Dagens nederbörd ger inomhusrekommendationen extra kraft.`
   ],
   cloud:[
-    "Det grå vädret passar dagens inomhusidé perfekt.",
-    "Molnen gör det lättare att lämna utomhusplanerna.",
-    "Lite sol och mycket grått talar för ett inomhusval.",
-    "Det dämpade vädret gör platsen ovanligt lämplig.",
-    "Molntäcket hjälper skämtkategorin uppåt i listan."
+    r=>`Bara ${fmt(r.sun)} soltimmar ger inomhusplanen ett plus.`,
+    r=>`Den begränsade soltiden gör det lättare att välja något inne.`,
+    r=>`${fmt(r.sun)} timmar sol talar för dagens inomhusval.`,
+    r=>`Den låga solmängden väger tungt för inomhusaktiviteten.`,
+    r=>`Prognosens få soltimmar hjälper inomhusalternativet uppåt.`
   ],
   waves:[
-    "Våghöjden är den främsta styrkan här.",
-    "Vågorna ger platsen ett tydligt surfövertag.",
-    "Havets rörelse är dagens stora plus.",
-    "Vågbilden ser mest lovande ut på den här platsen.",
-    "Det är framför allt vågorna som gör läget intressant."
+    r=>`Våghöjden på ${fmt(r.waveHeight)} m är den främsta styrkan.`,
+    r=>`${fmt(r.waveHeight)} m vågor ger platsen ett tydligt surfplus.`,
+    r=>`Den prognostiserade våghöjden väger tyngst här.`,
+    r=>`Vågbilden på ${fmt(r.waveHeight)} m gör platsen intressant.`,
+    r=>`Det är framför allt våghöjden som lyfter läget.`
   ],
   period:[
     "Vågperioden ger förutsättningarna extra kvalitet.",
@@ -597,6 +548,31 @@ const FACTOR_TEXT={
     "Nysnön gör rekommendationen extra intressant.",
     "Det är framför allt den färska snön som lockar."
   ],
+  precipitationRisk:[
+    r=>`Nederbördsrisken på ${fmt(r.risk,0)} % påverkar bedömningen mest.`,
+    r=>`${fmt(r.risk,0)} % nederbördsrisk är dagens tydligaste vädersignal.`,
+    r=>`Det är främst risken för nederbörd som styr rekommendationen.`
+  ],
+  thunder:[
+    r=>`Den angivna åskrisken på ${fmt(r.thunderRisk,0)} % väger tungt.`,
+    r=>`${fmt(r.thunderRisk,0)} % åskrisk påverkar dagens rekommendation mest.`,
+    r=>`Det är framför allt den prognostiserade åskrisken som styr bedömningen.`
+  ],
+  seaTemperature:[
+    r=>`Havstemperaturen på ${fmt(r.seaTemp,0)}° är ett tydligt plus.`,
+    r=>`${fmt(r.seaTemp,0)}° i vattnet lyfter kustbedömningen.`,
+    r=>`Det är främst havstemperaturen som stärker platsen.`
+  ],
+  swell:[
+    r=>`Dyningen på ${fmt(r.swellHeight)} m stärker surfläget.`,
+    r=>`${fmt(r.swellHeight)} m dyning bidrar tydligt till bedömningen.`,
+    r=>`Det är framför allt dyningen som ger platsen ett plus.`
+  ],
+  freezingLevel:[
+    r=>`Nollgradersnivån på ${fmt(r.freezingLevel,0)} m påverkar skidläget mest.`,
+    r=>`Den prognostiserade nollgradersnivån väger tungt i skidbedömningen.`,
+    r=>`${fmt(r.freezingLevel,0)} m nollgradersnivå är dagens tydligaste faktor.`
+  ],
   balance:[
     "Det är helheten snarare än en enskild faktor som sticker ut.",
     "Flera väderdelar samspelar på ett bra sätt.",
@@ -605,6 +581,63 @@ const FACTOR_TEXT={
     "Helhetsläget är jämnt och användbart."
   ]
 };
+function factorAssessments(r){
+  const a=settings.activity,temp=r.temp,rain=r.rain,risk=r.risk,sun=r.sun,wind=r.wind;
+  const dry=Number.isFinite(rain)&&Number.isFinite(risk)?clamp(100-rain*18-risk*.45):null;
+  const sunny=Number.isFinite(sun)?clamp(sun/12*100):null,items=[];
+  const add=(id,fit,weight,available=true)=>{
+    if(!available||!Number.isFinite(fit)||!Number.isFinite(weight)||weight<=0)return;
+    const normalized=clamp(fit);
+    items.push({id,fit:normalized,weight,positive:weight*normalized,negative:weight*(100-normalized),neutral:normalized});
+  };
+  if(a==="general"){
+    add("temperature",bell(temp,25,15),.34,Number.isFinite(temp));add("dry",dry,.30);add("sun",sunny,.24);add("wind",bell(wind,2.5,7),.12,Number.isFinite(wind));
+  }else if(a==="coast"){
+    add("temperature",bell(temp,22,12),.20,Number.isFinite(temp));add("dry",dry,.20);add("sun",sunny,.18);add("wind",bell(wind,5,6),.14,Number.isFinite(wind));
+    add("seaTemperature",bell(r.seaTemp,20,10),.18,Number.isFinite(r.seaTemp));add("waves",bell(r.waveHeight,.6,1.5),.10,Number.isFinite(r.waveHeight));
+  }else if(a==="cinema"||a==="indoorPool"){
+    const w=a==="cinema"?{rain:.34,cloud:.23,wind:.18,temp:.15,risk:.10}:{rain:.31,cloud:.21,wind:.17,temp:.21,risk:.10};
+    add("rain",100-dry,w.rain,Number.isFinite(dry));add("cloud",100-sunny,w.cloud,Number.isFinite(sunny));
+    add("wind",clamp(wind/14*100),w.wind,Number.isFinite(wind));
+    add("temperature",100-bell(temp,a==="cinema"?20:19,a==="cinema"?16:18),w.temp,Number.isFinite(temp));
+    add("precipitationRisk",clamp(risk),w.risk,Number.isFinite(risk));
+  }else if(a==="surf"){
+    add("waves",clamp((r.waveHeight-.25)/3.25*100),.38,Number.isFinite(r.waveHeight));
+    add("direction",surfOffshoreScore(r),.25,Number.isFinite(r.windDirection)&&Number.isFinite(r.wind));
+    add("period",clamp((r.wavePeriod-4)/10*100),.27,Number.isFinite(r.wavePeriod));
+    add("swell",clamp((r.swellHeight-.15)/2.85*100),.10,Number.isFinite(r.swellHeight));
+  }else if(a==="boat"){
+    add("temperature",bell(temp,19,13),.16,Number.isFinite(temp));add("dry",dry,.24);add("sun",sunny,.10);add("wind",bell(wind,4,5),.30,Number.isFinite(wind));add("waves",clamp(100-r.waveHeight*45),.20,Number.isFinite(r.waveHeight));
+  }else if(a==="fishing"){
+    add("temperature",bell(temp,16,14),.18,Number.isFinite(temp));add("dry",dry,.25);add("sun",sunny,.10);add("wind",bell(wind,3.5,5),.27,Number.isFinite(wind));add("waves",bell(r.waveHeight,.5,1.5),.20,Number.isFinite(r.waveHeight));
+  }else if(a==="cycling"){
+    add("temperature",bell(temp,19,11),.30,Number.isFinite(temp));add("dry",dry,.35);add("sun",sunny,.15);add("wind",bell(wind,2.5,5),.20,Number.isFinite(wind));
+  }else if(a==="hiking"){
+    add("temperature",bell(temp,17,12),.30,Number.isFinite(temp));add("dry",dry,.35);add("sun",sunny,.15);add("wind",bell(wind,3,6),.20,Number.isFinite(wind));
+  }else if(a==="ski"){
+    add("snow",clamp(r.snowDepth/80*100),.32,Number.isFinite(r.snowDepth));add("freshSnow",clamp(r.newSnow/15*100),.25,Number.isFinite(r.newSnow));
+    add("temperature",bell(temp,-3,12),.18,Number.isFinite(temp));add("wind",bell(wind,3,7),.15,Number.isFinite(wind));add("freezingLevel",clamp(100-r.freezingLevel/18),.10,Number.isFinite(r.freezingLevel));
+  }else{
+    const total=1+settings.rain+settings.wind+settings.sun;
+    add("temperature",bell(temp,settings.temp,14),1/total,Number.isFinite(temp));add("dry",dry,settings.rain/total);add("wind",clamp(100-Math.max(0,wind-3)*10),settings.wind/total,Number.isFinite(wind));add("sun",sunny,settings.sun/total);
+  }
+  return items;
+}
+function selectedFactorAssessments(r){
+  const factors=factorAssessments(r),positive=[...factors].sort((a,b)=>b.positive-a.positive||a.id.localeCompare(b.id));
+  const negative=[...factors].sort((a,b)=>b.negative-a.negative||a.id.localeCompare(b.id));
+  const mark=(item,tone)=>item?{...item,tone}:null;
+  if(r.score>=80)return positive.map(x=>mark(x,x.fit>=70?"positive":"neutral"));
+  if(r.score>=70){
+    const strength=positive[0],limitation=negative.find(x=>x.id!==strength?.id),used=new Set([strength?.id,limitation?.id]);
+    return [mark(strength,"positive"),mark(limitation,limitation?.fit>=70?"neutral":"negative"),...positive.filter(x=>!used.has(x.id)).map(x=>mark(x,x.fit>=70?"positive":"neutral"))].filter(Boolean);
+  }
+  if(r.score>=60){
+    const limitation=negative[0],observation=positive.find(x=>x.id!==limitation?.id),used=new Set([limitation?.id,observation?.id]);
+    return [mark(limitation,"negative"),mark(observation,"neutral"),...negative.filter(x=>!used.has(x.id)).map(x=>mark(x,x.fit>=70?"neutral":"negative"))].filter(Boolean);
+  }
+  return negative.map(x=>mark(x,x.fit>=70?"neutral":"negative"));
+}
 const SCORE_TEXT={
   excellent:[
     "Ett ovanligt starkt val idag.",
@@ -622,7 +655,7 @@ const SCORE_TEXT={
   ],
   good:[
     "Ett bra alternativ med någon mindre reservation.",
-    "Helheten är positiv även om allt inte är perfekt.",
+    "Helheten är positiv även om det finns en mindre brist.",
     "Platsen fungerar bra för dagens aktivitet.",
     "Flera saker talar för platsen, trots någon svagare punkt.",
     "Ett användbart val som bör ge en bra dag."
@@ -649,21 +682,112 @@ function scoreTextBand(score){
   if(score>=60)return "okay";
   return "weak";
 }
-function recommendationIntro(r){
-  const key=recommendationTextKey(r);
-  const activityLines=ACTIVITY_TEXT[settings.activity]||ACTIVITY_TEXT.general;
-  const factor=dominantWeatherFactor(r);
-  const factorLines=FACTOR_TEXT[factor]||FACTOR_TEXT.balance;
-  const scoreLines=SCORE_TEXT[scoreTextBand(r.score)];
-  const first=textPick(activityLines,key,"activity");
-  const second=textPick(factorLines,key,"factor");
-  const third=textPick(scoreLines,key,"score");
-  return `${first} ${second} ${third}`;
+function activityToneOptions(r){
+  const label=(ACTIVITIES[settings.activity]?.label||"aktiviteten").toLowerCase();
+  const indoor=settings.activity==="cinema"||settings.activity==="indoorPool";
+  if(r.score>=90)return indoor?[
+    `Utevädret ger ett mycket högt betyg för ${label}.`,
+    `Ruskfaktorerna ger ett mycket högt betyg för ${label}.`,
+    `Den omvända inomhusmodellen ger ett mycket högt betyg för ${label}.`
+  ]:[
+    `Prognosvärdena ger ett mycket högt betyg för ${label}.`,
+    `${label[0].toUpperCase()+label.slice(1)} får ett mycket högt väderbetyg här.`,
+    `Den samlade vädermodellen ger ${label} ett mycket högt betyg.`
+  ];
+  if(r.score>=80)return indoor?[
+    `Utevädret ger ett högt betyg för ${label}.`,
+    `Flera ruskfaktorer bidrar till ett högt betyg för ${label}.`,
+    `Den omvända inomhusmodellen ger ett högt betyg för ${label}.`
+  ]:[
+    `Prognosvärdena ger ett högt betyg för ${label}.`,
+    `${label[0].toUpperCase()+label.slice(1)} får ett tydligt positivt väderbetyg.`,
+    `Den samlade vädermodellen ger ett högt betyg för ${label}.`
+  ];
+  if(r.score>=70)return [
+    `${label[0].toUpperCase()+label.slice(1)} får ett ganska högt betyg, med både styrkor och begränsningar.`,
+    `Helheten är positiv för ${label}, men någon faktor håller tillbaka betyget.`
+  ];
+  if(r.score>=60)return [
+    `${label[0].toUpperCase()+label.slice(1)} får ett försiktigt godkänt betyg.`,
+    `Väderläget kan fungera för ${label}, men har en tydlig begränsning.`
+  ];
+  return indoor?[
+    `Prognosfaktorerna ger få poäng till ${label}.`,
+    `Prognosvärdena ger ett lågt betyg för ${label}.`
+  ]:[
+    `Prognosvärdena ger ett lågt betyg för ${label}.`,
+    `Väderläget har tydliga begränsningar för ${label}.`
+  ];
+}
+function factorObservation(r,id){
+  switch(id){
+    case "temperature":return `Temperaturen är ${fmt(r.temp,0)}°.`;
+    case "dry":return `Prognosen anger ${fmt(r.rain)} mm nederbörd och ${fmt(r.risk,0)} % nederbördsrisk.`;
+    case "rain":return `Prognosen anger ${fmt(r.rain)} mm nederbörd.`;
+    case "precipitationRisk":return `Nederbördsrisken är ${fmt(r.risk,0)} %.`;
+    case "sun":return `Prognosen anger ${fmt(r.sun)} soltimmar.`;
+    case "cloud":return `Prognosen anger ${fmt(r.sun)} soltimmar; färre soltimmar ger högre inomhusbetyg.`;
+    case "wind":return `Vinden är ${fmt(r.wind)} m/s.`;
+    case "waves":return `Våghöjden är ${fmt(r.waveHeight)} m.`;
+    case "period":return `Vågperioden är ${fmt(r.wavePeriod,0)} sekunder.`;
+    case "direction":return `Vindriktningen är ${fmt(r.windDirection,0)}° och frånlandskomponenten ${Math.round(surfOffshoreScore(r))}/100.`;
+    case "swell":return `Dyningen är ${fmt(r.swellHeight)} m.`;
+    case "seaTemperature":return `Havstemperaturen är ${fmt(r.seaTemp,0)}°.`;
+    case "snow":return `Snödjupet är ${fmt(r.snowDepth,0)} cm.`;
+    case "freshSnow":return `Prognosen anger ${fmt(r.newSnow)} cm nysnö.`;
+    case "freezingLevel":return `Nollgradersnivån är ${fmt(r.freezingLevel,0)} m.`;
+    case "thunder":return `Den separata åskrisken är ${fmt(r.thunderRisk,0)} %.`;
+    default:return "Flera prognosvärden påverkar helheten.";
+  }
+}
+function factorTextOptions(r,item){
+  const observation=factorObservation(r,item.id);
+  if(item.tone==="positive")return [
+    `${observation} Faktorn ger ett av de största positiva bidragen till betyget.`,
+    `${observation} Det är en av faktorerna som bidrar mest positivt.`,
+    `${observation} Värdet hör till de tyngsta positiva delarna av poängmodellen.`
+  ];
+  if(item.tone==="negative")return [
+    `${observation} Faktorn står för ett av de största avdragen i betyget.`,
+    `${observation} Det är en av faktorerna som håller tillbaka betyget mest.`,
+    `${observation} Värdet hör till de största negativa delarna av poängmodellen.`
+  ];
+  return [
+    `${observation} Faktorn ger visst stöd men väger inte upp den största begränsningen.`,
+    `${observation} Bidraget är användbart, men helheten begränsas mer av andra värden.`,
+    `${observation} Det är en neutral observation jämfört med de tyngre bidragen.`
+  ];
+}
+function scoreToneOptions(score){
+  if(score>=90)return ["Helhetsbetyget är mycket högt.","Den samlade poängen är mycket hög.","Prognosfältens viktade helhet ger ett mycket högt betyg."];
+  if(score>=80)return ["Helhetsbetyget är högt utan att alla värden behöver vara starka.","Den samlade poängen är hög.","De viktade prognosfälten ger ett högt helhetsbetyg."];
+  if(score>=70)return ["Helhetsbetyget är positivt men inte utan reservationer.","Den samlade poängen är ganska hög, trots en begränsning."];
+  if(score>=60)return ["Helhetsbetyget är försiktigt och begränsningen bör vägas in.","Den samlade poängen är godkänd, men marginalen är begränsad."];
+  return ["Helhetsbetyget är lågt och talar för att jämföra med andra platser.","Den samlade poängen är låg; kontrollera alternativen högre i listan."];
+}
+function factorReason(r,item){
+  const meta={
+    temperature:["🌡️","Temperatur",`${fmt(r.temp,0)}°`],dry:["🌧️","Nederbörd",`${fmt(r.rain)} mm · ${fmt(r.risk,0)} %`],rain:["🌧️","Nederbörd",`${fmt(r.rain)} mm`],
+    precipitationRisk:["🌦️","Nederbördsrisk",`${fmt(r.risk,0)} %`],sun:["☀️","Sol",`${fmt(r.sun)} h`],cloud:["☁️","Soltid",`${fmt(r.sun)} h`],wind:["💨","Vind",`${fmt(r.wind)} m/s`],
+    waves:["🌊","Våghöjd",`${fmt(r.waveHeight)} m`],period:["↔️","Vågperiod",`${fmt(r.wavePeriod,0)} s`],direction:["🧭","Frånlandsvind",`${Math.round(surfOffshoreScore(r))}/100`],
+    swell:["🏄","Dyning",`${fmt(r.swellHeight)} m`],seaTemperature:["🌊","Havstemperatur",`${fmt(r.seaTemp,0)}°`],snow:["❄️","Snödjup",`${fmt(r.snowDepth,0)} cm`],
+    freshSnow:["🌨️","Nysnö",`${fmt(r.newSnow)} cm`],freezingLevel:["🏔️","Nollgradersnivå",`${fmt(r.freezingLevel,0)} m`],thunder:["⛈️","Åskrisk",`${fmt(r.thunderRisk,0)} %`]
+  }[item.id]||["•","Väderfaktor",""];
+  const prefix=item.tone==="negative"?"Begränsning: ":item.tone==="neutral"?"Observation: ":"Styrka: ";
+  return {icon:meta[0],label:`${prefix}${meta[1]}`,value:meta[2]};
+}
+function recommendationIntro(r,usedText=null){
+  const used=usedText||new Set(),selected=selectedFactorAssessments(r);
+  const factorCount=r.score>=80?1:Math.min(2,selected.length);
+  const parts=[textPick(activityToneOptions(r),r,`activity:${scoreTextBand(r.score)}`,used)];
+  selected.slice(0,factorCount).forEach((item,index)=>parts.push(textPick(factorTextOptions(r,item),r,`factor:${item.id}:${item.tone}:${index}`,used)));
+  parts.push(textPick(scoreToneOptions(r.score),r,`score:${scoreTextBand(r.score)}`,used));
+  return parts.filter(Boolean).join(" ");
 }
 function decisionSentence(r){
   const a=settings.activity;
-  if(a==="cinema")return `Sämst utomhusväder bland de valda platserna – alltså ett utmärkt bioläge.`;
-  if(a==="indoorPool")return `Ruskigast väder bland de valda platserna – perfekt läge för badhuset.`;
+  if(a==="cinema")return `Högst biobetyg bland de valda platserna utifrån prognosens utomhusfaktorer.`;
+  if(a==="indoorPool")return `Högst badhusbetyg bland de valda platserna utifrån prognosens utomhusfaktorer.`;
   if(a==="surf")return `Bäst kombination av vågor, period och vind bland de valda platserna.`;
   if(a==="ski")return `Bäst kombination av snö, temperatur och prognossäkerhet.`;
   if(a==="coast")return `Bäst kustläge utifrån vind, vågor och väder.`;
@@ -1298,7 +1422,7 @@ function specialMetricHtml(r){
   }
   return "";
 }
-function winnerMetricCards(r){
+function winnerMetricCards(r,limit=12){
   const cards=[];
   const add=(icon,value,label,detail="",valid=true)=>{if(valid)cards.push({icon,value,label,detail})};
   const dir=Number.isFinite(r.windDirection)?`${compassDirection(r.windDirection)} ${Math.round(r.windDirection)}°`:"";
@@ -1352,7 +1476,7 @@ function winnerMetricCards(r){
     add("☔",`${fmt(r.risk,0)} %`,"regnrisk");add("💨",`${fmt(r.wind)} m/s`,"vind",dir);
     add("🎯",`${fmt(r.confidence,0)} %`,"säkerhet");
   }
-  return cards.slice(0,12).map(({icon,value,label,detail})=>`<article><span>${icon}</span><strong>${value}</strong><small>${label}</small>${detail?`<em>${detail}</em>`:""}</article>`).join("");
+  return cards.slice(0,limit).map(({icon,value,label,detail})=>`<article><span>${icon}</span><strong>${value}</strong><small>${label}</small>${detail?`<em>${detail}</em>`:""}</article>`).join("");
 }
 function winnerDetailsHtml(r){
   const rows=[];
@@ -1501,7 +1625,7 @@ function renderDetail(){
   $("detailPlace").textContent=placeLabel(r);
   $("detailRegion").textContent=`${r.area} · ${r.region}`;
   $("detailSummary").textContent=`${qualityIcon(r.score)} ${activitySummary(r.score)}`;
-  $("detailReason").innerHTML=`${recommendationIntro(r)}${reasonsHtml(r)}`;
+  $("detailReason").textContent=recommendationIntro(r);
   $("detailScore").textContent=r.score;
   $("detailMetrics").innerHTML=winnerMetricCards(r);
   $("detailData").innerHTML=winnerDetailsHtml(r);
@@ -1520,7 +1644,7 @@ function renderDay(){
     ? `${best.area} · ${best.region} · Tyngst: ${best.primarySource}`
     : `${best.area} · ${best.region} · ${best.usedSources.length} valda källor`;
   $("bestSummary").textContent=`${qualityIcon(best.score)} ${activitySummary(best.score)}`;
-  $("bestReason").innerHTML=`${recommendationIntro(best)}${reasonsHtml(best)}`;
+  $("bestReason").textContent=recommendationIntro(best);
   $("bestScore").textContent=best.score;$("hero").dataset.score=best.score;
   $("metrics").innerHTML=winnerMetricCards(best);
   $("mapLink").href=`https://maps.apple.com/?q=${encodeURIComponent(placeLabel(best))}&ll=${best.lat},${best.lon}`;
@@ -1536,7 +1660,7 @@ function renderDay(){
     card.querySelector(".rank-number").textContent=i+1;
     card.querySelector("h3").textContent=placeLabel(r);
     card.querySelector("p").textContent=`${r.area} · ${r.region} · ${qualityIcon(r.score)} ${activitySummary(r.score)}`;
-    card.querySelector(".mini-metrics").innerHTML=reasonsHtml(r,true);
+    card.querySelector(".mini-metrics").innerHTML=winnerMetricCards(r,5);
     card.querySelector(".rank-score").textContent=r.score;
     const rankCard=card.querySelector(".rank-card");
     rankCard.tabIndex=0;rankCard.setAttribute("role","button");rankCard.setAttribute("aria-label",`Visa detaljer för ${placeLabel(r)}`);

@@ -159,3 +159,10 @@ dialog{width:min(520px,calc(100% - 24px));border:0;border-radius:25px;padding:0;
   .decision-reasons.compact{grid-template-columns:repeat(2,minmax(0,1fr))}
   .decision-reasons.compact span{padding:5px 4px}
 }
+
+/* Aktivitetsanpassade vädervärden i topplistan */
+.rank-main .mini-metrics{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:2px;margin:6px 0 0}
+.rank-main .mini-metrics article{min-width:0;min-height:41px;padding:2px 0;border-radius:6px;box-shadow:none}
+.rank-main .mini-metrics span{font-size:12px;line-height:1}
+.rank-main .mini-metrics strong{margin:2px 0 1px;font-size:8px;line-height:1.1;overflow-wrap:anywhere}
+.rank-main .mini-metrics small,.rank-main .mini-metrics em{font-size:6px;line-height:1.05;letter-spacing:0}
