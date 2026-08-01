@@ -12,6 +12,7 @@
 - **14.0.6.1** Inomhusväder sist i listan med omvänd väderpoäng.
 
 - **14.0.8** Intelligent textsystem med aktivitetsspecifika och varierade rekommendationer.
+- **14.0.9** Mobilanpassade, aktivitetsrelevanta faktaboxar i topplistan.
 
 ## Nästa
 
