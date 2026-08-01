@@ -899,7 +899,7 @@ async function mapWithConcurrency(items,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
   return results;
 }
-const diagnostics={version:"14.2.0",mode:"checking",lastLoad:null,sources:[],forecastRequests:[]};
+const diagnostics={version:"14.3.0",mode:"checking",lastLoad:null,sources:[],forecastRequests:[]};
 function setDataMode(mode,detail=""){
   diagnostics.mode=mode;
   const badge=$("dataModeBadge");
@@ -1811,10 +1811,22 @@ $("settingsForm").addEventListener("submit",event=>{
   saveSettingsFromDialog();
 });
 if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
-  const reg=await navigator.serviceWorker.register(`sw.js?v=14.2.0`);
-  reg.update();
-  reg.addEventListener("updatefound",()=>{const worker=reg.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller){$("updateBanner").classList.remove("hidden");}})});
-  navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload());
+  // Registrera listenern först: en redan nedladdad worker kan annars hinna ta
+  // kontroll och den nya appversionen blir synlig först vid nästa öppning.
+  let reloading=false;
+  navigator.serviceWorker.addEventListener("controllerchange",()=>{
+    if(reloading)return;
+    reloading=true;
+    location.reload();
+  });
+  const reg=await navigator.serviceWorker.register(`sw.js?v=14.3.0`);
+  reg.addEventListener("updatefound",()=>{
+    const worker=reg.installing;
+    worker?.addEventListener("statechange",()=>{
+      if(worker.state==="installed"&&navigator.serviceWorker.controller){$("updateBanner").classList.remove("hidden");}
+    });
+  });
+  await reg.update();
 });
 $("updateNow").onclick=()=>navigator.serviceWorker.getRegistration().then(r=>r?.waiting?.postMessage({type:"SKIP_WAITING"}));
 renderActivities();
