@@ -1,10 +1,10 @@
 # Installation och drift
 
-## Väderkompassen v14.0.9
+## Väderkompassen v14.0.10
 
 1. Kör SQL-migrationerna i ordningen nedan.
 2. Publicera hela projektet till GitHub.
-3. Kontrollera att webbplatsen visar `Väderkompassen v14.0.9` i sidfoten.
+3. Kontrollera att webbplatsen visar `Väderkompassen v14.0.10` i sidfoten.
 4. Testa registrering, inloggning, start av provperiod och avslutad automatisk förnyelse.
 
 ## Manuella databassteg
@@ -49,3 +49,7 @@ Ingen databasändring krävs. Publicera projektet och kontrollera att rekommenda
 ## Faktaboxar och cache i v14.0.9
 
 Ingen databasändring krävs. Publicera projektet och kontrollera att topplistans kort visar 4–12 relevanta värden med högst fyra per rad. Kontrollera även att en tidigare installerad app får v14.0.9 och ersätter service-worker-cachen från v14.0.8.
+
+## V13-stil i topplistan i v14.0.10
+
+Ingen databasändring krävs. Publicera projektet och kontrollera att alla tio kategorier finns kvar med sina färger, att topplistans värden visas kompakt utan boxramar och att huvudpoängkortets större faktaboxar är oförändrade.

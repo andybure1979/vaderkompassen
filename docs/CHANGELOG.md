@@ -1,5 +1,15 @@
 # Ändringslogg
 
+## 14.0.10
+
+- Behåller samtliga tio aktivitetskategorier och deras befintliga färgprofiler.
+- Återställer topplistans kompakta, ramlösa faktavisning från V13.
+- Visar grundvärden samt relevanta havs-, surf- eller snövärden i ett flexibelt mobilflöde.
+- Behåller de stora aktivitetsanpassade faktaboxarna under huvudpoängkortet.
+- Uppdaterar frontendresurser och service-worker-cache till v14.0.10.
+- Poängmodell och ranking är oförändrade.
+- Ingen Supabase-migration krävs.
+
 ## 14.0.9
 
 - Topplistans kort visar 4–12 aktivitetsrelevanta prognosvärden.
