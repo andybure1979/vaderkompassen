@@ -1,5 +1,14 @@
 # Ändringslogg
 
+## 14.3.1 – Worker runtime-fix
+
+- Flyttar filtrering och sortering av lagrade forecast-rader till en service-role-skyddad Supabase-RPC.
+- Returnerar högst 75 färdigrankade rader per dag till Workern och minskar JSON-parse, merge, poängfallback och sortering i request-pathen.
+- Bevarar lagrade `serverScores`, aktivitetsfilter, områdesfilter och kust-/surfplatsfilter.
+- Ökar externa väderbatcher från 18 till 30 platser och tar bort rekursiva återförsök inom samma cron-invocation.
+- En misslyckad batch återanvänder föregående snapshot i stället för att riskera Cloudflares subrequestgräns.
+- Uppdaterar app, Worker och service-worker-cache till 14.3.1.
+
 ## 14.3.0 – Adminvy
 
 - Ny fullskärmsadminvy med översikt, användarsökning, abonnemang, drift, revisionshistorik och systeminformation.

@@ -1,5 +1,11 @@
 # Databas – prenumerationer
 
+## v14.3.1 – Forecast runtime
+
+Kör `supabase/migrations/20260801_1431_forecast_runtime_limits.sql` efter adminmigrationen. Funktionen `get_ranked_forecast()` får endast köras av `service_role`; `anon` och `authenticated` saknar EXECUTE.
+
+Funktionen använder redan lagrade `serverScores`, filtrerar regioner/områden/aktivitetsplatser och begränsar resultatet till 75 per dag. Den skapar inga nya poäng och ändrar ingen snapshotdata.
+
 ## v14.3.0
 
 Kör `supabase/migrations/20260801_1430_admin_console.sql` efter `20260801_1420_subscription_foundation.sql`.

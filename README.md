@@ -1,3 +1,9 @@
+## v14.3.1 – Worker runtime-fix
+
+Forecast-cachemissar använder den service-role-skyddade Supabase-funktionen `get_ranked_forecast()` för filtrering och sortering av befintliga `serverScores`. Workern tar därför emot högst 75 färdigrankade resultat per dag i stället för hela regionala JSON-snapshots. Cronbygget använder fasta batcher utan rekursiva nätverksförsök, så externa API-fel kan inte förbruka hela Workers Free-budgeten på 50 subrequests.
+
+Kör `supabase/migrations/20260801_1431_forecast_runtime_limits.sql` före Worker v14.3.1. Poäng, rankingregler, kartlogik och vädermodeller är oförändrade.
+
 ## v14.3.0 – Adminvy
 
 Adminanvändare får en mobil- och desktopanpassad administrationspanel för systemöversikt, paginerad användarsökning, abonnemangsstatus, separata VIP-entitlements, kontostatus, interna anteckningar, driftkontroll och revisionshistorik. UI-kontrollen kompletteras alltid av Admin-verifiering i SECURITY DEFINER-RPC:er och Worker-endpointen.
