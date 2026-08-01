@@ -1,3 +1,9 @@
+## v14.3.5 – Enkel Free/Premium
+
+Free visar dagens prognos, låter användaren välja en region åt gången och sparar inställningar lokalt. Premiumåtkomst – Trial, Premium, VIP och Admin – visar alla prognosdagar, jämför flera regioner, synkar inställningar mellan enheter och är reklamfri. Alla användare har samma kategorier, väderdata, prognoskvalitet, poäng, ranking, karta, faktaboxar, detaljvyer, navigation och rekommendationstexter.
+
+Webbversionen förbereder två reklamplatser för Free utan att hämta extern reklam: `ranking_inline_native` efter plats 3 i topplistan och `main_bottom_banner` längst ned i huvudvyn. De visas endast som tydligt märkta platshållare med texten ”Annons”. Ingen Supabase-migration krävs.
+
 ## v14.3.4 – Vattentemperatur i aktivitetsfakta
 
 Sol och bad, Kustväder, Surfväder och Fiskeväder visar vattentemperatur i både vinnarkort och topplista när prognosfältet finns. Visningen använder `waterTemperature` och kan läsa `seaTemp` som kompatibilitetsfallback. Saknas båda visas ingen tom fakta. Kortdesign, poäng och ranking är oförändrade.

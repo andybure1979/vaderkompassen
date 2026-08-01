@@ -1,10 +1,19 @@
 # Installation och drift
 
-## Väderkompassen v14.3.4
+## Väderkompassen v14.3.5
 
 1. Kör SQL-migrationerna i ordningen nedan.
 2. Publicera hela projektet till GitHub.
-3. Kontrollera att webbplatsen visar `Väderkompassen v14.3.4` i sidfoten.
+3. Kontrollera att webbplatsen visar `Väderkompassen v14.3.5` i sidfoten.
+
+## Verifiera Free/Premium i v14.3.5
+
+1. Öppna appen som Free eller Expired och kontrollera att endast dagens flik visas, att låskortet för resten av veckan visas och att ett andra regionval öppnar Premiuminformationen utan att ersätta den första regionen.
+2. Kontrollera att Free visar `ranking_inline_native` efter topplistans tredje plats och `main_bottom_banner` längst ned. Ingen extern annons får hämtas.
+3. Logga in med Trial, Premium, VIP respektive Admin och kontrollera att alla prognosdagar och flera regioner visas samt att annonsplatserna är dolda.
+4. Kontrollera att Free-inställningar sparas lokalt utan profilskrivning och att Premiuminställningar fortsatt synkas via den centrala entitlement-modellen.
+5. Kontrollera att Admin dessutom kan öppna adminpanelen.
+6. Jämför samma aktivitet, datum, region och plats mellan rollerna. Poäng, placering, väderdata, faktaboxar och texter ska vara identiska.
 4. Testa Admin-behörighet, användarsökning, VIP, audit och Worker-hälsa enligt checklistan nedan.
 
 ## Manuella databassteg

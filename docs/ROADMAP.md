@@ -4,7 +4,7 @@
 
 - **14.0.0** Identitet, autentisering, profiler och roller.
 - **14.0.1–14.0.2** Stabil konto- och profilupplevelse.
-- **14.0.3** Personlig profil och molnsynk.
+- **14.0.3** Kontoprofil och molnsynk.
 - **14.0.4** Premiumgrund och behörighetsmodell.
 - **14.0.5** Frivillig engångsprovperiod och prenumerationsflöde.
 - **14.0.5.1** Rättad aktivering av provperiod via Supabase RPC.
@@ -24,6 +24,7 @@
 - **14.3.2** Åtkomlig Premiumstatus för Admin, VIP och befintliga prenumerationslägen.
 - **14.3.3** Solid adminbakgrund, cachebrytning och rättad användardetalj-RPC.
 - **14.3.4** Datavillkorad vattentemperatur i bad-, kust-, surf- och fiskekort.
+- **14.3.5** Enkel Free/Premium-delning: idag och en region för Free, alla dagar och flera regioner för Premium samt molnsynk och reklamplatser efter entitlement.
 
 ## Nästa
 
