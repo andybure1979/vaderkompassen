@@ -1,5 +1,13 @@
 # Ändringslogg
 
+## 14.4.2 – Snapshot-säkerhet
+
+- Rättar fallbackfrågan till senaste kompletta `activity=all`-snapshot.
+- Stoppar publicering när inga platser är färska eller när fallback inte ger full täckning.
+- Räknar misslyckade batcher som batcher i stället för en rad per plats.
+- Bevarar Open-Meteos HTTP-detalj och batchindex i diagnostiken.
+- Ändrar inte prognos-, poäng- eller rankinglogik och kräver ingen migration.
+
 ## 14.4.1 – Utökat Premiumplatsregister
 
 - Central platsmodell och genererade frontend-/Worker-assets från `data/places.json`.

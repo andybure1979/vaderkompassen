@@ -28,6 +28,7 @@
 - **14.3.6** Skalbar forecasttransport med endags-Free, färdigbyggda rankingar, snapshot-ID, ETag/304, SWR, adaptiv polling och lasttest.
 - **14.4.0** Native appgrund med Capacitor 8, iOS/Android-projekt, native Auth/livscykel/navigation, säkra köp-/annonsstubbar, kontoborttagning och CI.
 - **14.4.1** Centralt platsregister med 500 bevarade Free-platser, 500 Premiumkandidater, strikt kvalitetsgrind och serververifierad platsåtkomst.
+- **14.4.2** Snapshot-säkerhet som förhindrar publicering av tomma eller ofullständiga prognoskörningar och rättar komplett fallback.
 
 ## Nästa
 

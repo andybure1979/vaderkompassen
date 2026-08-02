@@ -1,5 +1,9 @@
 # Arkitektur
 
+## Snapshot-säkerhet i v14.4.2
+
+Cronjobbet använder endast senaste kompletta `activity=all` som fallback. En ny snapshot måste innehålla minst en färsk plats och full täckning för samtliga aktiva registerplatser efter fallback. Annars avbryts publicering, rankingversion, cacheinvalidering och gallring; den tidigare fungerande snapshoten ligger kvar. Diagnostiken redovisar batchindex och verkligt antal misslyckade batcher.
+
 ## Platsregister och åtkomst i v14.4.1
 
 `data/places.json` är registerkälla; `npm run places:build` genererar kompatibla assets för frontend och Worker. Frontend använder `getAccessiblePlaces()`, medan Workern alltid verifierar en begäran om `access=premium` mot Supabase-sessionen och den centrala entitlement-RPC:n. Free-svar innehåller aldrig Premiumrader och tvingas till en dag. Cache, inflight-coalescing och ETag använder åtkomstnivån som egen dimension.

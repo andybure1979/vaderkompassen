@@ -12,6 +12,15 @@ test("cron använder stora fasta batcher utan rekursiva nätverksförsök",()=>{
   assert.doesNotMatch(worker,/fetchAdaptive\(batch\.slice/);
 });
 
+test("fallback läser endast komplett snapshot och degraderad körning publiceras inte",()=>{
+  assert.match(worker,/activity:'eq\.all'/);
+  assert.match(worker,/placesAvailable':'gte\.500'/);
+  assert.match(worker,/assertSnapshotPublishable/);
+  assert.match(worker,/if\(freshPlaces===0\)throw new Error/);
+  assert.match(worker,/if\(availablePlaces<requestedPlaces\)throw new Error/);
+  assert.match(worker,/failedBatches:failedParts\.length/);
+});
+
 test("forecast-RPC använder lagrade serverScores och max 75 per dag",()=>{
   assert.match(sql,/r\.value->'serverScores'->>p_activity/);
   assert.match(sql,/row_number\(\) over\(partition by forecast_day order by score desc/i);

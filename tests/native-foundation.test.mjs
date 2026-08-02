@@ -42,7 +42,7 @@ test("köp och annonser är explicita stubbar utan produktionsaktivering",()=>{
   assert.match(native,/Butiksköp är förberedda men ännu inte aktiverade/);
   assert.match(ads,/class AdMobProvider/);assert.match(ads,/this\.active=false/);
   assert.match(ads,/environment!=="production"&&this\.config\.adsMode==="test"/);
-  assert.match(html,/ads-provider\.js\?v=14\.4\.1/);
+  assert.match(html,/ads-provider\.js\?v=14\.4\.2/);
 });
 
 test("kontoborttagning kräver nylig auth och behåller minimal butiksrevision",()=>{

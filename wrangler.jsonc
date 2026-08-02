@@ -6,5 +6,5 @@
   "compatibility_flags": ["nodejs_compat"],
   "observability": { "enabled": true },
   "triggers": { "crons": ["*/30 * * * *"] },
-  "vars": { "APP_VERSION": "14.4.1", "ENVIRONMENT": "production" }
+  "vars": { "APP_VERSION": "14.4.2", "ENVIRONMENT": "production" }
 }
