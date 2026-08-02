@@ -1,5 +1,12 @@
 # Ändringslogg
 
+## 14.3.7 – Tydligare kontofel
+
+- Validerar e-postadress och lösenord lokalt före anrop till Supabase.
+- Ersätter råa tekniska Auth-fel med begripliga svenska meddelanden.
+- Fångar nätverksfel och förhindrar dubbla samtidiga kontoanrop.
+- Ändrar inte kontodialogens visuella utformning eller Auth-modellen.
+
 ## 14.3.6 – Scalability
 
 - Publicerar atomiska, färdigsorterade rankingar per aktivitet, region och dag i ett separat service-role-skyddat Supabase-lager.

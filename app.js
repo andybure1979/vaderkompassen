@@ -117,7 +117,7 @@ const SNOW_HOURLY = "snow_depth,freezing_level_height";
 const SETTINGS_KEY="vk-settings";
 const CLOUD_SYNC_KEY="vk-cloud-settings-updated-at";
 const WEATHER_CACHE_KEY="vk-weather-cache-v14.0.0";
-const FORECAST_VALIDATORS_KEY="vk-forecast-validators-v14.3.6";
+const FORECAST_VALIDATORS_KEY="vk-forecast-validators-v14.3.7";
 const POINT_CACHE_PREFIX="vk-point-cache";
 
 function clearAppCacheStorage({includeCurrentWeather=false}={}){
@@ -930,7 +930,7 @@ async function mapWithConcurrency(items,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
   return results;
 }
-const diagnostics={version:"14.3.6",workerVersion:null,snapshotVersion:null,cache:null,etag:null,rowsRead:0,rowsReturned:0,responseBytes:0,totalMs:0,workerCpuApproxMs:0,supabaseCalls:0,mode:"checking",lastLoad:null,sources:[],forecastRequests:[]};
+const diagnostics={version:"14.3.7",workerVersion:null,snapshotVersion:null,cache:null,etag:null,rowsRead:0,rowsReturned:0,responseBytes:0,totalMs:0,workerCpuApproxMs:0,supabaseCalls:0,mode:"checking",lastLoad:null,sources:[],forecastRequests:[]};
 function setDataMode(mode,detail=""){
   diagnostics.mode=mode;
   const badge=$("dataModeBadge");
@@ -1914,7 +1914,7 @@ if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
     reloading=true;
     location.reload();
   });
-  const reg=await navigator.serviceWorker.register(`sw.js?v=14.3.6`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=14.3.7`);
   reg.addEventListener("updatefound",()=>{
     const worker=reg.installing;
     worker?.addEventListener("statechange",()=>{

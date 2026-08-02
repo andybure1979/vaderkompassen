@@ -1,3 +1,7 @@
+## v14.3.7 – Tydligare kontofel
+
+Skapa konto, inloggning och lösenordsåterställning validerar nu uppgifterna lokalt och visar svenska, användaranpassade fel i stället för råa Supabase-meddelanden. Kontodialogens design och autentiseringsmodell är oförändrade.
+
 ## v14.3.6 – Scalability
 
 Prognos-API:t använder versionsmärkta snapshots, ETag/304, stale-while-revalidate och färdigbyggda rankingar per aktivitet, region och prognosdag. Cronjobbet publicerar rankingversionen atomiskt: en halvfärdig version blir aldrig läsbar. Request-pathen läser små, försorterade kandidatlistor och behåller den äldre snapshotvägen som kompatibilitetsreserv.

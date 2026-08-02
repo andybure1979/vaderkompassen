@@ -1,5 +1,5 @@
-const CACHE="vaderkompassen-v14-3-6";
-const ASSETS=["./","index.html","styles.css?v=14.3.6","config.js?v=14.3.6","fishing-score.js?v=14.3.6","navigation.js?v=14.3.6","cloud-request.js?v=14.3.6","subscription-providers.js?v=14.3.6","auth.js?v=14.3.6","admin.js?v=14.3.6","app.js?v=14.3.6","manifest.webmanifest","icon-192.png","icon-512.png","icon-180.png"];
+const CACHE="vaderkompassen-v14-3-7";
+const ASSETS=["./","index.html","styles.css?v=14.3.7","config.js?v=14.3.7","fishing-score.js?v=14.3.7","navigation.js?v=14.3.7","cloud-request.js?v=14.3.7","subscription-providers.js?v=14.3.7","auth.js?v=14.3.7","admin.js?v=14.3.7","app.js?v=14.3.7","manifest.webmanifest","icon-192.png","icon-512.png","icon-180.png"];
 self.addEventListener("install",e=>{self.skipWaiting();e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)))});
 self.addEventListener("activate",e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==CACHE).map(x=>caches.delete(x)))).then(()=>self.clients.claim()))});
 self.addEventListener("message",e=>{if(e.data?.type==="SKIP_WAITING")self.skipWaiting()});

@@ -40,6 +40,58 @@
     el.classList.toggle("error", Boolean(error));
   }
 
+  function authErrorMessage(error, action = "konto") {
+    const message = String(error?.message || error || "").trim();
+    if (/rate limit|too many requests|over_email_send_rate_limit/i.test(message)) return "För många försök. Vänta en stund och försök igen.";
+    if (/failed to fetch|fetch failed|network|load failed/i.test(message)) return "Det gick inte att ansluta. Kontrollera internetanslutningen och försök igen.";
+    if (/invalid login credentials/i.test(message)) return "Fel e-postadress eller lösenord.";
+    if (/email not confirmed/i.test(message)) return "E-postadressen är inte verifierad. Kontrollera din inkorg och öppna verifieringslänken.";
+    if (/user already registered|already been registered|already exists/i.test(message)) return "Kontot kunde inte skapas. Prova att logga in eller återställa lösenordet.";
+    if (/invalid email|email address.*invalid|unable to validate email/i.test(message)) return "Ange en giltig e-postadress, exempelvis namn@exempel.se.";
+    if (/password.*(least|short|characters)|weak password/i.test(message)) return "Lösenordet måste innehålla minst 6 tecken.";
+    if (/signup.*disabled|signups not allowed/i.test(message)) return "Kontofunktionen är tillfälligt otillgänglig.";
+    if (action === "login") return "Det gick inte att logga in just nu. Försök igen om en stund.";
+    if (action === "reset") return "Det gick inte att skicka återställningslänken just nu. Försök igen om en stund.";
+    if (action === "oauth") return "Det gick inte att öppna inloggningen just nu. Försök igen om en stund.";
+    return "Det gick inte att skapa kontot just nu. Försök igen om en stund.";
+  }
+
+  function validatedCredentials(requirePassword = true) {
+    const emailInput = $("authEmail"), passwordInput = $("authPassword");
+    const email = emailInput?.value.trim() || "";
+    const password = passwordInput?.value || "";
+    if (!email) {
+      setMessage("authMessage", "Ange din e-postadress.", true);
+      emailInput?.focus();
+      return null;
+    }
+    if (emailInput) emailInput.value = email;
+    if (!emailInput?.checkValidity()) {
+      setMessage("authMessage", "Ange en giltig e-postadress, exempelvis namn@exempel.se.", true);
+      emailInput?.focus();
+      return null;
+    }
+    if (requirePassword && !password) {
+      setMessage("authMessage", "Ange ett lösenord.", true);
+      passwordInput?.focus();
+      return null;
+    }
+    if (requirePassword && password.length < 6) {
+      setMessage("authMessage", "Lösenordet måste innehålla minst 6 tecken.", true);
+      passwordInput?.focus();
+      return null;
+    }
+    return { email, password };
+  }
+
+  async function withBusy(buttonId, task) {
+    const button = $(buttonId);
+    if (button?.disabled) return;
+    if (button) { button.disabled = true; button.setAttribute("aria-busy", "true"); }
+    try { return await task(); }
+    finally { if (button) { button.disabled = false; button.removeAttribute("aria-busy"); } }
+  }
+
   function daysLeft(iso) {
     if (!iso) return 0;
     return Math.max(0, Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000));
@@ -355,41 +407,55 @@
   async function signInWithPassword(event) {
     event.preventDefault();
     if (!client) return setMessage("authMessage", "Inloggningen är inte konfigurerad ännu.", true);
-    setMessage("authMessage", "Loggar in …");
-    const { error } = await client.auth.signInWithPassword({
-      email: $("authEmail").value.trim(),
-      password: $("authPassword").value
+    const credentials = validatedCredentials();
+    if (!credentials) return;
+    return withBusy("emailLogin", async () => {
+      setMessage("authMessage", "Loggar in …");
+      try {
+        const { error } = await client.auth.signInWithPassword(credentials);
+        if (error) return setMessage("authMessage", authErrorMessage(error, "login"), true);
+        setMessage("authMessage");
+        $("authDialog").close();
+      } catch (error) { setMessage("authMessage", authErrorMessage(error, "login"), true); }
     });
-    if (error) return setMessage("authMessage", error.message, true);
-    setMessage("authMessage");
-    $("authDialog").close();
   }
 
   async function signUp() {
-    setMessage("authMessage", "Skapar konto …");
-    const email = $("authEmail").value.trim();
-    const password = $("authPassword").value;
-    if (!email || password.length < 6) return setMessage("authMessage", "Ange en giltig e-postadress och minst 6 tecken.", true);
-    const { error } = await client.auth.signUp({ email, password, options: { emailRedirectTo: appRedirectUrl() } });
-    if (error) return setMessage("authMessage", error.message, true);
-    setMessage("authMessage", "Kontot är skapat. Kontrollera din e-post för verifieringslänken.");
+    if (!client) return setMessage("authMessage", "Kontofunktionen är tillfälligt otillgänglig.", true);
+    const credentials = validatedCredentials();
+    if (!credentials) return;
+    return withBusy("emailSignup", async () => {
+      setMessage("authMessage", "Skapar konto …");
+      try {
+        const { error } = await client.auth.signUp({ ...credentials, options: { emailRedirectTo: appRedirectUrl() } });
+        if (error) return setMessage("authMessage", authErrorMessage(error, "signup"), true);
+        setMessage("authMessage", "Kontot är skapat. Kontrollera din e-post och öppna verifieringslänken.");
+      } catch (error) { setMessage("authMessage", authErrorMessage(error, "signup"), true); }
+    });
   }
 
   async function oauth(provider) {
-    if (!client) return;
+    if (!client) return setMessage("authMessage", "Kontofunktionen är tillfälligt otillgänglig.", true);
     setMessage("authMessage", `Öppnar ${provider === "apple" ? "Apple" : "Google"} …`);
-    const { error } = await client.auth.signInWithOAuth({
-      provider,
-      options: { redirectTo: appRedirectUrl() }
-    });
-    if (error) setMessage("authMessage", error.message, true);
+    try {
+      const { error } = await client.auth.signInWithOAuth({
+        provider,
+        options: { redirectTo: appRedirectUrl() }
+      });
+      if (error) setMessage("authMessage", authErrorMessage(error, "oauth"), true);
+    } catch (error) { setMessage("authMessage", authErrorMessage(error, "oauth"), true); }
   }
 
   async function resetPassword() {
-    const email = $("authEmail").value.trim();
-    if (!email) return setMessage("authMessage", "Ange din e-postadress först.", true);
-    const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo: appRedirectUrl() });
-    setMessage("authMessage", error ? error.message : "Återställningslänk skickad.", Boolean(error));
+    if (!client) return setMessage("authMessage", "Kontofunktionen är tillfälligt otillgänglig.", true);
+    const credentials = validatedCredentials(false);
+    if (!credentials) return;
+    return withBusy("resetPassword", async () => {
+      try {
+        const { error } = await client.auth.resetPasswordForEmail(credentials.email, { redirectTo: appRedirectUrl() });
+        setMessage("authMessage", error ? authErrorMessage(error, "reset") : "Återställningslänk skickad.", Boolean(error));
+      } catch (error) { setMessage("authMessage", authErrorMessage(error, "reset"), true); }
+    });
   }
 
   async function signOut() {
@@ -431,7 +497,7 @@
     dispatchCloudSettings();
 
     if (callback.error) {
-      setMessage("authMessage", callback.error.replace(/\+/g, " "), true);
+      setMessage("authMessage", authErrorMessage(callback.error.replace(/\+/g, " "), "login"), true);
       $("authDialog").showModal();
       clearAuthCallbackUrl();
     } else if (callback.isCallback && session?.user) {

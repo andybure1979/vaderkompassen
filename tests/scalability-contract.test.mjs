@@ -9,11 +9,11 @@ const packageJson=JSON.parse(await readFile(new URL("../package.json",import.met
 const wrangler=await readFile(new URL("../wrangler.jsonc",import.meta.url),"utf8");
 
 test("deploykontraktet använder root-entrypoint och samma releaseversion",()=>{
-  assert.equal(packageJson.version,"14.3.6");
+  assert.equal(packageJson.version,"14.3.7");
   assert.equal(packageJson.scripts.deploy,"wrangler deploy --config wrangler.jsonc");
   assert.match(wrangler,/"main": "cloudflare\/src\/index\.js"/);
-  assert.match(wrangler,/"APP_VERSION": "14\.3\.6"/);
-  assert.match(worker,/workerVersion:env\.APP_VERSION\|\|'14\.3\.6'/);
+  assert.match(wrangler,/"APP_VERSION": "14\.3\.7"/);
+  assert.match(worker,/workerVersion:env\.APP_VERSION\|\|'14\.3\.7'/);
 });
 
 test("rankingtabeller är privata och endast färdiga versioner blir läsbara",()=>{
@@ -43,4 +43,3 @@ test("Worker exponerar snapshot-, cache- och prestandadiagnostik",()=>{
   assert.match(worker,/stale-while-revalidate=600/);
   assert.match(worker,/notModifiedResponse/);
 });
-
