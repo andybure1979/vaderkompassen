@@ -1,10 +1,21 @@
 # Installation och drift
 
-## Väderkompassen v14.3.5
+## Väderkompassen v14.3.6
 
 1. Kör SQL-migrationerna i ordningen nedan.
 2. Publicera hela projektet till GitHub.
-3. Kontrollera att webbplatsen visar `Väderkompassen v14.3.5` i sidfoten.
+3. Kör `supabase/migrations/20260801_1436_prebuilt_forecast_rankings.sql` i Supabase.
+4. Kör `npm run deploy:production`. Kommandot deployar root-entrypointen och stoppar om publik Worker-version inte är `14.3.6`.
+5. Kontrollera att webbplatsen visar `Väderkompassen v14.3.6` i sidfoten.
+
+## Prestandaverifiering i v14.3.6
+
+- Free-request skall innehålla `days=1` och endast returnera första dagen.
+- Premium-request skall innehålla `days=all` och returnera samtliga dagar.
+- Upprepa samma request med svarets ETag i `If-None-Match`; svaret skall vara 304 utan body.
+- Kontrollera `X-Vaderkompassen-Worker-Version`, `X-Vaderkompassen-Snapshot-Version`, cacheläge och prestandaheaderar.
+- Kör varmt lasttest lokalt eller mot godkänd miljö: `npm run loadtest -- --base=http://127.0.0.1:8787 --users=100,500,1000,5000 --mode=warm`.
+- Kallt lasttest får endast köras kontrollerat med Worker-secreten `LOAD_TEST_TOKEN` och motsvarande lokala `VK_LOAD_TEST_TOKEN`.
 
 ## Verifiera Free/Premium i v14.3.5
 

@@ -4,9 +4,10 @@
     return [...new Set(Array.from(values||[],value=>String(value).trim()).filter(Boolean))]
       .sort((a,b)=>a.localeCompare(b,"sv"));
   }
-  function createRequestKey(baseUrl,{activity="general",regions=[],areas=[]}={}){
+  function createRequestKey(baseUrl,{activity="general",regions=[],areas=[],days="1"}={}){
     const params=new URLSearchParams();
     params.set("activity",String(activity||"general").trim()||"general");
+    params.set("days",days==="all"?"all":"1");
     const normalizedRegions=normalizedValues(regions),normalizedAreas=normalizedValues(areas);
     if(normalizedRegions.length)params.set("regions",normalizedRegions.join(","));
     if(normalizedAreas.length)params.set("areas",normalizedAreas.join(","));

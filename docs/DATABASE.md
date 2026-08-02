@@ -1,5 +1,9 @@
 # Databas – prenumerationer
 
+## v14.3.6 – färdigbyggda forecast-rankingar
+
+Kör `supabase/migrations/20260801_1436_prebuilt_forecast_rankings.sql` före Worker 14.3.6. Tabellen `forecast_ranking_versions` styr atomisk publicering och `forecast_rankings` lagrar försorterade kandidatlistor. Båda har RLS, saknar åtkomst för `anon` och `authenticated` och används endast av Worker service role. Endast senaste kompletta rankingversionen behålls.
+
 ## v14.3.1 – Forecast runtime
 
 Kör `supabase/migrations/20260801_1431_forecast_runtime_limits.sql` efter adminmigrationen. Funktionen `get_ranked_forecast()` får endast köras av `service_role`; `anon` och `authenticated` saknar EXECUTE.

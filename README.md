@@ -1,3 +1,11 @@
+## v14.3.6 – Scalability
+
+Prognos-API:t använder versionsmärkta snapshots, ETag/304, stale-while-revalidate och färdigbyggda rankingar per aktivitet, region och prognosdag. Cronjobbet publicerar rankingversionen atomiskt: en halvfärdig version blir aldrig läsbar. Request-pathen läser små, försorterade kandidatlistor och behåller den äldre snapshotvägen som kompatibilitetsreserv.
+
+Free begär och tar emot endast dagens prognos. Trial, Premium, VIP och Admin begär fortsatt alla prognosdagar. Frontend kontrollerar ny data var 30:e minut för Free och var 15:e minut för Premium, pausar i bakgrunden och använder `If-None-Match` för att undvika identiska payloads.
+
+Kör `supabase/migrations/20260801_1436_prebuilt_forecast_rankings.sql` före Worker-deploy. `npm run deploy:production` använder uttryckligen rootkonfigurationens `cloudflare/src/index.js` och verifierar därefter att publik `WorkerVersion` är 14.3.6. Lasttestet körs med `npm run loadtest -- --base=https://... --users=100,500,1000,5000 --mode=warm`; kall cache kräver en separat `LOAD_TEST_TOKEN`-secret och `VK_LOAD_TEST_TOKEN` lokalt.
+
 ## v14.3.5 – Enkel Free/Premium
 
 Free visar dagens prognos, låter användaren välja en region åt gången och sparar inställningar lokalt. Premiumåtkomst – Trial, Premium, VIP och Admin – visar alla prognosdagar, jämför flera regioner, synkar inställningar mellan enheter och är reklamfri. Alla användare har samma kategorier, väderdata, prognoskvalitet, poäng, ranking, karta, faktaboxar, detaljvyer, navigation och rekommendationstexter.

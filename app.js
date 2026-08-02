@@ -117,6 +117,7 @@ const SNOW_HOURLY = "snow_depth,freezing_level_height";
 const SETTINGS_KEY="vk-settings";
 const CLOUD_SYNC_KEY="vk-cloud-settings-updated-at";
 const WEATHER_CACHE_KEY="vk-weather-cache-v14.0.0";
+const FORECAST_VALIDATORS_KEY="vk-forecast-validators-v14.3.6";
 const POINT_CACHE_PREFIX="vk-point-cache";
 
 function clearAppCacheStorage({includeCurrentWeather=false}={}){
@@ -929,7 +930,7 @@ async function mapWithConcurrency(items,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
   return results;
 }
-const diagnostics={version:"14.3.5",mode:"checking",lastLoad:null,sources:[],forecastRequests:[]};
+const diagnostics={version:"14.3.6",workerVersion:null,snapshotVersion:null,cache:null,etag:null,rowsRead:0,rowsReturned:0,responseBytes:0,totalMs:0,workerCpuApproxMs:0,supabaseCalls:0,mode:"checking",lastLoad:null,sources:[],forecastRequests:[]};
 function setDataMode(mode,detail=""){
   diagnostics.mode=mode;
   const badge=$("dataModeBadge");
@@ -947,10 +948,15 @@ function setDataMode(mode,detail=""){
   badge.className=`data-mode-badge ${mode}`;
   badge.title=detail?`${state.title} ${detail}`:state.title;
 }
-const BACKGROUND_REFRESH_MS=30*60*1000;
+const FREE_REFRESH_MS=30*60*1000;
+const PREMIUM_REFRESH_MS=15*60*1000;
 let refreshTimer=null;
 let loadInProgress=false;
 let loadGeneration=0;
+let lastForecastCheckAt=0;
+let forecastValidators={};
+try{forecastValidators=JSON.parse(localStorage.getItem(FORECAST_VALIDATORS_KEY)||"{}")||{}}catch{}
+const backgroundRefreshMs=()=>hasPremiumUiAccess()?PREMIUM_REFRESH_MS:FREE_REFRESH_MS;
 function cacheSignature(){
   return JSON.stringify({regions:[...settings.regions].sort(),areas:[...settings.areas].sort(),activity:settings.activity});
 }
@@ -999,7 +1005,8 @@ function restoreWeatherCache(){
 }
 function scheduleBackgroundRefresh(lastSaved=Date.now()){
   clearTimeout(refreshTimer);
-  const delay=Math.max(1000,BACKGROUND_REFRESH_MS-(Date.now()-lastSaved));
+  if(document.visibilityState==="hidden")return;
+  const delay=Math.max(1000,backgroundRefreshMs()-(Date.now()-lastSaved));
   refreshTimer=setTimeout(()=>load({background:true}),delay);
 }
 
@@ -1036,14 +1043,32 @@ async function fetchCloudSnapshot(places){
   if(!cloudApiEnabled())return null;
   const base=String(CLOUD_CONFIG.apiBaseUrl).replace(/\/$/,"");
   const requestUrl=globalThis.VK_CLOUD_REQUESTS.createRequestKey(base,{
-    activity:settings.activity,regions:settings.regions,areas:settings.areas
+    activity:settings.activity,regions:settings.regions,areas:settings.areas,days:hasPremiumUiAccess()?"all":"1"
   });
   return cloudRequestManager.run(requestUrl,async activeSignal=>{
     const controller=new AbortController(),abort=()=>controller.abort();
     activeSignal.addEventListener("abort",abort,{once:true});
     const timer=setTimeout(()=>controller.abort(new DOMException("Moln-API timeout","TimeoutError")),Number(CLOUD_CONFIG.apiTimeoutMs)||10000);
     try{
-      const response=await fetch(requestUrl,{headers:{Accept:"application/json"},signal:controller.signal,cache:"no-store"});
+      const headers={Accept:"application/json"},validator=forecastValidators[requestUrl];
+      if(validator?.etag&&Object.keys(dailyResults).length)headers["If-None-Match"]=validator.etag;
+      const response=await fetch(requestUrl,{headers,signal:controller.signal,cache:"no-store"});
+      lastForecastCheckAt=Date.now();
+      const responseDiagnostics={
+        snapshotVersion:response.headers.get("X-Vaderkompassen-Snapshot-Version")||validator?.snapshotVersion||null,
+        cache:response.headers.get("X-Vaderkompassen-Cache")||null,etag:response.headers.get("ETag")||validator?.etag||null,
+        rowsRead:Number(response.headers.get("X-Vaderkompassen-Rows-Read"))||0,rowsReturned:Number(response.headers.get("X-Vaderkompassen-Rows-Returned"))||0,
+        responseBytes:Number(response.headers.get("X-Vaderkompassen-Response-Bytes"))||0,totalMs:Number(response.headers.get("X-Vaderkompassen-Total-Ms"))||0,
+        workerCpuApproxMs:Number(response.headers.get("X-Vaderkompassen-Worker-CPU-Approx-Ms"))||0,
+        supabaseCalls:Number(response.headers.get("X-Vaderkompassen-Supabase-Calls"))||0,
+        workerVersion:response.headers.get("X-Vaderkompassen-Worker-Version")||null
+      };
+      Object.assign(diagnostics,responseDiagnostics);
+      if(responseDiagnostics.etag){
+        forecastValidators[requestUrl]={etag:responseDiagnostics.etag,snapshotVersion:responseDiagnostics.snapshotVersion,checkedAt:Date.now()};
+        localStorage.setItem(FORECAST_VALIDATORS_KEY,JSON.stringify(forecastValidators));
+      }
+      if(response.status===304)return {notModified:true,...responseDiagnostics};
       if(response.status===404||response.status===204)return null;
       if(!response.ok)throw new Error(`Moln-API HTTP ${response.status}`);
       const payload=await response.json();
@@ -1070,14 +1095,14 @@ function applyCloudSnapshot(snapshot,places){
   activeDate=previouslySelectedDate&&dailyResults[previouslySelectedDate]
     ?previouslySelectedDate
     :(snapshot.activeDate&&dailyResults[snapshot.activeDate]?snapshot.activeDate:availableDates[0]);
-  setDataMode("cloud",`Uppdaterad ${formatUpdatedAt(snapshot.generatedAt||snapshot.savedAt||Date.now())}.`);diagnostics.lastLoad=new Date().toISOString();diagnostics.placeCount=places.length;
+  setDataMode("cloud",`Uppdaterad ${formatUpdatedAt(snapshot.generatedAt||snapshot.savedAt||Date.now())}.`);diagnostics.lastLoad=new Date().toISOString();diagnostics.placeCount=places.length;diagnostics.snapshotVersion=snapshot.snapshotVersion||diagnostics.snapshotVersion||null;diagnostics.workerVersion=snapshot.workerVersion||diagnostics.workerVersion||null;
   const updated=snapshot.generatedAt||snapshot.savedAt||Date.now();
   const meta=snapshot.meta||{},available=meta.placesAvailable??new Set(Object.values(dailyResults).flat().map(r=>r.place)).size;
   const fresh=meta.placesFresh??meta.placesUpdated??available,fallback=meta.placesFallback??Math.max(0,available-fresh);
   $("modelCount").textContent=`Moln · uppdaterad ${formatUpdatedAt(updated)} · ${available}/${meta.placesRequested||places.length} orter${fallback?` (${fresh} färska, ${fallback} reserv)`:""}`;
   $("modelCount").title="Centralt beräknad och cachad prognos";
   $("statusCard").classList.add("hidden");renderTabs();renderActivities();renderDay();
-  saveWeatherCache({sourceStatus:snapshot.sourceStatus||[],cloud:true,generatedAt:updated});
+  saveWeatherCache({sourceStatus:snapshot.sourceStatus||[],cloud:true,generatedAt:updated,snapshotVersion:diagnostics.snapshotVersion});
   scheduleBackgroundRefresh(updated);
 }
 
@@ -1339,6 +1364,10 @@ async function load({background=false}={}){
       try{
         const snapshot=await fetchCloudSnapshot(places);
         if(!isCurrent())return;
+        if(snapshot?.notModified){
+          setDataMode("cloud",`Prognosen är aktuell · kontrollerad ${formatUpdatedAt(Date.now())}.`);
+          $("statusCard").classList.add("hidden");scheduleBackgroundRefresh(Date.now());return;
+        }
         if(snapshot){applyCloudSnapshot(snapshot,places);return}
       }catch(cloudError){
         if(cloudError?.name==="AbortError")return;
@@ -1861,7 +1890,9 @@ $("settingsForm").addEventListener("submit",event=>{
 });
 $("showPremiumWeek").onclick=()=>requestPremium("forecastDays");
 window.addEventListener("vk:access-changed",event=>{
+  const previousPremium=hasPremiumUiAccess();
   accessState=event.detail||window.VK_AUTH?.getAccessState?.()||{role:"free",premium:false,admin:false};
+  const accessChanged=previousPremium!==hasPremiumUiAccess();
   let settingsChanged=false;
   if(!hasPremiumUiAccess()){
     const restricted=singleRegionSettings(settings);
@@ -1870,8 +1901,9 @@ window.addEventListener("vk:access-changed",event=>{
   }
   renderAccessUi();
   renderTabs();
-  if(settingsChanged)load({background:false});
+  if(settingsChanged||accessChanged)load({background:false});
   else if(Object.keys(dailyResults).length)renderDay();
+  scheduleBackgroundRefresh(Date.now());
 });
 if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
   // Registrera listenern först: en redan nedladdad worker kan annars hinna ta
@@ -1882,7 +1914,7 @@ if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
     reloading=true;
     location.reload();
   });
-  const reg=await navigator.serviceWorker.register(`sw.js?v=14.3.5`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=14.3.6`);
   reg.addEventListener("updatefound",()=>{
     const worker=reg.installing;
     worker?.addEventListener("statechange",()=>{
@@ -1897,7 +1929,9 @@ renderAccessUi();
 setDataMode("checking");
 if(!restoreWeatherCache())load();
 document.addEventListener("visibilitychange",()=>{
-  if(document.visibilityState!=="visible")return;
-  const cache=readWeatherCache();
-  if(cache&&Date.now()-cache.savedAt>=BACKGROUND_REFRESH_MS)load({background:true});
+  if(document.visibilityState!=="visible"){
+    clearTimeout(refreshTimer);cloudRequestManager.abort();return;
+  }
+  if(Date.now()-lastForecastCheckAt>30000)load({background:true});
+  else scheduleBackgroundRefresh(lastForecastCheckAt||Date.now());
 });

@@ -1,5 +1,18 @@
 # Ändringslogg
 
+## 14.3.6 – Scalability
+
+- Publicerar atomiska, färdigsorterade rankingar per aktivitet, region och dag i ett separat service-role-skyddat Supabase-lager.
+- Undviker JSONB-expansion i normal request-path och behåller tidigare RPC/snapshot som övergångsreserv.
+- Returnerar endast dagens prognos för Free och samtliga dagar för Trial, Premium, VIP och Admin.
+- Inför centralt `snapshotVersion`, representationsspecifik ETag, 304-svar och stale-while-revalidate.
+- Invaliderar kända lokala Cache API-nycklar när en ny snapshot publiceras.
+- Pausar polling i bakgrunden; Free kontrollerar var 30:e minut och Premium var 15:e minut.
+- Exponerar WorkerVersion, snapshotVersion, cacheläge, ETag, lästa/returnerade rader, payloadstorlek, total tid, CPU-approximation och antal Supabase-anrop.
+- Root-deployen pekar uttryckligen på `wrangler.jsonc` och har en separat produktionsverifiering.
+- Lägger till kontrollerat lasttest för 100, 500, 1 000 och 5 000 blandade användare.
+- Poäng, rankingregler, väderfält, UI, texter, karta, Premium-entitlement, Auth och Admin är oförändrade.
+
 ## 14.3.5 – Enkel Free/Premium
 
 - Free visar endast dagens prognos och ett låst kort för resten av veckan.

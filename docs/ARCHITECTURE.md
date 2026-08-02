@@ -1,5 +1,15 @@
 # Arkitektur
 
+## Skalbar forecast-path i v14.3.6
+
+Cronjobbet bygger först den kanoniska sjudagarssnapshoten och beräknar därefter kandidater per aktivitet, region och dag. `forecast_ranking_versions` markerar versionen som `building` tills samtliga rader i `forecast_rankings` är skrivna; endast `ready` läses av API:t. Båda tabellerna är privata för Worker service role.
+
+Rankinglagret nås genom ett avgränsat `rankingStore` i Workern. Supabase är första implementationen, men läs-/skrivgränsen gör att samma objekt senare kan lagras i KV eller R2 utan förändring av forecastkontraktet.
+
+`/v1/forecast` normaliserar även `days=1|all`. Free använder `1`, medan central entitlement låter Trial, Premium, VIP och Admin använda `all`. Svaret märks med snapshot-ID och representationsspecifik ETag. Cache API lagrar svaret i upp till 15 minuter, betraktar de första fem som färska och kan servera resterande tid stale medan en bakgrundsuppdatering sker. Kända cacheposter i cron-isolatet raderas vid publicering; andra datacenter konvergerar genom TTL/SWR.
+
+Frontend sparar ETag per kanonisk request, skickar `If-None-Match` och behåller befintlig prognos vid 304. Polling körs endast när dokumentet är synligt.
+
 ## Forecast inom Workers Free-gränser i v14.3.1
 
 Vid cachemiss anropar Workern `get_ranked_forecast()` med service role. PostgreSQL väljer senaste regionala shards, filtrerar och sorterar på snapshotens befintliga `serverScores`. Workern vidarebefordrar den kompakta JSON-strängen till Cache API utan att först läsa, slå samman och sortera hela regionala payloads.
