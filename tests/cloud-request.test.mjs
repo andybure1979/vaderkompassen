@@ -6,7 +6,7 @@ test("bygger stabil request key med trimning, unika värden och svensk sortering
   const a=cloudRequests.createRequestKey("https://worker.test/",{activity:" fishing ",regions:["Södra Sverige","Mellansverige","Södra Sverige"],areas:[" Skåne ","Småland"]});
   const b=cloudRequests.createRequestKey("https://worker.test",{activity:"fishing",regions:["Mellansverige","Södra Sverige"],areas:["Småland","Skåne"]});
   assert.equal(a,b);
-  assert.equal(a,"https://worker.test/v1/forecast?activity=fishing&days=1&regions=Mellansverige%2CS%C3%B6dra+Sverige&areas=Sk%C3%A5ne%2CSm%C3%A5land");
+  assert.equal(a,"https://worker.test/v1/forecast?activity=fishing&days=1&access=free&regions=Mellansverige%2CS%C3%B6dra+Sverige&areas=Sk%C3%A5ne%2CSm%C3%A5land");
   assert.match(cloudRequests.createRequestKey("https://worker.test",{days:"all"}),/days=all/);
 });
 

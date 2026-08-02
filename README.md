@@ -1,3 +1,9 @@
+## v14.4.1 – Utökat Premiumplatsregister
+
+Platsregistret har en central, validerad modell med 500 oförändrade Free-platser och 500 nya Premiumkandidater från Sverige, Norge och Danmark. Stoppregeln är strikt: endast 47 nya poster är aktiverade i första leveransen; övriga ligger avstängda med tydlig granskningsstatus tills område, kategori eller dubblettstatus är verifierad.
+
+Free får dagens prognos för standardutbudet. Trial, Premium, VIP, Admin och aktivt uppsagda abonnemang får dessutom det aktiverade utökade registret. Workern verifierar entitlement och separerar cache med `access=free|premium`. Poäng, rankingformler och väderalgoritmer är oförändrade. Kör `npm run validate:places`; full modell och granskningsrapport finns i `docs/PLACE_REGISTRY.md`.
+
 ## v14.4.0 – Native appgrund
 
 Webbappen kan nu paketeras lokalt i officiella Capacitor 8-projekt för iOS och Android. Versionen innehåller reproducerbar `dist/`-build, tre miljöer, native plattforms-/livscykelbrygga, Supabase deeplink/Auth-lagring, kartnavigation, säkra köp- och annonsstubbar, kontoborttagning, CI och versionskontroll. Riktiga köp, produktionsannonser och butikspublicering är inte aktiverade. Se `docs/NATIVE_SETUP.md`.

@@ -10,7 +10,7 @@
   <title>Väderkompassen – vart ska du åka?</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icon-180.png">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><link rel="stylesheet" href="styles.css?v=14.4.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><link rel="stylesheet" href="styles.css?v=14.4.1">
 </head>
 <body><div id="updateBanner" class="update-banner hidden"><span>En ny version finns.</span><button id="updateNow">Uppdatera nu</button></div>
 <header><div class="brand"><h1><span class="brand-mark">◈</span> Väderkompassen</h1><p>Vart ska du åka idag?</p></div><div class="header-actions"><button id="accountBtn" class="account-btn" type="button" aria-label="Konto"><span id="accountIcon">👤</span><span id="accountLabel">Logga in</span></button><button id="settingsBtn" class="icon-btn" aria-label="Inställningar">⚙️</button></div></header>
@@ -46,7 +46,7 @@
   <details id="aboutSection" class="about"><summary>Hur tolkas prognosen och hur sätts aktivitetsbetyget</summary><p>Varje aktivitet har en egen balans mellan temperatur, regn, sol och vind. Surfväder gynnas exempelvis av mer vind, medan cykel- och båtväder gynnas av lugnare vind. Skidväder premierar kyla och nederbörd. Bioväder och badhusväder är medvetet omvända: de visar de platser där utomhusvädret är som sämst, eftersom ruskväder passar extra bra för en inomhusaktivitet. I automatläget är väderprognosen en viktad sammanvägning: SMHI väger tyngst för svenska orter, Yr/MET Norway för norska orter och DMI för Danmark. I eget läge används bara de valda prognoskällorna och de väger lika. Övriga modeller används som stöd och för att bedöma osäkerheten. Kust- och surfbetyg använder våghöjd, vågperiod, dyning och havstemperatur. Skidbetyget använder modellberäknat snödjup, nysnö och nollgradersnivå. Uppgifterna är prognoser och ersätter inte lokala säkerhetsrapporter.</p></details>
   <aside id="mainBottomBanner" class="ad-placeholder ad-banner hidden" data-placement="main_bottom_banner" aria-label="Annons">Annons</aside>
 </main>
-<footer class="app-footer" aria-label="Versionsinformation"><span>Väderkompassen v14.4.0</span></footer>
+<footer class="app-footer" aria-label="Versionsinformation"><span>Väderkompassen v14.4.1</span></footer>
 <div id="navigationNotice" class="navigation-notice hidden" role="status" aria-live="polite"></div>
 <dialog id="navigationDialog" class="navigation-dialog" aria-labelledby="navigationTitle"><form method="dialog">
   <div class="dialog-head"><div><span class="section-kicker">VÄLJ KARTTJÄNST</span><h2 id="navigationTitle">Navigera till</h2></div><button id="navigationClose" type="button" class="icon-btn" aria-label="Stäng navigeringsval">✕</button></div>
@@ -75,6 +75,7 @@
   </fieldset>
   <fieldset><legend>Regioner</legend>
     <p id="cloudSyncHint" class="settings-hint hidden">Molnsynk ingår i Premium.</p>
+    <p id="premiumPlacesHint" class="settings-hint">Fler platser ingår i Premium.</p>
     <div class="country-filter-actions">
       <button id="filterSweden" type="button">🇸🇪 Hela Sverige</button>
       <button id="filterDenmark" type="button">🇩🇰 Hela Danmark</button>
@@ -117,10 +118,10 @@
 <dialog id="premiumInfoDialog" class="account-dialog premium-dialog"><form method="dialog">
   <div class="dialog-head"><div><span class="section-kicker">PREMIUM</span><h2>Mer av Väderkompassen</h2></div><button id="premiumInfoClose" type="button" class="icon-btn" aria-label="Stäng Premium-information">✕</button></div>
   <div class="premium-price-card"><strong id="premiumPrice">Planerat pris: 29 kr/månad</strong><span id="premiumPriceNote">Ingen verklig debitering sker i webbversionen</span></div>
-  <p id="premiumRequestedFeature" class="account-intro">Se skillnaden mellan Free och Premium.</p>
+  <p id="premiumRequestedFeature" class="account-intro">Premium ger tillgång till det utökade platsregistret med hundratals fler orter, fiskevatten, vandringsmål och surfplatser efter kvalitetsgranskning.</p>
   <div class="premium-comparison" aria-label="Jämförelse mellan Free och Premium">
-    <section><h3>Free</h3><ul><li>Dagens prognos</li><li>En region åt gången</li><li>Lokala inställningar</li><li>Reklam</li></ul></section>
-    <section><h3>Premium</h3><ul><li>Alla prognosdagar</li><li>Jämför flera regioner</li><li>Molnsynk mellan enheter</li><li>Reklamfritt</li></ul></section>
+    <section><h3>Free</h3><ul><li>Dagens prognos</li><li>En region åt gången</li><li>Befintligt standardutbud av platser</li><li>Lokala inställningar</li><li>Reklam</li></ul></section>
+    <section><h3>Premium</h3><ul><li>Alla prognosdagar</li><li>Jämför flera regioner</li><li>Upp till cirka 1 000 platser efter kvalitetsgranskning</li><li>Fler fiske-, vandrings- och surfmål</li><li>Molnsynk mellan enheter</li><li>Reklamfritt</li></ul></section>
   </div>
   <p id="premiumTerms" class="account-intro">Testprovperioden avslutas efter tre dagar. Ingen debitering sker i denna webbversion.</p>
   <p id="premiumState" class="account-message">Du har inte aktiverat provperioden.</p>
@@ -134,13 +135,14 @@
   <div class="admin-shell">
     <header class="admin-header"><div><span class="section-kicker">ADMIN</span><h2 id="adminTitle">Administrationspanel</h2><p>Säker överblick för Väderkompassens ägare</p></div><button id="adminClose" type="button" class="icon-btn" aria-label="Stäng adminpanel">✕</button></header>
     <nav class="admin-tabs" aria-label="Adminsektioner">
-      <button type="button" data-admin-tab="overview" aria-selected="true">Översikt</button><button type="button" data-admin-tab="users">Användare</button><button type="button" data-admin-tab="subscriptions">Abonnemang</button><button type="button" data-admin-tab="operations">Drift</button><button type="button" data-admin-tab="logs">Historik</button><button type="button" data-admin-tab="system">System</button>
+      <button type="button" data-admin-tab="overview" aria-selected="true">Översikt</button><button type="button" data-admin-tab="users">Användare</button><button type="button" data-admin-tab="subscriptions">Abonnemang</button><button type="button" data-admin-tab="places">Platser</button><button type="button" data-admin-tab="operations">Drift</button><button type="button" data-admin-tab="logs">Historik</button><button type="button" data-admin-tab="system">System</button>
     </nav>
     <p id="adminMessage" class="account-message hidden" role="status"></p>
     <main class="admin-content">
       <section class="admin-panel" data-admin-panel="overview"><div class="admin-section-head"><div><h3>Översikt</h3><p>Senast uppdaterad <span id="adminCheckedAt">–</span></p></div><button id="adminRefresh" type="button" class="secondary">Uppdatera</button></div><div id="adminOverview" class="admin-stat-grid"><p class="empty-state">Hämtar säker adminstatistik …</p></div></section>
       <section class="admin-panel hidden" data-admin-panel="users"><div class="admin-section-head"><div><h3>Användare</h3><p>Sökningen sker på servern och visar högst 25 träffar.</p></div></div><div class="admin-search"><label><span class="sr-only">Sök användare</span><input id="adminSearch" type="search" minlength="2" maxlength="200" placeholder="E-post, namn eller användar-ID" autocomplete="off"></label><button id="adminSearchBtn" type="button" class="primary">Sök</button></div><div id="adminResults" class="admin-results"><p class="empty-state">Skriv minst två tecken för att söka.</p></div><div class="admin-pagination"><button id="adminPrev" type="button" class="secondary" disabled>Föregående</button><span id="adminPage">Sida 1</span><button id="adminNext" type="button" class="secondary" disabled>Nästa</button></div></section>
       <section class="admin-panel hidden" data-admin-panel="subscriptions"><div class="admin-section-head"><div><h3>Abonnemang</h3><p>Apple- och Googleköp kan endast visas och synkas via framtida verifierad provideranslutning.</p></div></div><div id="adminSubscriptions" class="admin-stat-grid"><p class="empty-state">Data laddas från översikten.</p></div><div class="admin-callout"><strong>Administrativ Premium</strong><span>VIP och kostnadsfri Premium hanteras separat och skapar aldrig en butikstransaktion.</span></div></section>
+      <section class="admin-panel hidden" data-admin-panel="places"><div class="admin-section-head"><div><h3>Platsregister</h3><p>Översikt över Free, Premium och poster som väntar på granskning.</p></div><button id="adminExportPlaces" type="button" class="secondary">Exportera granskningslista</button></div><div class="admin-search"><label><span class="sr-only">Filtrera platser</span><input id="adminPlaceFilter" type="search" placeholder="Filtrera land, region, area, kategori eller status"></label></div><div id="adminPlaceStats" class="admin-stat-grid"></div><div id="adminPlaceResults" class="admin-results"></div></section>
       <section class="admin-panel hidden" data-admin-panel="operations"><div class="admin-section-head"><div><h3>Drift och prestanda</h3><p>Manuell, begränsad hälsokontroll utan känsliga miljövärden.</p></div><button id="adminHealth" type="button" class="primary">Kör prognostest</button></div><div id="adminOperations" class="admin-health"><p class="empty-state">Ingen kontroll utförd ännu.</p></div><p class="admin-footnote">Cloudflare-loggar hanteras i Cloudflare Dashboard och visas inte här utan separat integration.</p></section>
       <section class="admin-panel hidden" data-admin-panel="logs"><div class="admin-section-head"><div><h3>Administrationshistorik</h3><p>Ändringar loggas av backend, inte av webbläsaren.</p></div><button id="adminLoadLogs" type="button" class="secondary">Uppdatera</button></div><div id="adminLogs" class="admin-log-list"><p class="empty-state">Hämta revisionsloggen.</p></div></section>
       <section class="admin-panel hidden" data-admin-panel="system"><div class="admin-section-head"><div><h3>Systeminformation</h3><p>Versioner och anslutningsstatus.</p></div></div><div id="adminSystem" class="admin-stat-grid"></div><div class="admin-callout warning"><strong>Inte anslutet ännu</strong><span>Aktiva användare, cache-hit-rate, CPU-fel och Apple-/Googleverifiering visas inte förrän en säker datakälla finns.</span></div></section>
@@ -149,5 +151,5 @@
 </dialog>
 <dialog id="adminUserDialog" class="account-dialog admin-user-dialog" aria-labelledby="adminUserTitle"><div class="admin-user-detail"><div class="dialog-head"><div><span class="section-kicker">ANVÄNDARE</span><h2 id="adminUserTitle">Användardetalj</h2></div><button id="adminUserClose" type="button" class="icon-btn" aria-label="Stäng användardetalj">✕</button></div><div id="adminUserContent"><p class="empty-state">Ingen användare vald.</p></div></div></dialog>
 <template id="rankTemplate"><article class="rank-card"><div class="rank-number"></div><div class="rank-main"><h3></h3><p></p><div class="mini-metrics" aria-label="Viktigaste vädervärden"></div><button type="button" class="rank-navigation">📍 Navigera</button></div><div class="rank-score"></div></article></template>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="environment.js?v=14.4.0"></script><script src="native-platform.js?v=14.4.0"></script><script src="config.js?v=14.4.0"></script><script src="fishing-score.js?v=14.4.0"></script><script src="navigation.js?v=14.4.0"></script><script src="cloud-request.js?v=14.4.0"></script><script src="subscription-providers.js?v=14.4.0"></script><script src="ads-provider.js?v=14.4.0"></script><script src="auth.js?v=14.4.0" defer></script><script src="admin.js?v=14.4.0" defer></script><script src="app.js?v=14.4.0" defer></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="environment.js?v=14.4.1"></script><script src="native-platform.js?v=14.4.1"></script><script src="config.js?v=14.4.1"></script><script src="place-registry.js?v=14.4.1"></script><script src="fishing-score.js?v=14.4.1"></script><script src="navigation.js?v=14.4.1"></script><script src="cloud-request.js?v=14.4.1"></script><script src="subscription-providers.js?v=14.4.1"></script><script src="ads-provider.js?v=14.4.1"></script><script src="auth.js?v=14.4.1" defer></script><script src="admin.js?v=14.4.1" defer></script><script src="app.js?v=14.4.1" defer></script>
 </body></html>

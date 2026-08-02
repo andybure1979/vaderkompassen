@@ -1,4 +1,4 @@
-import { PLACES } from './places.js';
+import { PLACES,ENABLED_PLACES } from './place-registry.js';
 import '../../fishing-score.js';
 
 const COAST_PLACES = new Set([
@@ -18,11 +18,14 @@ const SURF_PROFILES = {
   'Svolvær':{spotName:'Unstad',offshore:120},'Bodø':{spotName:'Mørkved',offshore:120}
 };
 const SURF_PLACES = new Set(Object.keys(SURF_PROFILES));
+const PLACE_BY_ID=new Map(ENABLED_PLACES.map(place=>[place.id,place]));
+const PLACE_BY_NAME=new Map(ENABLED_PLACES.map(place=>[place.name,place]));
+for(const place of ENABLED_PLACES){if(place.coastal)COAST_PLACES.add(place.name);if(place.surfSpot)SURF_PLACES.add(place.name)}
 
 const JSON_HEADERS={"content-type":"application/json; charset=utf-8","cache-control":"no-store"};
 const json=(data,status=200,extra={})=>new Response(JSON.stringify(data),{status,headers:{...JSON_HEADERS,...extra}});
 const now=()=>performance.now();
-const cors=env=>({"access-control-allow-origin":env.ALLOWED_ORIGIN||"*","access-control-allow-methods":"GET,POST,OPTIONS","access-control-allow-headers":"content-type,authorization,x-admin-token,x-load-test-token,if-none-match","access-control-expose-headers":"etag,x-vaderkompassen-snapshot-version,x-vaderkompassen-worker-version,x-vaderkompassen-cache,x-vaderkompassen-rows-read,x-vaderkompassen-rows-returned,x-vaderkompassen-response-bytes,x-vaderkompassen-total-ms,x-vaderkompassen-worker-cpu-approx-ms,x-vaderkompassen-supabase-calls","X-Vaderkompassen-Worker-Version":env.APP_VERSION||"14.4.0"});
+const cors=env=>({"access-control-allow-origin":env.ALLOWED_ORIGIN||"*","access-control-allow-methods":"GET,POST,OPTIONS","access-control-allow-headers":"content-type,authorization,x-admin-token,x-load-test-token,if-none-match","access-control-expose-headers":"etag,x-vaderkompassen-snapshot-version,x-vaderkompassen-worker-version,x-vaderkompassen-cache,x-vaderkompassen-rows-read,x-vaderkompassen-rows-returned,x-vaderkompassen-response-bytes,x-vaderkompassen-total-ms,x-vaderkompassen-worker-cpu-approx-ms,x-vaderkompassen-supabase-calls","X-Vaderkompassen-Worker-Version":env.APP_VERSION||"14.4.1"});
 const supabaseKeyType=env=>String(env.SUPABASE_SERVICE_ROLE_KEY||'').startsWith('sb_secret_')?'secret':'legacy-service-role';
 const sbHeaders=env=>{
   const key=String(env.SUPABASE_SERVICE_ROLE_KEY||'').trim();
@@ -58,6 +61,18 @@ async function authenticatedAdmin(req,env){
   if(profile?.role!=="admin"||profile?.account_status!=="active")throw Object.assign(new Error("Endast Admin"),{status:403});
   return profile;
 }
+async function resolveForecastAccess(req,env,requestedAccess){
+  if(requestedAccess!=="premium")return "free";
+  const token=req.headers.get("authorization")?.replace(/^Bearer\s+/i,"").trim();
+  if(!token)throw Object.assign(new Error("Premiumsession krävs för det utökade platsregistret"),{status:401});
+  const base=String(env.SUPABASE_URL||"").trim().replace(/\/+$/,'');
+  const authResponse=await fetch(`${base}/auth/v1/user`,{headers:{apikey:String(env.SUPABASE_SERVICE_ROLE_KEY||""),authorization:`Bearer ${token}`}});
+  if(!authResponse.ok)throw Object.assign(new Error("Ogiltig eller utgången Premiumsession"),{status:401});
+  const entitlement=await sb(env,"rpc/get_user_entitlement",{method:"POST",headers:{authorization:`Bearer ${token}`},body:"{}"});
+  const value=Array.isArray(entitlement)?entitlement[0]:entitlement;
+  if(value?.is_premium!==true)throw Object.assign(new Error("Premiumåtkomst krävs för det utökade platsregistret"),{status:403});
+  return "premium";
+}
 async function adminHealth(req,env){
   const admin=await authenticatedAdmin(req,env),last=adminHealthCooldown.get(admin.id)||0,current=Date.now();
   if(current-last<10000)throw Object.assign(new Error("Hälsokontrollen kan köras högst var tionde sekund"),{status:429});
@@ -67,7 +82,7 @@ async function adminHealth(req,env){
   const responseMs=Math.round((performance.now()-started)*10)/10,row=latest?.[0]||null;
   const generated=row?.generated_at||null,ageMinutes=generated?Math.max(0,Math.round((Date.now()-new Date(generated).getTime())/60000)):null;
   try{await sb(env,'admin_audit_log',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify({actor_user_id:admin.id,action:'admin_health_check',entity_type:'worker',reason:'Manuell hälsokontroll från adminvyn',new_value:{ok:Boolean(row),responseMs}})});}catch(error){console.warn('Kunde inte logga admin health:',error.message)}
-  return {ok:Boolean(row),checkedAt:new Date().toISOString(),workerVersion:env.APP_VERSION||'14.4.0',environment:env.ENVIRONMENT||'production',buildId:env.BUILD_ID||null,forecast:{status:row?'ok':'warning',responseMs,cache:null,rowsRead:row?1:0,rowsReturned:row?1:0},snapshot:{status:row&&ageMinutes<=90?'ok':row?'warning':'error',generatedAt:generated,ageMinutes,shards:null},supabase:{status:'ok'},auth:{status:'ok'},subscriptions:{status:'ok'}};
+  return {ok:Boolean(row),checkedAt:new Date().toISOString(),workerVersion:env.APP_VERSION||'14.4.1',environment:env.ENVIRONMENT||'production',buildId:env.BUILD_ID||null,forecast:{status:row?'ok':'warning',responseMs,cache:null,rowsRead:row?1:0,rowsReturned:row?1:0},snapshot:{status:row&&ageMinutes<=90?'ok':row?'warning':'error',generatedAt:generated,ageMinutes,shards:null},supabase:{status:'ok'},auth:{status:'ok'},subscriptions:{status:'ok'}};
 }
 const chunks=(a,n)=>Array.from({length:Math.ceil(a.length/n)},(_,i)=>a.slice(i*n,(i+1)*n));
 const finite=v=>Number.isFinite(Number(v))?Number(v):null;
@@ -91,7 +106,8 @@ async function fetchWeatherBatch(batch){
         hourlyTimes.forEach((t,idx)=>{if(String(t).startsWith(dayPrefix))idxs.push(idx)});
         const snowDepth=Math.max(0,...idxs.map(idx=>finite(data.hourly?.snow_depth?.[idx])||0));
         const freezingVals=idxs.map(idx=>finite(data.hourly?.freezing_level_height?.[idx])).filter(Number.isFinite);
-        return {day,place:p[0],area:p[1],region:p[2],lat:p[3],lon:p[4],
+        const metadata=PLACE_BY_ID.get(p[5])||PLACE_BY_NAME.get(p[0]);
+        return {day,place:p[0],placeId:p[5],accessTier:p[6]||metadata?.accessTier||"free",categories:metadata?.categories||[],area:p[1],region:p[2],lat:p[3],lon:p[4],
           temp:finite(data.daily.temperature_2m_max?.[d]),min:finite(data.daily.temperature_2m_min?.[d]),
           rain:finite(data.daily.precipitation_sum?.[d]),risk:finite(data.daily.precipitation_probability_max?.[d]),
           sun:finite(data.daily.sunshine_duration?.[d])!=null?finite(data.daily.sunshine_duration[d])/3600:null,
@@ -169,7 +185,7 @@ const ACTIVITIES=['general','coast','surf','boat','fishing','cycling','hiking','
 const FORECAST_ACTIVITIES=new Set([...ACTIVITIES,'cinema','indoorPool']);
 const FORECAST_REGIONS=new Set(PLACES.map(place=>place[2]));
 const FORECAST_ROWS_PER_DAY=75;
-export const FORECAST_ROW_FIELDS=['day','place','area','region','lat','lon','temp','min','rain','risk','sun','cloudCover','wind','windGust','windDirection','models','usedSources','primarySource','confidence','waveHeight','waveDirection','wavePeriod','swellHeight','swellDirection','swellPeriod','seaTemp','waterTemperature','snowDepth','newSnow','freezingLevel','hasMarine','hasSnow','spotName','thunderRisk'];
+export const FORECAST_ROW_FIELDS=['day','place','placeId','accessTier','area','region','lat','lon','temp','min','rain','risk','sun','cloudCover','wind','windGust','windDirection','models','usedSources','primarySource','confidence','waveHeight','waveDirection','wavePeriod','swellHeight','swellDirection','swellPeriod','seaTemp','waterTemperature','snowDepth','newSnow','freezingLevel','hasMarine','hasSnow','spotName','thunderRisk'];
 export function compactForecastRow(row,score){
   const compact={};
   for(const field of FORECAST_ROW_FIELDS){
@@ -195,13 +211,14 @@ export function normalizeForecastRequest(url){
     const mapped=AREA_REGIONS.get(area);if(!mapped)return false;
     return !regionSet||[...mapped].some(region=>regionSet.has(region));
   });
-  const days=url.searchParams.get('days')==='all'?'all':'1';
-  return {activity,regions,areas,days};
+  const days=url.searchParams.get('days')==='all'?'all':'1',requestedAccess=url.searchParams.get('access')==='premium'?'premium':'free';
+  return {activity,regions,areas,days,requestedAccess,access:'free'};
 }
 export function canonicalForecastUrl(origin,normalized){
   const url=new URL('/v1/forecast',origin),params=new URLSearchParams();
   params.set('activity',normalized.activity);
   params.set('days',normalized.days==='all'?'all':'1');
+  params.set('access',normalized.access==='premium'?'premium':'free');
   if(normalized.regions.length)params.set('regions',normalized.regions.join(','));
   if(normalized.areas.length)params.set('areas',normalized.areas.join(','));
   url.search=params.toString();return url;
@@ -214,6 +231,16 @@ function requestedScore(row,activity){
   const prepared=row.serverScores?.[activity];
   return {sortScore:Number.isFinite(prepared)?prepared:serverScore(row,activity),responseScore:Number.isFinite(prepared)?prepared:null};
 }
+function activityCategory(activity){return activity==='ski'?'skiing':activity}
+function rowMatchesActivity(row,activity){
+  const categories=row.categories||PLACE_BY_ID.get(row.placeId)?.categories||PLACE_BY_NAME.get(row.place)?.categories||[];
+  return categories.includes(activityCategory(activity));
+}
+function rowMatchesAccess(row,access){const tier=row.accessTier||PLACE_BY_ID.get(row.placeId)?.accessTier||PLACE_BY_NAME.get(row.place)?.accessTier||"free";return tier!=="premium"||access==="premium"}
+function allowedPlaceNames(normalized){
+  const accessible=ENABLED_PLACES.filter(place=>place.accessTier!=="premium"||normalized.access==="premium"),category=activityCategory(normalized.activity),specialized=accessible.filter(place=>place.categories.includes(category));
+  return (specialized.length?specialized:accessible).map(place=>place.name);
+}
 function buildPrecomputedRankings(snapshot){
   const records=[];
   for(const [forecastDay,rows] of Object.entries(snapshot.dailyResults||{})){
@@ -224,7 +251,8 @@ function buildPrecomputedRankings(snapshot){
     }
     for(const [region,regional] of byRegion){
       for(const activity of FORECAST_ACTIVITIES){
-        const ranked=regional.map(row=>({row,...requestedScore(row,activity)}))
+        const specialized=regional.filter(row=>rowMatchesActivity(row,activity)),pool=specialized.length?specialized:regional;
+        const ranked=pool.map(row=>({row,...requestedScore(row,activity)}))
           .sort((a,b)=>b.sortScore-a.sortScore||(b.row.confidence||0)-(a.row.confidence||0))
           .map(({row,sortScore,responseScore})=>({rankSortScore:sortScore,row:compactForecastRow(row,responseScore)}));
         records.push({snapshot_version:snapshot.snapshotVersion,generated_at:snapshot.generatedAt,forecast_day:forecastDay,activity,region,ranked_rows:ranked});
@@ -262,7 +290,7 @@ const rankingStore={
       const candidates=dailyResults[record.forecast_day]||(dailyResults[record.forecast_day]=[]);
       for(const entry of record.ranked_rows||[]){
         performanceMetrics.rowsRead++;
-        if((!areaSet||areaSet.has(entry.row?.area))&&(!placeSet||placeSet.has(entry.row?.place)))candidates.push(entry);
+        if(rowMatchesAccess(entry.row,normalized.access)&&(!areaSet||areaSet.has(entry.row?.area))&&(!placeSet||placeSet.has(entry.row?.place)))candidates.push(entry);
       }
     }
     for(const day of Object.keys(dailyResults)){
@@ -272,7 +300,7 @@ const rankingStore={
       performanceMetrics.rowsReturned+=dailyResults[day].length;
       if(!dailyResults[day].length)delete dailyResults[day];
     }
-    return {ok:true,version:env.APP_VERSION||'14.4.0',workerVersion:env.APP_VERSION||'14.4.0',snapshotVersion:head.snapshot_version,generatedAt:head.generated_at,
+    return {ok:true,version:env.APP_VERSION||'14.4.1',workerVersion:env.APP_VERSION||'14.4.1',snapshotVersion:head.snapshot_version,generatedAt:head.generated_at,
       activeDate:Object.keys(dailyResults).sort()[0]||null,dailyResults,
       meta:{performance:performanceMetrics},activity:normalized.activity,rankingEngine:'cloud-v7-prebuilt',resultLimitPerDay:FORECAST_ROWS_PER_DAY};
   }
@@ -281,7 +309,7 @@ async function buildSnapshot(env){
   const previous=await previousSnapshot(env),batches=chunks(PLACES,30);
   const parts=await mapLimit(batches,5,b=>fetchAdaptive(b));
   let freshRows=parts.flatMap(x=>x.rows);const failures=parts.flatMap(x=>x.failures);
-  const marinePlaces=PLACES.filter(p=>COAST_PLACES.has(p[0])||SURF_PLACES.has(p[0]));
+  const marinePlaces=PLACES.filter(p=>PLACE_BY_ID.get(p[5])?.marine===true);
   const marineParts=await mapLimit(chunks(marinePlaces,30),3,b=>fetchMarineBatch(b));
   const marineMap=new Map(marineParts.flat().map(m=>[`${m.day}|${m.place}`,m]));
   freshRows=freshRows.map(row=>{const m=marineMap.get(`${row.day}|${row.place}`);return m?{...row,...m,hasMarine:Number.isFinite(m.waveHeight)||Number.isFinite(m.seaTemp),spotName:SURF_PROFILES[row.place]?.spotName||null,offshoreDirection:SURF_PROFILES[row.place]?.offshore??null}:row});
@@ -296,7 +324,7 @@ async function buildSnapshot(env){
   for(const row of rows)(dailyResults[row.day]||=[]).push(row);
   const days=Object.keys(dailyResults).sort(),availablePlaces=new Set(rows.map(r=>r.place));
   const generatedAt=new Date().toISOString();
-  return {ok:true,version:env.APP_VERSION||'14.4.0',workerVersion:env.APP_VERSION||'14.4.0',snapshotVersion:snapshotVersionFor(generatedAt),generatedAt,activeDate:days[0]||null,dailyResults,
+  return {ok:true,version:env.APP_VERSION||'14.4.1',workerVersion:env.APP_VERSION||'14.4.1',snapshotVersion:snapshotVersionFor(generatedAt),generatedAt,activeDate:days[0]||null,dailyResults,
     sourceStatus:[{name:'Open-Meteo',ok:freshPlaces.size>0,rows:freshRows.length,error:failures.map(x=>`${x.place}: ${x.error}`).join(' · ')}],
     meta:{placesRequested:PLACES.length,placesUpdated:freshPlaces.size,placesFresh:freshPlaces.size,placesFallback:availablePlaces.size-freshPlaces.size,placesAvailable:availablePlaces.size,days:days.length,batches:batches.length,failedBatches:failures.length,failedPlaces:failures.map(x=>x.place)}};
 }
@@ -389,12 +417,14 @@ async function latestSnapshot(env,normalized,performanceMetrics){
   for(const [day,source] of Object.entries(mergedResults)){
     if(allowedDays&&!allowedDays.has(day))continue;
     const filtered=source.filter(r=>{
+      if(!rowMatchesAccess(r,normalized.access))return false;
       if(areas&&!areas.has(r.area))return false;
       if(coastOnly&&!COAST_PLACES.has(r.place))return false;
       if(surfOnly&&!SURF_PLACES.has(r.place))return false;
       return true;
     });
-    if(filtered.length){dailyResults[day]=filtered;performanceMetrics.rowsMatched+=filtered.length;}
+    const specialized=filtered.filter(row=>rowMatchesActivity(row,requested)),selected=specialized.length?specialized:filtered;
+    if(selected.length){dailyResults[day]=selected;performanceMetrics.rowsMatched+=selected.length;}
   }
   performanceMetrics.filterMs=now()-filterStarted;
   for(const day of Object.keys(dailyResults)){
@@ -415,7 +445,7 @@ async function latestSnapshot(env,normalized,performanceMetrics){
   }
   performanceMetrics.shards=storedRows.length;
   const firstPayload=storedRows[0].payload||{};
-  return {ok:firstPayload.ok!==false,version:env.APP_VERSION||firstPayload.version||'14.4.0',workerVersion:env.APP_VERSION||'14.4.0',
+  return {ok:firstPayload.ok!==false,version:env.APP_VERSION||firstPayload.version||'14.4.1',workerVersion:env.APP_VERSION||'14.4.1',
     snapshotVersion:firstPayload.snapshotVersion||snapshotVersionFor(generatedAt),generatedAt,
     activeDate:firstPayload.activeDate||Object.keys(dailyResults).sort()[0]||null,dailyResults,
     sourceStatus,meta:responseMeta(payloadMeta,performanceMetrics),activity:requested,
@@ -460,15 +490,15 @@ async function databaseRankedForecast(env,normalized,c){
   const response=await fetch(`${base}/rest/v1/rpc/get_ranked_forecast`,{
     method:'POST',headers:{...sbHeaders(env),accept:'application/json'},
     body:JSON.stringify({p_activity:normalized.activity,p_regions:normalized.regions,p_areas:normalized.areas,
-      p_places:normalized.activity==='coast'?[...COAST_PLACES]:normalized.activity==='surf'?[...SURF_PLACES]:[],
-      p_limit:FORECAST_ROWS_PER_DAY,p_version:env.APP_VERSION||'14.4.0'})
+      p_places:allowedPlaceNames(normalized),
+      p_limit:FORECAST_ROWS_PER_DAY,p_version:env.APP_VERSION||'14.4.1'})
   });
   const rawBody=await response.text();
   if(response.status===404||response.status===400&&/get_ranked_forecast|schema cache/i.test(rawBody))return null;
   if(!response.ok)throw new Error(`Supabase ranking ${response.status}: ${rawBody.slice(0,300)}`);
   if(!rawBody||rawBody==='null')return {body:JSON.stringify({ok:false,error:'Ingen molnprognos sparad ännu'}),status:404,headers:{...JSON_HEADERS,...c}};
   const parsed=payloadForDays(JSON.parse(rawBody),normalized.days),snapshotVersion=parsed.snapshotVersion||snapshotVersionFor(parsed.generatedAt);
-  parsed.snapshotVersion=snapshotVersion;parsed.workerVersion=env.APP_VERSION||'14.4.0';parsed.version=env.APP_VERSION||'14.4.0';
+  parsed.snapshotVersion=snapshotVersion;parsed.workerVersion=env.APP_VERSION||'14.4.1';parsed.version=env.APP_VERSION||'14.4.1';
   const body=JSON.stringify(parsed);
   return {body,status:200,snapshotVersion,headers:{...JSON_HEADERS,...c,'cache-control':'public, max-age=300, stale-while-revalidate=600','X-Vaderkompassen-Database-Ranked':'true','X-Vaderkompassen-Response-Bytes':String(body.length),'X-Vaderkompassen-Supabase-Calls':'1'}};
 }
@@ -505,7 +535,7 @@ async function buildForecastResult(env,normalized,c,totalStarted){
 const forecastCacheKeys=new Set();
 async function buildCacheableForecast(env,normalized,c,totalStarted,canonicalUrl){
   const result=await buildForecastResult(env,normalized,c,totalStarted),snapshotVersion=result.snapshotVersion||'unknown';
-  result.headers={...result.headers,etag:resultEtag(snapshotVersion,canonicalUrl),'X-Vaderkompassen-Snapshot-Version':snapshotVersion,'X-Vaderkompassen-Worker-Version':env.APP_VERSION||'14.4.0','X-Vaderkompassen-Cached-At':new Date().toISOString()};
+  result.headers={...result.headers,etag:resultEtag(snapshotVersion,canonicalUrl),'X-Vaderkompassen-Snapshot-Version':snapshotVersion,'X-Vaderkompassen-Worker-Version':env.APP_VERSION||'14.4.1','X-Vaderkompassen-Cached-At':new Date().toISOString()};
   return result;
 }
 async function invalidateForecastCache(){
@@ -524,6 +554,8 @@ function sharedForecastBuild(key,builder){
 }
 async function forecast(req,env,ctx,url,c){
   const totalStarted=now(),normalized=normalizeForecastRequest(url);
+  normalized.access=await resolveForecastAccess(req,env,normalized.requestedAccess);
+  if(normalized.access!=="premium")normalized.days="1";
   const canonicalUrl=canonicalForecastUrl(url.origin,normalized);
   const cacheRequest=new Request(canonicalUrl,{method:'GET'}),cache=caches.default;
   const bypass=Boolean(env.LOAD_TEST_TOKEN&&req.headers.get('x-load-test-token')===env.LOAD_TEST_TOKEN);
@@ -553,7 +585,7 @@ async function status(env){
     sb(env,'worker_runs?select=started_at,finished_at,status,message,details&order=started_at.desc&limit=10')
   ]);
   const latest=snapshots?.[0]||null;
-  return {ok:true,service:'Väderkompassen API',version:env.APP_VERSION||'14.4.0',workerVersion:env.APP_VERSION||'14.4.0',time:new Date().toISOString(),
+  return {ok:true,service:'Väderkompassen API',version:env.APP_VERSION||'14.4.1',workerVersion:env.APP_VERSION||'14.4.1',time:new Date().toISOString(),
     latestSnapshot:latest?{id:latest.id,generated_at:latest.generated_at,activity:latest.activity,meta:latest.payload?.meta||null}:null,recentRuns:runs||[]};
 }
 async function saveSnapshot(req,env){
@@ -582,7 +614,7 @@ export default {
   async fetch(req,env,ctx){
     const c=cors(env); if(req.method==='OPTIONS')return new Response(null,{status:204,headers:c}); const url=new URL(req.url);
     try{
-      if(url.pathname==='/'||url.pathname==='/health')return json({ok:true,service:'Väderkompassen API',version:env.APP_VERSION||'14.4.0',workerVersion:env.APP_VERSION||'14.4.0',time:new Date().toISOString()},200,c);
+      if(url.pathname==='/'||url.pathname==='/health')return json({ok:true,service:'Väderkompassen API',version:env.APP_VERSION||'14.4.1',workerVersion:env.APP_VERSION||'14.4.1',time:new Date().toISOString()},200,c);
       if((url.pathname==='/v1/status'||url.pathname==='/status')&&req.method==='GET'){
         await authenticatedAdmin(req,env);
         return json(await status(env),200,c);
