@@ -27,6 +27,7 @@
 - **14.3.5** Enkel Free/Premium-delning: idag och en region för Free, alla dagar och flera regioner för Premium samt molnsynk och reklamplatser efter entitlement.
 - **14.3.6** Skalbar forecasttransport med endags-Free, färdigbyggda rankingar, snapshot-ID, ETag/304, SWR, adaptiv polling och lasttest.
 - **14.4.0** Native appgrund med Capacitor 8, iOS/Android-projekt, native Auth/livscykel/navigation, säkra köp-/annonsstubbar, kontoborttagning och CI.
+- **14.4.1** Centralt platsregister med 500 bevarade Free-platser, 500 Premiumkandidater, strikt kvalitetsgrind och serververifierad platsåtkomst.
 
 ## Nästa
 

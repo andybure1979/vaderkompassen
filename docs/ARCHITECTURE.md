@@ -1,5 +1,11 @@
 # Arkitektur
 
+## Platsregister och åtkomst i v14.4.1
+
+`data/places.json` är registerkälla; `npm run places:build` genererar kompatibla assets för frontend och Worker. Frontend använder `getAccessiblePlaces()`, medan Workern alltid verifierar en begäran om `access=premium` mot Supabase-sessionen och den centrala entitlement-RPC:n. Free-svar innehåller aldrig Premiumrader och tvingas till en dag. Cache, inflight-coalescing och ETag använder åtkomstnivån som egen dimension.
+
+Snapshoten innehåller endast `enabled=true`. Varje rad bär stabilt `placeId` och `accessTier`; aktivitetseligibilitet kommer från platsens kategorier före befintlig poängsortering. Marine API använder enbart registerflaggan `marine`. Modell, granskningsregler och importflöde beskrivs i `PLACE_REGISTRY.md`.
+
 ## Skalbar forecast-path i v14.3.6
 
 Cronjobbet bygger först den kanoniska sjudagarssnapshoten och beräknar därefter kandidater per aktivitet, region och dag. `forecast_ranking_versions` markerar versionen som `building` tills samtliga rader i `forecast_rankings` är skrivna; endast `ready` läses av API:t. Båda tabellerna är privata för Worker service role.

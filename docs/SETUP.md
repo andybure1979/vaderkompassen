@@ -1,14 +1,17 @@
 # Installation och drift
 
-## Väderkompassen v14.4.0
+## Väderkompassen v14.4.1
 
 För native iOS/Android, miljöer, signing, Supabase redirect, butiksförberedelser och CI: se `NATIVE_SETUP.md`.
 
 1. Kör SQL-migrationerna i ordningen nedan.
 2. Publicera hela projektet till GitHub.
 3. Kör `supabase/migrations/20260801_1436_prebuilt_forecast_rankings.sql` i Supabase.
-4. Kör `npm run deploy:production`. Kommandot deployar root-entrypointen och stoppar om publik Worker-version inte är `14.4.0`.
-5. Kontrollera att webbplatsen visar `Väderkompassen v14.4.0` i sidfoten.
+4. Kör `npm run validate:places` och `npm run build:web`.
+5. Kör `npm run deploy:production`. Kommandot deployar root-entrypointen och stoppar om publik Worker-version inte är `14.4.1`.
+6. Kontrollera att webbplatsen visar `Väderkompassen v14.4.1` i sidfoten.
+
+Ingen databasändring krävs för v14.4.1. Efter Worker-deploy måste ett nytt snapshot byggas innan de aktiverade Premiumplatserna finns i prognossvar. Verifiera ett Free-anrop utan bearer-token och ett `access=premium`-anrop med Trial/Premium/VIP/Admin-session. Kontrollera att cacheheadern skiljer representationerna och att Free endast får första dagen.
 
 ## Prestandaverifiering i v14.3.6
 

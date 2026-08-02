@@ -2,7 +2,7 @@ import {cp,mkdir,readFile,rm,writeFile} from "node:fs/promises";
 import {resolve} from "node:path";
 
 const root=resolve(import.meta.dirname,".."),dist=resolve(root,"dist");
-const files=["index.html","styles.css","app.js","auth.js","admin.js","cloud-request.js","config.js","environment.js","native-platform.js","ads-provider.js","fishing-score.js","navigation.js","subscription-providers.js","manifest.webmanifest","sw.js","icon-180.png","icon-192.png","icon-512.png"];
+const files=["index.html","styles.css","place-registry.js","app.js","auth.js","admin.js","cloud-request.js","config.js","environment.js","native-platform.js","ads-provider.js","fishing-score.js","navigation.js","subscription-providers.js","manifest.webmanifest","sw.js","icon-180.png","icon-192.png","icon-512.png"];
 await rm(dist,{recursive:true,force:true});await mkdir(dist,{recursive:true});
 for(const file of files)await cp(resolve(root,file),resolve(dist,file));
 await mkdir(resolve(dist,"vendor/leaflet/images"),{recursive:true});

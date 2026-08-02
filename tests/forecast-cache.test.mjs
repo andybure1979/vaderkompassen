@@ -8,14 +8,16 @@ class MemoryCache{
   async put(request,response){this.puts++;this.items.set(request.url,response.clone())}
   async delete(request){return this.items.delete(request.url)}
 }
-const env={SUPABASE_URL:"https://supabase.test",SUPABASE_SERVICE_ROLE_KEY:"test-key",ALLOWED_ORIGIN:"*",APP_VERSION:"14.4.0"};
+const env={SUPABASE_URL:"https://supabase.test",SUPABASE_SERVICE_ROLE_KEY:"test-key",ALLOWED_ORIGIN:"*",APP_VERSION:"14.4.1"};
 const rows=Array.from({length:80},(_,index)=>({day:"2026-08-01",place:["Varberg","Falkenberg","Halmstad"][index%3],area:"Skåne",region:"Södra Sverige",lat:55.6,lon:13,temp:20,min:12,rain:0,risk:0,sun:8,cloudCover:50,wind:3,windGust:5,windDirection:180,models:1,usedSources:["Open-Meteo"],primarySource:"Open-Meteo",confidence:80,serverScores:{general:index,fishing:80-index,surf:index,hiking:index,ski:index},internal:"ska bort"}));
-const shard={payload:{ok:true,version:"14.4.0",workerVersion:"14.4.0",snapshotVersion:"snapshot-20260801T000000Z",generatedAt:"2026-08-01T00:00:00Z",activeDate:"2026-08-01",dailyResults:{"2026-08-01":rows},meta:{}},source_status:[]};
+const shard={payload:{ok:true,version:"14.4.1",workerVersion:"14.4.1",snapshotVersion:"snapshot-20260801T000000Z",generatedAt:"2026-08-01T00:00:00Z",activeDate:"2026-08-01",dailyResults:{"2026-08-01":rows},meta:{}},source_status:[]};
 
-function setup({delay=0,failSnapshot=false,rankedBody=null,prebuiltRecords=null}={}){
+function setup({delay=0,failSnapshot=false,rankedBody=null,prebuiltRecords=null,shardValue=shard,premium=false}={}){
   const calls={head:0,snapshot:0,ranked:0,prebuilt:0};globalThis.caches={default:new MemoryCache()};
   globalThis.fetch=async input=>{
     const url=new URL(String(input));
+    if(url.pathname.endsWith("/auth/v1/user"))return premium?new Response(JSON.stringify({id:"premium-user"}),{status:200}):new Response("{}",{status:401});
+    if(url.pathname.endsWith("/rest/v1/rpc/get_user_entitlement"))return new Response(JSON.stringify({is_premium:premium}),{status:200});
     if(url.pathname.endsWith("/forecast_ranking_versions")){
       calls.prebuilt++;
       return prebuiltRecords?new Response(JSON.stringify([{snapshot_version:"snapshot-20260801",generated_at:"2026-08-01T00:00:00Z",active_date:"2026-08-01"}]),{status:200}):new Response(JSON.stringify({message:"forecast_ranking_versions missing"}),{status:404});
@@ -35,7 +37,7 @@ function setup({delay=0,failSnapshot=false,rankedBody=null,prebuiltRecords=null}
     }
     calls.snapshot++;if(delay)await new Promise(resolve=>setTimeout(resolve,delay));
     if(failSnapshot)return new Response(JSON.stringify({message:"fel"}),{status:500});
-    return new Response(JSON.stringify([shard]),{status:200});
+    return new Response(JSON.stringify([shardValue]),{status:200});
   };
   const pending=[],ctx={waitUntil(promise){pending.push(promise)}};
   return {calls,pending,ctx};
@@ -48,7 +50,7 @@ test("normaliserar ordning, dubbletter, endpoint och irrelevanta områden",()=>{
   assert.deepEqual(a,b);
   assert.equal(canonicalForecastUrl("https://worker.test",a).toString(),canonicalForecastUrl("https://worker.test",b).toString());
   const irrelevant=normalizeForecastRequest(new URL("https://worker.test/v1/forecast?regions=Mellansverige&areas=Skåne&activity=okänd"));
-  assert.deepEqual(irrelevant,{activity:"general",regions:["Mellansverige"],areas:[],days:"1"});
+  assert.deepEqual(irrelevant,{activity:"general",regions:["Mellansverige"],areas:[],days:"1",requestedAccess:"free",access:"free"});
 });
 
 test("första identiska request är MISS och nästa HIT utan Supabase",async()=>{
@@ -68,11 +70,16 @@ test("ETag ger 304 utan ny Supabase-fråga",async()=>{
 });
 
 test("Free får en dag medan Premium får samtliga dagar",async()=>{
-  const twoDays={ok:true,version:"14.4.0",generatedAt:"2026-08-01T00:00:00Z",dailyResults:{"2026-08-01":[{place:"Falun",serverScore:91}],"2026-08-02":[{place:"Falun",serverScore:89}]},meta:{}};
-  const freeState=setup({rankedBody:twoDays}),free=await worker.fetch(request("activity=general&regions=Mellansverige&days=1"),env,freeState.ctx),freeBody=await free.json();
-  const premiumState=setup({rankedBody:twoDays}),premium=await worker.fetch(request("activity=general&regions=Mellansverige&days=all"),env,premiumState.ctx),premiumBody=await premium.json();
+  const secondRows=rows.map(row=>({...row,day:"2026-08-02"})),twoDayShard={...shard,payload:{...shard.payload,dailyResults:{"2026-08-01":rows,"2026-08-02":secondRows}}};
+  const freeState=setup({shardValue:twoDayShard}),free=await worker.fetch(request("activity=general&regions=S%C3%B6dra%20Sverige&days=all"),env,freeState.ctx),freeBody=await free.json();
+  const premiumState=setup({shardValue:twoDayShard,premium:true}),premiumRequest=new Request(request("activity=general&regions=S%C3%B6dra%20Sverige&days=all&access=premium"),{headers:{Authorization:"Bearer valid"}}),premiumResponse=await worker.fetch(premiumRequest,env,premiumState.ctx),premiumBody=await premiumResponse.json();
   assert.deepEqual(Object.keys(freeBody.dailyResults),["2026-08-01"]);assert.equal(Object.keys(premiumBody.dailyResults).length,2);
-  assert.ok(Number(free.headers.get("X-Vaderkompassen-Response-Bytes"))<Number(premium.headers.get("X-Vaderkompassen-Response-Bytes")));
+  assert.ok(Number(free.headers.get("X-Vaderkompassen-Response-Bytes"))<Number(premiumResponse.headers.get("X-Vaderkompassen-Response-Bytes")));
+});
+
+test("manipulerad access=premium utan giltig session ger inga Premiumplatser",async()=>{
+  const state=setup(),response=await worker.fetch(request("activity=general&access=premium&days=all"),env,state.ctx);
+  assert.equal(response.status,401);assert.match((await response.json()).error,/Premiumsession/);assert.equal(state.calls.snapshot,0);
 });
 
 test("förbyggd ranking undviker legacy-RPC och regional JSON-expansion",async()=>{
@@ -84,11 +91,11 @@ test("förbyggd ranking undviker legacy-RPC och regional JSON-expansion",async()
   assert.equal(response.headers.get("X-Vaderkompassen-Supabase-Calls"),"2");
 });
 
-test("databasrankat svar går direkt till cache utan regional JSON-bearbetning",async()=>{
-  const ranked={ok:true,version:"14.4.0",generatedAt:"2026-08-01T00:00:00Z",dailyResults:{"2026-08-01":[{place:"Falun",serverScore:91}]},meta:{performance:{databaseRanked:true}}};
+test("legacy-RPC får ett serverbestämt platsurval och går direkt till cache",async()=>{
+  const ranked={ok:true,version:"14.4.1",generatedAt:"2026-08-01T00:00:00Z",dailyResults:{"2026-08-01":[{place:"Falun",serverScore:91}]},meta:{performance:{databaseRanked:true}}};
   const state=setup({rankedBody:ranked}),response=await worker.fetch(request("activity=fishing&regions=Mellansverige&areas=Dalarna"),state.env||env,state.ctx);
   assert.equal(response.status,200);assert.equal(response.headers.get("X-Vaderkompassen-Database-Ranked"),"true");
-  const body=await response.json();assert.deepEqual(body.dailyResults,ranked.dailyResults);assert.equal(body.workerVersion,"14.4.0");assert.ok(body.snapshotVersion);
+  const body=await response.json();assert.deepEqual(body.dailyResults,ranked.dailyResults);assert.equal(body.workerVersion,"14.4.1");assert.ok(body.snapshotVersion);
   assert.equal(state.calls.ranked,1);assert.equal(state.calls.head,0);assert.equal(state.calls.snapshot,0);
 });
 
@@ -149,7 +156,7 @@ test("ranking och max 75 rader per dag behålls",async()=>{
   assert.equal(result.length,75);assert.equal(result[0].serverScore,79);assert.equal(result.at(-1).serverScore,5);
   assert.equal("serverScores" in result[0],false);assert.equal("internal" in result[0],false);
   assert.equal(body.rankingEngine,"cloud-v6-performance-2");
-  assert.equal(response.headers.get("X-Vaderkompassen-Worker-Version"),"14.4.0");
+  assert.equal(response.headers.get("X-Vaderkompassen-Worker-Version"),"14.4.1");
   assert.deepEqual(Object.keys(body.meta.performance).sort(),["cache","coalesced","compactMs","fieldsPerRowApprox","filterMs","headQueryMs","mergeMs","parseMs","responseBytes","responseTextMs","rowsMatched","rowsRead","rowsReturned","serializationMs","shards","sliceMs","snapshotQueryMs","sortMs","supabaseBytes","supabaseCalls","totalMs","workerCpuApproxMs"].sort());
   assert.ok(Number.isFinite(body.meta.performance.serializationMs));assert.ok(body.meta.performance.totalMs>=body.meta.performance.serializationMs);
   assert.ok(body.meta.performance.supabaseBytes>0);assert.ok(body.meta.performance.responseBytes>0);

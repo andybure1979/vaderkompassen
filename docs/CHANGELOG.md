@@ -1,5 +1,14 @@
 # Ändringslogg
 
+## 14.4.1 – Utökat Premiumplatsregister
+
+- Central platsmodell och genererade frontend-/Worker-assets från `data/places.json`.
+- Bevarar 500 tidigare platser som Free och importerar exakt 500 Premiumkandidater: 300 SE, 100 NO och 100 DK.
+- Aktiverar endast 47 kvalitetssäkrade kandidater; 453 osäkra poster är avstängda för område-, kategori- eller dubblettgranskning.
+- Verifierar Premiumåtkomst server-side och skiljer Cache API/ETag på `access=free|premium`.
+- Begränsar marin hämtning till `marine=true` och lägger till administrativ platsöversikt med filter och granskningsexport.
+- Lägger till `npm run validate:places`; inga poäng-, ranking- eller prognosformler har ändrats och ingen Supabase-migration krävs.
+
 ## 14.4.0 – Native appgrund
 
 ### Färdigimplementerat
