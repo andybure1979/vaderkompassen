@@ -58,3 +58,10 @@ Aktuell dokumentation finns endast i:
 - `CHANGELOG.md`
 - `ROADMAP.md`
 - `SETUP.md`
+## Native arkitektur i v14.4.0
+
+`scripts/build-web.mjs` skapar en allowlistad `dist/` och ersätter CDN-referenser med lokalt paketerade Leaflet/Supabase-filer. Capacitor bäddar in `dist/`; production har aldrig en fjärrserver som huvudapp. `native-platform.js` är enda gränsen för plattform, App/Browser/Network/Preferences, extern navigation och framtida köpbridge. Webb använder samma kärnfiler och service worker; native inaktiverar service worker och använder WebView/HTTP-cache.
+
+Supabase-klienten får en asynkron Preferences-adapter i native och normal webblagring på webben. Auth återvänder via `vaderkompassen://auth/callback`; callback växlar PKCE-kod eller tokenpar till session. Native appState och Network dispatchar gemensamma events till befintlig forecast-coalescing så resume inte startar parallella loads.
+
+SubscriptionProvider och AdProvider fabricerar inga köp eller annonser. Native bridge måste senare implementeras och backendverifiering förblir entitlement-sanningskälla.

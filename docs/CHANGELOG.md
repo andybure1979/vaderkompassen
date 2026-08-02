@@ -1,5 +1,29 @@
 # Ändringslogg
 
+## 14.4.0 – Native appgrund
+
+### Färdigimplementerat
+
+- Capacitor 8.5.0 med lokalt paketerad webbapp, officiella iOS-/Androidprojekt och exakt låsta plugins.
+- Central development/staging/production-konfiguration, plattformsdetektering, livscykel, nätverksstatus, Preferences-lagring och service-worker-avgränsning.
+- Native Auth callback `vaderkompassen://auth/callback`, extern OAuth Browser, kartnavigation och skyddad kontoborttagning.
+- Separata buildnummer: iOS 1 och Android 14400; publik version 14.4.0.
+- GitHub Actions för web/Worker, Android debug och osignerad iOS-simulator.
+
+### Förberett men inte aktiverat
+
+- Apple/Google köpgränssnitt med backend som framtida sanningskälla.
+- AdMob-provider och placements; endast webb-/utvecklingsplaceholders kan visas.
+
+### Manuella externa steg
+
+- Kör kontoborttagningsmigrationen, lägg till Supabase redirect och konfigurera Apple/Google-konton, signing och GitHub Environments enligt `NATIVE_SETUP.md`.
+
+### Kvarvarande blockerare
+
+- Full Xcode 26 och Android Studio/SDK 36 saknas lokalt.
+- Slutlig 1024×1024 ikon/splash-master, butikskonfiguration, sandboxverifierade köp och AdMob-plugin återstår.
+
 ## 14.3.7 – Tydligare kontofel
 
 - Validerar e-postadress och lösenord lokalt före anrop till Supabase.

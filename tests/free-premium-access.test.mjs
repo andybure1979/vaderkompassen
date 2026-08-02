@@ -5,6 +5,7 @@ import test from "node:test";
 const app=readFileSync(new URL("../app.js",import.meta.url),"utf8");
 const auth=readFileSync(new URL("../auth.js",import.meta.url),"utf8");
 const html=readFileSync(new URL("../index.html",import.meta.url),"utf8");
+const ads=readFileSync(new URL("../ads-provider.js",import.meta.url),"utf8");
 
 test("Trial, Premium, VIP och Admin använder central Premium-entitlement",()=>{
   assert.match(auth,/\["trial", "premium", "vip", "admin"\]\.includes\(effectiveRole\(p\)\)/);
@@ -30,7 +31,9 @@ test("annonsplatser finns endast som lokala Free-platshållare",()=>{
   assert.match(html,/data-placement="main_bottom_banner"[^>]*aria-label="Annons">Annons</);
   assert.match(app,/ad\.dataset\.placement="ranking_inline_native"/);
   assert.match(app,/if\(!hasPremiumUiAccess\(\)&&i===2\)/);
-  assert.match(app,/mainBottomBanner"\)\?\.classList\.toggle\("hidden",premium\)/);
+  assert.match(app,/adProvider\(\)\?\.show\?\.\(\$\("mainBottomBanner"\)\)/);
+  assert.match(ads,/if\(premium\)return new NoAdsProvider\(\)/);
+  assert.match(ads,/return new WebPlaceholderAdProvider\(\)/);
 });
 
 test("Premiumdialogen visar endast den förenklade jämförelsen",()=>{

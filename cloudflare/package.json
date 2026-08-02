@@ -1,6 +1,6 @@
 {
   "name": "vaderkompassen-worker",
-  "version": "14.3.7",
+  "version": "14.4.0",
   "type": "module",
   "private": true,
   "scripts": {

@@ -1,12 +1,14 @@
 # Installation och drift
 
-## Väderkompassen v14.3.7
+## Väderkompassen v14.4.0
+
+För native iOS/Android, miljöer, signing, Supabase redirect, butiksförberedelser och CI: se `NATIVE_SETUP.md`.
 
 1. Kör SQL-migrationerna i ordningen nedan.
 2. Publicera hela projektet till GitHub.
 3. Kör `supabase/migrations/20260801_1436_prebuilt_forecast_rankings.sql` i Supabase.
-4. Kör `npm run deploy:production`. Kommandot deployar root-entrypointen och stoppar om publik Worker-version inte är `14.3.7`.
-5. Kontrollera att webbplatsen visar `Väderkompassen v14.3.7` i sidfoten.
+4. Kör `npm run deploy:production`. Kommandot deployar root-entrypointen och stoppar om publik Worker-version inte är `14.4.0`.
+5. Kontrollera att webbplatsen visar `Väderkompassen v14.4.0` i sidfoten.
 
 ## Prestandaverifiering i v14.3.6
 

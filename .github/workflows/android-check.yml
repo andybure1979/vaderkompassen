@@ -1,0 +1,18 @@
+name: Android debug check
+on:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  debug:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 24, cache: npm}
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: 21, cache: gradle}
+      - uses: android-actions/setup-android@v3
+      - run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - run: npm ci
+      - run: npm run cap:android
+      - run: cd android && ./gradlew assembleDebug

@@ -117,7 +117,7 @@ const SNOW_HOURLY = "snow_depth,freezing_level_height";
 const SETTINGS_KEY="vk-settings";
 const CLOUD_SYNC_KEY="vk-cloud-settings-updated-at";
 const WEATHER_CACHE_KEY="vk-weather-cache-v14.0.0";
-const FORECAST_VALIDATORS_KEY="vk-forecast-validators-v14.3.7";
+const FORECAST_VALIDATORS_KEY="vk-forecast-validators-v14.4.0";
 const POINT_CACHE_PREFIX="vk-point-cache";
 
 function clearAppCacheStorage({includeCurrentWeather=false}={}){
@@ -176,6 +176,7 @@ function normalizeSettings(candidate={}){
 function persistSettings(next,{cloud=true}={}){
   settings=normalizeSettings(next);
   localStorage.setItem(SETTINGS_KEY,JSON.stringify(settings));
+  window.VK_NATIVE?.storage?.setItem?.(SETTINGS_KEY,JSON.stringify(settings)).catch?.(()=>{});
   if(cloud)window.VK_AUTH?.saveSettings?.(settings);
   return settings;
 }
@@ -195,6 +196,7 @@ let dailyResults={}, cloudRankings={}, activeDate=null, map=null, markerLayer=nu
 const $=id=>document.getElementById(id);
 let accessState=window.VK_AUTH?.getAccessState?.()||{role:"free",premium:false,admin:false};
 const hasPremiumUiAccess=()=>Boolean(accessState?.premium);
+const adProvider=()=>window.VK_ADS?.createProvider?.(window.VK_CONFIG,hasPremiumUiAccess());
 function requestPremium(feature){
   if($("settingsDialog")?.open)$("settingsDialog").close();
   window.VK_AUTH?.openPremiumInfo?.(feature);
@@ -203,7 +205,7 @@ function renderAccessUi(){
   const premium=hasPremiumUiAccess();
   $("premiumWeekLock")?.classList.toggle("hidden",premium||!Object.keys(dailyResults).length);
   $("cloudSyncHint")?.classList.toggle("hidden",premium);
-  $("mainBottomBanner")?.classList.toggle("hidden",premium);
+  adProvider()?.show?.($("mainBottomBanner"));
 }
 function singleRegionSettings(candidate){
   const normalized=normalizeSettings(candidate);
@@ -930,7 +932,7 @@ async function mapWithConcurrency(items,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,items.length)},runner));
   return results;
 }
-const diagnostics={version:"14.3.7",workerVersion:null,snapshotVersion:null,cache:null,etag:null,rowsRead:0,rowsReturned:0,responseBytes:0,totalMs:0,workerCpuApproxMs:0,supabaseCalls:0,mode:"checking",lastLoad:null,sources:[],forecastRequests:[]};
+const diagnostics={version:"14.4.0",workerVersion:null,snapshotVersion:null,cache:null,etag:null,rowsRead:0,rowsReturned:0,responseBytes:0,totalMs:0,workerCpuApproxMs:0,supabaseCalls:0,mode:"checking",lastLoad:null,sources:[],forecastRequests:[]};
 function setDataMode(mode,detail=""){
   diagnostics.mode=mode;
   const badge=$("dataModeBadge");
@@ -1771,6 +1773,7 @@ function renderDay(){
       ad.setAttribute("aria-label","Annons");
       ad.textContent="Annons";
       ranking.appendChild(ad);
+      adProvider()?.show?.(ad);
     }
   });
 }
@@ -1798,7 +1801,7 @@ function openNavigationChooser(place,triggerElement){
 }
 function openNavigationService(builder){
   const url=globalThis.VK_NAVIGATION?.[builder]?.(navigationPlace);if(!url)return;
-  window.open(url,"_blank","noopener,noreferrer");closeNavigationChooser();
+  Promise.resolve(window.VK_NATIVE?.openExternal?.(url)||window.open(url,"_blank","noopener,noreferrer")).catch(()=>showNavigationNotice("Kartappen kunde inte öppnas."));closeNavigationChooser();
 }
 $("navigationClose").onclick=closeNavigationChooser;
 $("navigationGoogle").onclick=()=>openNavigationService("buildGoogleMapsUrl");
@@ -1905,7 +1908,7 @@ window.addEventListener("vk:access-changed",event=>{
   else if(Object.keys(dailyResults).length)renderDay();
   scheduleBackgroundRefresh(Date.now());
 });
-if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
+if(!window.VK_NATIVE?.isNativePlatform?.()&&"serviceWorker"in navigator)window.addEventListener("load",async()=>{
   // Registrera listenern först: en redan nedladdad worker kan annars hinna ta
   // kontroll och den nya appversionen blir synlig först vid nästa öppning.
   let reloading=false;
@@ -1914,7 +1917,7 @@ if("serviceWorker"in navigator)window.addEventListener("load",async()=>{
     reloading=true;
     location.reload();
   });
-  const reg=await navigator.serviceWorker.register(`sw.js?v=14.3.7`);
+  const reg=await navigator.serviceWorker.register(`sw.js?v=14.4.0`);
   reg.addEventListener("updatefound",()=>{
     const worker=reg.installing;
     worker?.addEventListener("statechange",()=>{
@@ -1934,4 +1937,13 @@ document.addEventListener("visibilitychange",()=>{
   }
   if(Date.now()-lastForecastCheckAt>30000)load({background:true});
   else scheduleBackgroundRefresh(lastForecastCheckAt||Date.now());
+});
+let lastNativeResumeAt=0;
+window.addEventListener("vk:native-app-state",event=>{
+  if(!event.detail?.isActive){clearTimeout(refreshTimer);cloudRequestManager.abort();return}
+  const now=Date.now();if(now-lastNativeResumeAt<1500)return;lastNativeResumeAt=now;
+  if(now-lastForecastCheckAt>30000)load({background:true});else scheduleBackgroundRefresh(lastForecastCheckAt||now);
+});
+window.addEventListener("vk:native-network",event=>{
+  if(event.detail?.connected&&document.visibilityState!=="hidden"&&Date.now()-lastForecastCheckAt>30000)load({background:true});
 });

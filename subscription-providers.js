@@ -22,16 +22,21 @@
       return Array.isArray(data)?data[0]:data;
     }
   }
-  class NativeUnavailableProvider extends SubscriptionProvider{
-    constructor(client,name){super(client);this.name=name}
-    unavailable(){throw new Error(`${this.name}-integrationen är inte tillgänglig i webbversionen.`)}
-    async startSubscription(){return this.unavailable()}
-    async restorePurchases(){return this.unavailable()}
-    async openManageSubscription(){return this.unavailable()}
-    async syncPurchases(){return this.unavailable()}
+  class NativeSubscriptionProvider extends SubscriptionProvider{
+    constructor(client,name,provider){super(client);this.name=name;this.provider=provider}
+    async invoke(method,args={}){
+      if(!root.VK_NATIVE?.isNativePlatform?.())throw new Error(`${this.name}-integrationen är inte tillgänglig i webbversionen.`);
+      return root.VK_NATIVE.purchase(method,{provider:this.provider,...args});
+    }
+    async getProducts(){return this.invoke("getProducts")}
+    async getSubscriptionStatus(){return this.invoke("getSubscriptionStatus")}
+    async startSubscription(){return this.invoke("startSubscription",{productId:PRODUCT_IDS[this.provider]})}
+    async restorePurchases(){return this.invoke("restorePurchases")}
+    async openManageSubscription(){return this.invoke("openManageSubscription")}
+    async syncPurchases(){return this.invoke("syncPurchases")}
   }
-  class AppleSubscriptionProvider extends NativeUnavailableProvider{constructor(client){super(client,"Apple")}}
-  class GoogleSubscriptionProvider extends NativeUnavailableProvider{constructor(client){super(client,"Google Play")}}
+  class AppleSubscriptionProvider extends NativeSubscriptionProvider{constructor(client){super(client,"Apple","apple")}}
+  class GoogleSubscriptionProvider extends NativeSubscriptionProvider{constructor(client){super(client,"Google Play","google")}}
   function createProvider(config={},client=null){
     const mode=String(config.subscriptionMode||"disabled");
     if(mode==="manual_test")return new ManualTestSubscriptionProvider(client);

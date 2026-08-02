@@ -1,0 +1,14 @@
+name: iOS unsigned simulator check
+on:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  simulator:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 24, cache: npm}
+      - run: npm ci
+      - run: npm run cap:ios
+      - run: xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug -sdk iphonesimulator CODE_SIGNING_ALLOWED=NO build
