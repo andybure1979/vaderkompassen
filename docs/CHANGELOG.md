@@ -1,5 +1,14 @@
 # Ändringslogg
 
+## 14.4.3 – 1 000 verifierade platser
+
+- Aktiverar de återstående 453 källgranskade Premiumplatserna.
+- Ger Premium totalt 500 utökade platser utöver Freeutbudets 500 platser.
+- Verifierar samtliga GeoNames-ID:n, namn och koordinater mot officiella SE/NO/DK-register.
+- Normaliserar 223 orter, två parker, vatten-/kusttyper, kommunetiketter och säkert identifierade områdesfel.
+- Behåller verkliga homonymer som separata platser med geografisk särskiljning.
+- Ändrar inte poäng, ranking, prognosalgoritmer, design, Auth eller Premiumlogik och kräver ingen migration.
+
 ## 14.4.2 – Snapshot-säkerhet
 
 - Rättar fallbackfrågan till senaste kompletta `activity=all`-snapshot.

@@ -1,5 +1,9 @@
 # Arkitektur
 
+## Fullt platsregister i v14.4.3
+
+Registerkällan innehåller 500 aktiva Freeplatser och 500 aktiva Premiumplatser. Alla Premiumobjekt har verifierade GeoNames-ID:n och koordinater samt aktivitet utifrån källans objekttyp. Frontend och Worker använder fortsatt samma genererade register, och serverentitlement avgör om endast Free eller samtliga 1 000 platser är tillgängliga. Snapshotens publiceringsspärr kräver full täckning för alla 1 000 aktiva platser.
+
 ## Snapshot-säkerhet i v14.4.2
 
 Cronjobbet använder endast senaste kompletta `activity=all` som fallback. En ny snapshot måste innehålla minst en färsk plats och full täckning för samtliga aktiva registerplatser efter fallback. Annars avbryts publicering, rankingversion, cacheinvalidering och gallring; den tidigare fungerande snapshoten ligger kvar. Diagnostiken redovisar batchindex och verkligt antal misslyckade batcher.

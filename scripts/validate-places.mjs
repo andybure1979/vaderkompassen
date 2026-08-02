@@ -6,7 +6,7 @@ const allowedCategories=new Set(["general","fishing","hiking","surf","coast","bo
 const allowedReviews=new Set(["verified","coordinate_verified","area_review_required","category_review_required","duplicate_review_required","disabled_pending_review"]);
 const allowedRegions=new Set(["Södra Sverige","Mellansverige","Norra Sverige","Jylland","Fyn","Själland","Østlandet","Sørlandet","Vestlandet","Trøndelag","Nord-Norge"]);
 const ids=new Set(),premium=places.filter(place=>place.accessTier==="premium"),free=places.filter(place=>place.accessTier==="free");
-assert.equal(free.length,500,"De befintliga Free-platserna ska vara exakt 500");assert.equal(premium.length,500,"De nya Premium-posterna ska vara exakt 500 före granskning");
+assert.equal(free.length,500,"De befintliga Free-platserna ska vara exakt 500");assert.equal(premium.length,500,"Premiumregistret ska vara exakt 500 platser");
 assert.deepEqual(Object.fromEntries(["SE","NO","DK"].map(code=>[code,premium.filter(place=>place.countryCode===code).length])),{SE:300,NO:100,DK:100});
 for(const place of places){
   assert.ok(place.id&&!ids.has(place.id),`Dubblett eller tomt id: ${place.id}`);ids.add(place.id);
@@ -17,4 +17,5 @@ for(const place of places){
   assert.ok(!(place.surfSpot&&(!place.marine||!place.coastal)),`Surfspot saknar marine/coastal: ${place.id}`);assert.ok(!(place.placeType==="coast"&&!place.coastal),`Kustpost saknar coastal: ${place.id}`);assert.ok(!(place.freshwater&&place.marine),`Motsägande vattenflaggor: ${place.id}`);
 }
 assert.ok(free.every(place=>place.accessTier==="free"));assert.ok(premium.every(place=>place.accessTier==="premium"));
-console.log(`Platsregister OK: ${free.length} Free + ${premium.length} Premium-kandidater, ${premium.filter(place=>place.enabled).length} Premium aktiverade.`);
+assert.ok(premium.every(place=>place.enabled&&place.reviewStatus==="verified"),"Alla 500 granskade Premiumplatser ska vara verifierade och aktiva");
+console.log(`Platsregister OK: ${free.length} Free + ${premium.length} verifierade Premiumplatser, ${places.filter(place=>place.enabled).length} totalt aktiva.`);

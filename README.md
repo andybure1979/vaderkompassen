@@ -1,3 +1,9 @@
+## v14.4.3 – 1 000 verifierade platser
+
+Samtliga 500 Premiumplatser är nu källgranskade mot GeoNames officiella landregister och aktiverade. Registret innehåller därmed 500 Freeplatser och 500 Premiumplatser. Namn, GeoNames-ID och koordinater har verifierats; objekttyp, aktivitetskategorier, kommunetiketter och tydliga områdesfel har normaliserats. Homonymer behålls som separata verkliga platser och särskiljs geografiskt.
+
+Poäng, ranking, prognosalgoritmer, design, Auth och Premiumlogik är oförändrade. Ingen Supabase-migration krävs. Efter Worker-deploy måste en ny snapshot verifieras med exakt 1 000 tillgängliga platser innan releasen betraktas som färdig.
+
 ## v14.4.2 – Snapshot-säkerhet
 
 Cronjobbet läser nu uttryckligen den senaste kompletta `activity=all`-snapshoten som fallback. En körning med noll färska platser eller ofullständig täckning stoppas före publicering, så en fungerande prognos inte längre kan ersättas av en snapshot med bara ett fåtal platser. Batchfel rapporteras per faktisk batch med leverantörens felsvar.

@@ -10,16 +10,16 @@ test("registret bevarar 500 Free och importerar 300/100/100 Premium",()=>{
 
 test("central entitlement ger rätt aktiva platsurval",()=>{
   const freeCount=getAccessiblePlaces(PLACE_REGISTRY,{role:"free"}).length,premiumCount=getAccessiblePlaces(PLACE_REGISTRY,{role:"premium"}).length;
-  assert.equal(freeCount,500);assert.equal(premiumCount,547);
+  assert.equal(freeCount,500);assert.equal(premiumCount,1000);
   for(const role of ["trial","premium","vip","admin"])assert.equal(getAccessiblePlaces(PLACE_REGISTRY,{role}).length,premiumCount);
   assert.equal(getAccessiblePlaces(PLACE_REGISTRY,{role:"expired"}).length,freeCount);
   assert.equal(getAccessiblePlaces(PLACE_REGISTRY,{role:"cancelled_active",current_period_ends_at:"2999-01-01"}).length,premiumCount);
   assert.equal(getAccessiblePlaces(PLACE_REGISTRY,{role:"cancelled_active",current_period_ends_at:"2000-01-01"}).length,freeCount);
 });
 
-test("blockerande granskning är avstängd och lika namn förtydligas",()=>{
+test("alla Premiumplatser är verifierade och lika namn förtydligas",()=>{
   const blockers=PLACE_REGISTRY.filter(place=>["area_review_required","category_review_required","duplicate_review_required"].includes(place.reviewStatus));
-  assert.ok(blockers.length>0);assert.ok(blockers.every(place=>place.enabled===false));
+  assert.equal(blockers.length,0);assert.equal(PLACE_REGISTRY.filter(place=>place.accessTier==="premium"&&place.enabled).length,500);
   const duplicate=PLACE_REGISTRY.find(place=>PLACE_REGISTRY.some(other=>other.id!==place.id&&other.name.toLocaleLowerCase("sv")===place.name.toLocaleLowerCase("sv")));
   assert.ok(duplicate);assert.notEqual(getPlaceDisplayName(duplicate),duplicate.name);
 });
