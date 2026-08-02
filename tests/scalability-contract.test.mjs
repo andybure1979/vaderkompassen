@@ -7,13 +7,21 @@ const app=await readFile(new URL("../app.js",import.meta.url),"utf8");
 const migration=await readFile(new URL("../supabase/migrations/20260801_1436_prebuilt_forecast_rankings.sql",import.meta.url),"utf8");
 const packageJson=JSON.parse(await readFile(new URL("../package.json",import.meta.url),"utf8"));
 const wrangler=await readFile(new URL("../wrangler.jsonc",import.meta.url),"utf8");
+const cloudflareWrangler=await readFile(new URL("../cloudflare/wrangler.toml",import.meta.url),"utf8");
 
 test("deploykontraktet använder root-entrypoint och samma releaseversion",()=>{
-  assert.equal(packageJson.version,"14.4.4");
+  assert.equal(packageJson.version,"14.4.5");
   assert.equal(packageJson.scripts.deploy,"wrangler deploy --config wrangler.jsonc");
   assert.match(wrangler,/"main": "cloudflare\/src\/index\.js"/);
-  assert.match(wrangler,/"APP_VERSION": "14\.4\.4"/);
-  assert.match(worker,/workerVersion:env\.APP_VERSION\|\|'14\.4\.4'/);
+  assert.match(wrangler,/"APP_VERSION": "14\.4\.5"/);
+  assert.match(worker,/workerVersion:env\.APP_VERSION\|\|'14\.4\.5'/);
+});
+
+test("snapshotjobbet körs en gång per hel timme i båda deploykonfigurationerna",()=>{
+  assert.match(wrangler,/"crons": \["0 \* \* \* \*"\]/);
+  assert.match(cloudflareWrangler,/crons = \["0 \* \* \* \*"\]/);
+  assert.doesNotMatch(wrangler,/\*\/30/);
+  assert.doesNotMatch(cloudflareWrangler,/\*\/30/);
 });
 
 test("rankingtabeller är privata och endast färdiga versioner blir läsbara",()=>{

@@ -1,3 +1,9 @@
+## v14.4.5 – Prognosuppdatering varje timme
+
+Cloudflare Workerns snapshotjobb hämtar en ny prognos vid hel timme, en gång var 60:e minut i stället för var 30:e minut. Frontendens lätta snapshotkontroller är oförändrade och laddar endast ned prognosen när snapshot-ID har ändrats.
+
+Poäng, ranking, prognosdata, UI, Auth och Premiumlogik är oförändrade. Ingen Supabase-migration krävs.
+
 ## v14.4.4 – Robust snapshot-hämtning
 
 Snapshotjobbet begränsar samtidiga Open-Meteo-anrop, försöker om tillfälliga 429-/5xx-fel med deterministisk fördröjning och respekterar `Retry-After`. Data- och formatfel isoleras genom en begränsad batchdelning utan att förstärka rate limiting. Om publiceringsspärren stoppar en körning sparas de faktiska leverantörsfelen i diagnostiken.

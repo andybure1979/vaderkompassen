@@ -3,9 +3,9 @@ main = "src/index.js"
 compatibility_date = "2026-07-26"
 
 [triggers]
-crons = ["*/30 * * * *"]
+crons = ["0 * * * *"]
 
 [vars]
-APP_VERSION = "14.4.4"
+APP_VERSION = "14.4.5"
 ENVIRONMENT = "production"
 ALLOWED_ORIGIN = "*"
