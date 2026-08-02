@@ -1,3 +1,9 @@
+## v14.4.4 – Robust snapshot-hämtning
+
+Snapshotjobbet begränsar samtidiga Open-Meteo-anrop, försöker om tillfälliga 429-/5xx-fel med deterministisk fördröjning och respekterar `Retry-After`. Data- och formatfel isoleras genom en begränsad batchdelning utan att förstärka rate limiting. Om publiceringsspärren stoppar en körning sparas de faktiska leverantörsfelen i diagnostiken.
+
+Poäng, ranking, prognosfält, design, Auth och Premiumlogik är oförändrade. Ingen Supabase-migration krävs.
+
 ## v14.4.3 – 1 000 verifierade platser
 
 Samtliga 500 Premiumplatser är nu källgranskade mot GeoNames officiella landregister och aktiverade. Registret innehåller därmed 500 Freeplatser och 500 Premiumplatser. Namn, GeoNames-ID och koordinater har verifierats; objekttyp, aktivitetskategorier, kommunetiketter och tydliga områdesfel har normaliserats. Homonymer behålls som separata verkliga platser och särskiljs geografiskt.

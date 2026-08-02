@@ -1,5 +1,14 @@
 # Ändringslogg
 
+## 14.4.4 – Robust snapshot-hämtning
+
+- Begränsar Open-Meteo-hämtningen till två samtidiga batchar.
+- Försöker om HTTP 429 och 5xx med deterministisk backoff och stöd för `Retry-After`.
+- Delar data-/formatfel en gång för att isolera felaktiga delbatchar, men delar aldrig rate-limitfel.
+- Sparar batchindex, felförklaring, antal försök och berörda platser i `worker_runs` när publicering stoppas.
+- Behåller strikt krav på minst en färsk plats och full täckning för alla 1 000 platser.
+- Ändrar inte poäng, ranking, prognosdata, design, Auth eller Premium och kräver ingen migration.
+
 ## 14.4.3 – 1 000 verifierade platser
 
 - Aktiverar de återstående 453 källgranskade Premiumplatserna.
