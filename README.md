@@ -1,3 +1,9 @@
+## v14.4.2 – Snapshot-säkerhet
+
+Cronjobbet läser nu uttryckligen den senaste kompletta `activity=all`-snapshoten som fallback. En körning med noll färska platser eller ofullständig täckning stoppas före publicering, så en fungerande prognos inte längre kan ersättas av en snapshot med bara ett fåtal platser. Batchfel rapporteras per faktisk batch med leverantörens felsvar.
+
+Poäng, ranking, aktivitetsmodeller, platsåtkomst och UI är oförändrade.
+
 ## v14.4.1 – Utökat Premiumplatsregister
 
 Platsregistret har en central, validerad modell med 500 oförändrade Free-platser och 500 nya Premiumkandidater från Sverige, Norge och Danmark. Stoppregeln är strikt: endast 47 nya poster är aktiverade i första leveransen; övriga ligger avstängda med tydlig granskningsstatus tills område, kategori eller dubblettstatus är verifierad.
