@@ -1,5 +1,12 @@
 # Ändringslogg
 
+## 14.4.5 – Prognosuppdatering varje timme
+
+- Ändrar snapshotjobbet från `*/30 * * * *` till `0 * * * *`.
+- Hämtar därmed ny leverantörsprognos en gång per hel timme.
+- Behåller frontendens befintliga ETag-/snapshotkontroller oförändrade.
+- Ändrar inte poäng, ranking, prognosfält, UI, Auth eller Premium och kräver ingen migration.
+
 ## 14.4.4 – Robust snapshot-hämtning
 
 - Begränsar Open-Meteo-hämtningen till två samtidiga batchar.

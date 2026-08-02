@@ -1,5 +1,9 @@
 # Arkitektur
 
+## Timvis prognosuppdatering i v14.4.5
+
+Cloudflare Workerns schemalagda snapshotjobb använder cron-uttrycket `0 * * * *` och hämtar ny leverantörsdata vid hel timme. Frontendens polling styr endast kontrollen av snapshot-ID och kan därför fortsätta med befintliga intervall utan att skapa fler Open-Meteo-anrop.
+
 ## Robust snapshot-hämtning i v14.4.4
 
 Väderhämtningen kör högst två Open-Meteo-batchar samtidigt. Tillfälliga HTTP 429- och 5xx-svar försöks om med begränsad deterministisk backoff och leverantörens `Retry-After` när den finns. Ett data- eller formatfel kan dela batchen en gång för att rädda en frisk del, medan rate-limitfel aldrig skapar fler delanrop. Ett stoppat snapshotjobb sparar strukturerad leverantörsdiagnostik i `worker_runs`.
