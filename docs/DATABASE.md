@@ -36,3 +36,6 @@ Vanliga användare har endast SELECT på egna subscription- och trialrader. De s
 Migrationen är idempotent. Äldre `manual`-trial/Premium migreras till `manual_test` med befintligt slutdatum och blir aldrig verifierat Apple-/Google-Premium. Gamla profilfält raderas inte.
 
 Providerpayload och köpidentifierare får senare bara skrivas av service role eller en verifierande backend. Köp-token ska endast sparas som hash.
+## v14.4.0 – kontoborttagning
+
+Kör `supabase/migrations/20260802_1440_account_deletion.sql`. RPC:n `delete_own_account(text)` kräver nylig autentisering och exakt bekräftelse, blockerar Admin-konton och raderar authanvändaren med kaskaderande persondata. En privat RLS-skyddad revisionspost behåller endast hashat subject/providerreferens och minsta abonnemangsfakta som krävs för butik/revision; den avslutar aldrig en butiksprenumeration.

@@ -35,7 +35,7 @@ if(mockMode){
     }
     throw new Error(`Oväntat mockanrop: ${url}`);
   };
-  const mockEnv={SUPABASE_URL:"https://supabase.test",SUPABASE_SERVICE_ROLE_KEY:"test-key",APP_VERSION:"14.3.7",ALLOWED_ORIGIN:"*",LOAD_TEST_TOKEN:"mock-token"};
+  const mockEnv={SUPABASE_URL:"https://supabase.test",SUPABASE_SERVICE_ROLE_KEY:"test-key",APP_VERSION:"14.4.0",ALLOWED_ORIGIN:"*",LOAD_TEST_TOKEN:"mock-token"};
   const mockCtx={waitUntil(promise){pendingBackground.push(promise)}};
   requestFetch=(url,init={})=>worker.fetch(new Request(url,init),mockEnv,mockCtx);
 }

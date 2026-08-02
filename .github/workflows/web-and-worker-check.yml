@@ -1,0 +1,17 @@
+name: Web and Worker check
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 24, cache: npm}
+      - run: npm ci
+      - run: npm test
+      - run: npm run build:web
+      - run: npm run version:check
+      - run: node --check app.js && node --check auth.js && node --check native-platform.js && node --check cloudflare/src/index.js

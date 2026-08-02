@@ -5,7 +5,7 @@
   const cfg = window.VK_CONFIG || {};
   const configured = Boolean(cfg.supabaseUrl && cfg.supabaseAnonKey && window.supabase?.createClient);
   const client = configured ? window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, {
-    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: !window.VK_NATIVE?.isNativePlatform?.(), storage: window.VK_NATIVE?.storage }
   }) : null;
 
   let session = null;
@@ -98,7 +98,7 @@
   }
 
   function appRedirectUrl() {
-    return new URL("./", window.location.href).href;
+    return window.VK_NATIVE?.authRedirectUrl?.()||new URL("./", window.location.href).href;
   }
 
   function closeDialog(id) {
@@ -120,6 +120,18 @@
     const error = search.get("error_description") || hash.get("error_description");
     const isCallback = search.has("code") || hash.has("access_token") || search.has("token_hash");
     return { error, isCallback };
+  }
+
+  async function handleNativeAuthUrl(rawUrl) {
+    if (!client || !rawUrl) return false;
+    const url=new URL(rawUrl),search=new URLSearchParams(url.search),hash=new URLSearchParams(url.hash.replace(/^#/,""));
+    const error=search.get("error_description")||hash.get("error_description");
+    if(error){setMessage("authMessage",authErrorMessage(error,"login"),true);$("authDialog")?.showModal();return false}
+    const code=search.get("code");
+    if(code){const {error:exchangeError}=await client.auth.exchangeCodeForSession(code);if(exchangeError)throw exchangeError;return true}
+    const accessToken=hash.get("access_token"),refreshToken=hash.get("refresh_token");
+    if(accessToken&&refreshToken){const {error:sessionError}=await client.auth.setSession({access_token:accessToken,refresh_token:refreshToken});if(sessionError)throw sessionError;return true}
+    return false;
   }
 
   function clearAuthCallbackUrl() {
@@ -438,11 +450,13 @@
     if (!client) return setMessage("authMessage", "Kontofunktionen är tillfälligt otillgänglig.", true);
     setMessage("authMessage", `Öppnar ${provider === "apple" ? "Apple" : "Google"} …`);
     try {
-      const { error } = await client.auth.signInWithOAuth({
+      const native=window.VK_NATIVE?.isNativePlatform?.();
+      const { data, error } = await client.auth.signInWithOAuth({
         provider,
-        options: { redirectTo: appRedirectUrl() }
+        options: { redirectTo: appRedirectUrl(),skipBrowserRedirect:Boolean(native) }
       });
       if (error) setMessage("authMessage", authErrorMessage(error, "oauth"), true);
+      else if(native&&data?.url)await window.VK_NATIVE.openAuth(data.url);
     } catch (error) { setMessage("authMessage", authErrorMessage(error, "oauth"), true); }
   }
 
@@ -463,6 +477,29 @@
     $("profileDialog").close();
   }
 
+  async function deleteAccount() {
+    if(!client||!session?.user)return;
+    const provider=entitlement?.provider||"manual_test",storeProvider=["apple","google"].includes(provider);
+    const periodEnd=entitlement?.current_period_ends_at||entitlement?.trial_ends_at;
+    const warning=storeProvider
+      ? `Kontot och personliga appdata tas bort. Din ${provider==="apple"?"Apple":"Google Play"}-prenumeration avslutas inte automatiskt och måste hanteras i butiken${periodEnd?` före ${new Date(periodEnd).toLocaleDateString("sv-SE")}`:""}. Fortsätta?`
+      : "Kontot, profilen och personliga appdata tas bort permanent. Åtgärden kan inte ångras. Fortsätta?";
+    if(!window.confirm(warning))return;
+    if(window.prompt("Skriv RADERA för att bekräfta permanent kontoborttagning.")!=="RADERA")return setMessage("profileNotice","Kontot raderades inte.",true);
+    const button=$("deleteAccount");if(button)button.disabled=true;
+    setMessage("profileNotice","Raderar konto …");
+    try{
+      const {error}=await client.rpc("delete_own_account",{confirmation_text:"RADERA"});
+      if(error)throw error;
+      await client.auth.signOut({scope:"local"});
+      localStorage.clear();
+      $("profileDialog").close();
+      setMessage("authMessage","Kontot och personliga appdata är raderade.");
+      $("authDialog").showModal();
+    }catch(error){setMessage("profileNotice",/recent|nyligen/i.test(error?.message||"")?"Logga ut och in igen innan du raderar kontot.":"Kontot kunde inte raderas. Försök igen eller kontakta support.",true)}
+    finally{if(button)button.disabled=false}
+  }
+
   function bind() {
     $("accountBtn")?.addEventListener("click", openAccount);
     $("authForm")?.addEventListener("submit", signInWithPassword);
@@ -471,6 +508,7 @@
     $("googleLogin")?.addEventListener("click", () => oauth("google"));
     $("resetPassword")?.addEventListener("click", resetPassword);
     $("signOut")?.addEventListener("click", signOut);
+    $("deleteAccount")?.addEventListener("click", deleteAccount);
     $("saveProfileName")?.addEventListener("click", saveDisplayName);
     $("upgradePremium")?.addEventListener("click", () => openPremiumInfo());
     $("premiumPurchase")?.addEventListener("click", startPremiumTrial);
@@ -520,6 +558,10 @@
       }
     });
   }
+
+  window.addEventListener("vk:native-url-open",event=>handleNativeAuthUrl(event.detail?.url).catch(error=>{
+    setMessage("authMessage",authErrorMessage(error,"login"),true);$("authDialog")?.showModal();
+  }));
 
   window.VK_AUTH = Object.freeze({
     getAccessState,

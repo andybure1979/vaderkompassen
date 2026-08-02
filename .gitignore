@@ -4,4 +4,23 @@
 !.dev.vars.example
 .env*
 !.env.example
+!.env.development.example
+!.env.staging.example
+!.env.production.example
 node_modules/
+dist/
+
+# Native lokalfiler och privata signingartefakter
+ios/App/xcuserdata/
+ios/DerivedData/
+**/*.xcuserstate
+**/*.xcworkspace/xcuserdata/
+**/*.mobileprovision
+**/*.p12
+**/*.cer
+android/.gradle/
+android/local.properties
+android/**/build/
+**/*.jks
+**/*.keystore
+keystore.properties

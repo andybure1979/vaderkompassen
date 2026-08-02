@@ -1,3 +1,7 @@
+## v14.4.0 – Native appgrund
+
+Webbappen kan nu paketeras lokalt i officiella Capacitor 8-projekt för iOS och Android. Versionen innehåller reproducerbar `dist/`-build, tre miljöer, native plattforms-/livscykelbrygga, Supabase deeplink/Auth-lagring, kartnavigation, säkra köp- och annonsstubbar, kontoborttagning, CI och versionskontroll. Riktiga köp, produktionsannonser och butikspublicering är inte aktiverade. Se `docs/NATIVE_SETUP.md`.
+
 ## v14.3.7 – Tydligare kontofel
 
 Skapa konto, inloggning och lösenordsåterställning validerar nu uppgifterna lokalt och visar svenska, användaranpassade fel i stället för råa Supabase-meddelanden. Kontodialogens design och autentiseringsmodell är oförändrade.
