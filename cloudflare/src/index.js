@@ -25,7 +25,7 @@ for(const place of ENABLED_PLACES){if(place.coastal)COAST_PLACES.add(place.name)
 const JSON_HEADERS={"content-type":"application/json; charset=utf-8","cache-control":"no-store"};
 const json=(data,status=200,extra={})=>new Response(JSON.stringify(data),{status,headers:{...JSON_HEADERS,...extra}});
 const now=()=>performance.now();
-const cors=env=>({"access-control-allow-origin":env.ALLOWED_ORIGIN||"*","access-control-allow-methods":"GET,POST,OPTIONS","access-control-allow-headers":"content-type,authorization,x-admin-token,x-load-test-token,if-none-match","access-control-expose-headers":"etag,x-vaderkompassen-snapshot-version,x-vaderkompassen-worker-version,x-vaderkompassen-cache,x-vaderkompassen-rows-read,x-vaderkompassen-rows-returned,x-vaderkompassen-response-bytes,x-vaderkompassen-total-ms,x-vaderkompassen-worker-cpu-approx-ms,x-vaderkompassen-supabase-calls","X-Vaderkompassen-Worker-Version":env.APP_VERSION||"14.4.3"});
+const cors=env=>({"access-control-allow-origin":env.ALLOWED_ORIGIN||"*","access-control-allow-methods":"GET,POST,OPTIONS","access-control-allow-headers":"content-type,authorization,x-admin-token,x-load-test-token,if-none-match","access-control-expose-headers":"etag,x-vaderkompassen-snapshot-version,x-vaderkompassen-worker-version,x-vaderkompassen-cache,x-vaderkompassen-rows-read,x-vaderkompassen-rows-returned,x-vaderkompassen-response-bytes,x-vaderkompassen-total-ms,x-vaderkompassen-worker-cpu-approx-ms,x-vaderkompassen-supabase-calls","X-Vaderkompassen-Worker-Version":env.APP_VERSION||"14.4.4"});
 const supabaseKeyType=env=>String(env.SUPABASE_SERVICE_ROLE_KEY||'').startsWith('sb_secret_')?'secret':'legacy-service-role';
 const sbHeaders=env=>{
   const key=String(env.SUPABASE_SERVICE_ROLE_KEY||'').trim();
@@ -82,10 +82,23 @@ async function adminHealth(req,env){
   const responseMs=Math.round((performance.now()-started)*10)/10,row=latest?.[0]||null;
   const generated=row?.generated_at||null,ageMinutes=generated?Math.max(0,Math.round((Date.now()-new Date(generated).getTime())/60000)):null;
   try{await sb(env,'admin_audit_log',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify({actor_user_id:admin.id,action:'admin_health_check',entity_type:'worker',reason:'Manuell hälsokontroll från adminvyn',new_value:{ok:Boolean(row),responseMs}})});}catch(error){console.warn('Kunde inte logga admin health:',error.message)}
-  return {ok:Boolean(row),checkedAt:new Date().toISOString(),workerVersion:env.APP_VERSION||'14.4.3',environment:env.ENVIRONMENT||'production',buildId:env.BUILD_ID||null,forecast:{status:row?'ok':'warning',responseMs,cache:null,rowsRead:row?1:0,rowsReturned:row?1:0},snapshot:{status:row&&ageMinutes<=90?'ok':row?'warning':'error',generatedAt:generated,ageMinutes,shards:null},supabase:{status:'ok'},auth:{status:'ok'},subscriptions:{status:'ok'}};
+  return {ok:Boolean(row),checkedAt:new Date().toISOString(),workerVersion:env.APP_VERSION||'14.4.4',environment:env.ENVIRONMENT||'production',buildId:env.BUILD_ID||null,forecast:{status:row?'ok':'warning',responseMs,cache:null,rowsRead:row?1:0,rowsReturned:row?1:0},snapshot:{status:row&&ageMinutes<=90?'ok':row?'warning':'error',generatedAt:generated,ageMinutes,shards:null},supabase:{status:'ok'},auth:{status:'ok'},subscriptions:{status:'ok'}};
 }
 const chunks=(a,n)=>Array.from({length:Math.ceil(a.length/n)},(_,i)=>a.slice(i*n,(i+1)*n));
 const finite=v=>Number.isFinite(Number(v))?Number(v):null;
+const WEATHER_CONCURRENCY=2;
+const WEATHER_RETRY_DELAYS_MS=[500,1500];
+const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+
+function providerError(message,{status=null,retryAfterMs=null}={}){
+  const error=new Error(message);error.status=status;error.retryAfterMs=retryAfterMs;
+  error.retryable=status===429||status>=500;return error;
+}
+function retryAfterMs(response){
+  const value=response.headers.get('retry-after');if(!value)return null;
+  const seconds=Number(value);if(Number.isFinite(seconds))return Math.max(0,Math.min(5000,seconds*1000));
+  const date=Date.parse(value);return Number.isFinite(date)?Math.max(0,Math.min(5000,date-Date.now())):null;
+}
 
 async function fetchWeatherBatch(batch){
   const q=new URLSearchParams({
@@ -95,10 +108,10 @@ async function fetchWeatherBatch(batch){
   });
   try{
     const r=await fetch(`https://api.open-meteo.com/v1/forecast?${q}`,{headers:{accept:'application/json'}});
-    if(!r.ok){const detail=(await r.text()).slice(0,240).replace(/\s+/g,' ');throw new Error(`Open-Meteo HTTP ${r.status}${detail?`: ${detail}`:''}`)}
+    if(!r.ok){const detail=(await r.text()).slice(0,240).replace(/\s+/g,' ');throw providerError(`Open-Meteo HTTP ${r.status}${detail?`: ${detail}`:''}`,{status:r.status,retryAfterMs:retryAfterMs(r)})}
     const payload=await r.json();
     const list=Array.isArray(payload)?payload:[payload];
-    if(list.length!==batch.length)throw new Error(`Open-Meteo returnerade ${list.length}/${batch.length} orter`);
+    if(list.length!==batch.length)throw providerError(`Open-Meteo returnerade ${list.length}/${batch.length} orter`);
     return list.flatMap((data,i)=>{
       const p=batch[i]; if(!p||!data?.daily?.time)return [];
       return data.daily.time.map((day,d)=>{
@@ -147,9 +160,28 @@ async function fetchMarineBatch(batch){
   }catch{return []}
 }
 
-async function fetchAdaptive(batch,batchIndex){
-  try{return {batchIndex,rows:await fetchWeatherBatch(batch),failures:[],error:null}}
-  catch(error){return {batchIndex,rows:[],failures:batch.map(place=>({place:place[0],error:error.message})),error:error.message}}
+async function fetchAdaptive(batch,batchIndex,{allowSplit=true}={}){
+  let lastError=null,attempts=0;
+  for(let attempt=0;attempt<=WEATHER_RETRY_DELAYS_MS.length;attempt++){
+    try{attempts++;return {batchIndex,rows:await fetchWeatherBatch(batch),failures:[],error:null,attempts}}
+    catch(error){
+      lastError=error;
+      if(!error.retryable||attempt===WEATHER_RETRY_DELAYS_MS.length)break;
+      await wait(error.retryAfterMs??WEATHER_RETRY_DELAYS_MS[attempt]);
+    }
+  }
+  // Format- och datafel kan orsakas av en enskild plats. Dela då batchen en gång
+  // så att övriga platser fortfarande kan hämtas. Dela aldrig 429/5xx eftersom
+  // fler anrop skulle förstärka leverantörens belastning.
+  if(allowSplit&&!lastError?.retryable&&batch.length>1){
+    const middle=Math.ceil(batch.length/2),parts=[];
+    parts.push(await fetchAdaptive(batch.slice(0,middle),`${batchIndex+1}a`,{allowSplit:false}));
+    parts.push(await fetchAdaptive(batch.slice(middle),`${batchIndex+1}b`,{allowSplit:false}));
+    const rows=parts.flatMap(part=>part.rows),failures=parts.flatMap(part=>part.failures),errors=parts.filter(part=>part.error).map(part=>part.error);
+    return {batchIndex,rows,failures,error:errors.length?errors.join(' · '):null,attempts:parts.reduce((sum,part)=>sum+(part.attempts||1),0)};
+  }
+  const message=lastError?.message||'Okänt Open-Meteo-fel';
+  return {batchIndex,rows:[],failures:batch.map(place=>({place:place[0],error:message})),error:message,attempts};
 }
 async function mapLimit(items,limit,fn){
   const out=new Array(items.length);let cursor=0;
@@ -306,14 +338,14 @@ const rankingStore={
       performanceMetrics.rowsReturned+=dailyResults[day].length;
       if(!dailyResults[day].length)delete dailyResults[day];
     }
-    return {ok:true,version:env.APP_VERSION||'14.4.3',workerVersion:env.APP_VERSION||'14.4.3',snapshotVersion:head.snapshot_version,generatedAt:head.generated_at,
+    return {ok:true,version:env.APP_VERSION||'14.4.4',workerVersion:env.APP_VERSION||'14.4.4',snapshotVersion:head.snapshot_version,generatedAt:head.generated_at,
       activeDate:Object.keys(dailyResults).sort()[0]||null,dailyResults,
       meta:{performance:performanceMetrics},activity:normalized.activity,rankingEngine:'cloud-v7-prebuilt',resultLimitPerDay:FORECAST_ROWS_PER_DAY};
   }
 };
 async function buildSnapshot(env){
   const previous=await previousSnapshot(env),batches=chunks(PLACES,30);
-  const parts=await mapLimit(batches,5,(batch,index)=>fetchAdaptive(batch,index));
+  const parts=await mapLimit(batches,WEATHER_CONCURRENCY,(batch,index)=>fetchAdaptive(batch,index));
   let freshRows=parts.flatMap(x=>x.rows);const failures=parts.flatMap(x=>x.failures),failedParts=parts.filter(part=>part.error);
   const marinePlaces=PLACES.filter(p=>PLACE_BY_ID.get(p[5])?.marine===true);
   const marineParts=await mapLimit(chunks(marinePlaces,30),3,b=>fetchMarineBatch(b));
@@ -329,9 +361,15 @@ async function buildSnapshot(env){
   const rows=[...freshRows,...fallbackRows].map(addServerScores),dailyResults={};
   for(const row of rows)(dailyResults[row.day]||=[]).push(row);
   const days=Object.keys(dailyResults).sort(),availablePlaces=new Set(rows.map(r=>r.place));
-  assertSnapshotPublishable({requestedPlaces:PLACES.length,freshPlaces:freshPlaces.size,availablePlaces:availablePlaces.size});
+  try{assertSnapshotPublishable({requestedPlaces:PLACES.length,freshPlaces:freshPlaces.size,availablePlaces:availablePlaces.size})}
+  catch(error){
+    error.details={placesRequested:PLACES.length,placesFresh:freshPlaces.size,placesFallback:availablePlaces.size-freshPlaces.size,placesAvailable:availablePlaces.size,
+      failedBatches:failedParts.length,failedBatchIndexes:failedParts.map(part=>part.batchIndex+1),failedPlaces:failures.map(x=>x.place),
+      providerErrors:failedParts.map(part=>({batch:part.batchIndex+1,error:part.error,attempts:part.attempts||1}))};
+    console.error('Snapshotleverantörsfel',JSON.stringify(error.details));throw error;
+  }
   const generatedAt=new Date().toISOString();
-  return {ok:true,version:env.APP_VERSION||'14.4.3',workerVersion:env.APP_VERSION||'14.4.3',snapshotVersion:snapshotVersionFor(generatedAt),generatedAt,activeDate:days[0]||null,dailyResults,
+  return {ok:true,version:env.APP_VERSION||'14.4.4',workerVersion:env.APP_VERSION||'14.4.4',snapshotVersion:snapshotVersionFor(generatedAt),generatedAt,activeDate:days[0]||null,dailyResults,
     sourceStatus:[{name:'Open-Meteo',ok:freshPlaces.size>0,rows:freshRows.length,error:failedParts.map(part=>`Batch ${part.batchIndex+1}: ${part.error}`).join(' · ')}],
     meta:{placesRequested:PLACES.length,placesUpdated:freshPlaces.size,placesFresh:freshPlaces.size,placesFallback:availablePlaces.size-freshPlaces.size,placesAvailable:availablePlaces.size,days:days.length,batches:batches.length,failedBatches:failedParts.length,failedBatchIndexes:failedParts.map(part=>part.batchIndex+1),failedPlaces:failures.map(x=>x.place)}};
 }
@@ -452,7 +490,7 @@ async function latestSnapshot(env,normalized,performanceMetrics){
   }
   performanceMetrics.shards=storedRows.length;
   const firstPayload=storedRows[0].payload||{};
-  return {ok:firstPayload.ok!==false,version:env.APP_VERSION||firstPayload.version||'14.4.3',workerVersion:env.APP_VERSION||'14.4.3',
+  return {ok:firstPayload.ok!==false,version:env.APP_VERSION||firstPayload.version||'14.4.4',workerVersion:env.APP_VERSION||'14.4.4',
     snapshotVersion:firstPayload.snapshotVersion||snapshotVersionFor(generatedAt),generatedAt,
     activeDate:firstPayload.activeDate||Object.keys(dailyResults).sort()[0]||null,dailyResults,
     sourceStatus,meta:responseMeta(payloadMeta,performanceMetrics),activity:requested,
@@ -498,14 +536,14 @@ async function databaseRankedForecast(env,normalized,c){
     method:'POST',headers:{...sbHeaders(env),accept:'application/json'},
     body:JSON.stringify({p_activity:normalized.activity,p_regions:normalized.regions,p_areas:normalized.areas,
       p_places:allowedPlaceNames(normalized),
-      p_limit:FORECAST_ROWS_PER_DAY,p_version:env.APP_VERSION||'14.4.3'})
+      p_limit:FORECAST_ROWS_PER_DAY,p_version:env.APP_VERSION||'14.4.4'})
   });
   const rawBody=await response.text();
   if(response.status===404||response.status===400&&/get_ranked_forecast|schema cache/i.test(rawBody))return null;
   if(!response.ok)throw new Error(`Supabase ranking ${response.status}: ${rawBody.slice(0,300)}`);
   if(!rawBody||rawBody==='null')return {body:JSON.stringify({ok:false,error:'Ingen molnprognos sparad ännu'}),status:404,headers:{...JSON_HEADERS,...c}};
   const parsed=payloadForDays(JSON.parse(rawBody),normalized.days),snapshotVersion=parsed.snapshotVersion||snapshotVersionFor(parsed.generatedAt);
-  parsed.snapshotVersion=snapshotVersion;parsed.workerVersion=env.APP_VERSION||'14.4.3';parsed.version=env.APP_VERSION||'14.4.3';
+  parsed.snapshotVersion=snapshotVersion;parsed.workerVersion=env.APP_VERSION||'14.4.4';parsed.version=env.APP_VERSION||'14.4.4';
   const body=JSON.stringify(parsed);
   return {body,status:200,snapshotVersion,headers:{...JSON_HEADERS,...c,'cache-control':'public, max-age=300, stale-while-revalidate=600','X-Vaderkompassen-Database-Ranked':'true','X-Vaderkompassen-Response-Bytes':String(body.length),'X-Vaderkompassen-Supabase-Calls':'1'}};
 }
@@ -542,7 +580,7 @@ async function buildForecastResult(env,normalized,c,totalStarted){
 const forecastCacheKeys=new Set();
 async function buildCacheableForecast(env,normalized,c,totalStarted,canonicalUrl){
   const result=await buildForecastResult(env,normalized,c,totalStarted),snapshotVersion=result.snapshotVersion||'unknown';
-  result.headers={...result.headers,etag:resultEtag(snapshotVersion,canonicalUrl),'X-Vaderkompassen-Snapshot-Version':snapshotVersion,'X-Vaderkompassen-Worker-Version':env.APP_VERSION||'14.4.3','X-Vaderkompassen-Cached-At':new Date().toISOString()};
+  result.headers={...result.headers,etag:resultEtag(snapshotVersion,canonicalUrl),'X-Vaderkompassen-Snapshot-Version':snapshotVersion,'X-Vaderkompassen-Worker-Version':env.APP_VERSION||'14.4.4','X-Vaderkompassen-Cached-At':new Date().toISOString()};
   return result;
 }
 async function invalidateForecastCache(){
@@ -592,7 +630,7 @@ async function status(env){
     sb(env,'worker_runs?select=started_at,finished_at,status,message,details&order=started_at.desc&limit=10')
   ]);
   const latest=snapshots?.[0]||null;
-  return {ok:true,service:'Väderkompassen API',version:env.APP_VERSION||'14.4.3',workerVersion:env.APP_VERSION||'14.4.3',time:new Date().toISOString(),
+  return {ok:true,service:'Väderkompassen API',version:env.APP_VERSION||'14.4.4',workerVersion:env.APP_VERSION||'14.4.4',time:new Date().toISOString(),
     latestSnapshot:latest?{id:latest.id,generated_at:latest.generated_at,activity:latest.activity,meta:latest.payload?.meta||null}:null,recentRuns:runs||[]};
 }
 async function saveSnapshot(req,env){
@@ -614,14 +652,14 @@ async function runUpdate(env,reason='scheduled'){
     await sb(env,`forecast_snapshots?generated_at=lt.${encodeURIComponent(cutoff)}`,{method:'DELETE',headers:{Prefer:'return=minimal'}});
     await recordRun(env,'success',`Prognosen uppdaterades (${reason})`,{durationMs:Date.now()-started,...snapshot.meta},startedAt);
     return snapshot.meta;
-  }catch(e){await recordRun(env,'error',e.message,{durationMs:Date.now()-started,reason},startedAt);throw e}
+  }catch(e){await recordRun(env,'error',e.message,{durationMs:Date.now()-started,reason,...(e.details||{})},startedAt);throw e}
 }
 
 export default {
   async fetch(req,env,ctx){
     const c=cors(env); if(req.method==='OPTIONS')return new Response(null,{status:204,headers:c}); const url=new URL(req.url);
     try{
-      if(url.pathname==='/'||url.pathname==='/health')return json({ok:true,service:'Väderkompassen API',version:env.APP_VERSION||'14.4.3',workerVersion:env.APP_VERSION||'14.4.3',time:new Date().toISOString()},200,c);
+      if(url.pathname==='/'||url.pathname==='/health')return json({ok:true,service:'Väderkompassen API',version:env.APP_VERSION||'14.4.4',workerVersion:env.APP_VERSION||'14.4.4',time:new Date().toISOString()},200,c);
       if((url.pathname==='/v1/status'||url.pathname==='/status')&&req.method==='GET'){
         await authenticatedAdmin(req,env);
         return json(await status(env),200,c);

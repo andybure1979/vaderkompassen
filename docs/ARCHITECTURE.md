@@ -1,5 +1,11 @@
 # Arkitektur
 
+## Robust snapshot-hämtning i v14.4.4
+
+Väderhämtningen kör högst två Open-Meteo-batchar samtidigt. Tillfälliga HTTP 429- och 5xx-svar försöks om med begränsad deterministisk backoff och leverantörens `Retry-After` när den finns. Ett data- eller formatfel kan dela batchen en gång för att rädda en frisk del, medan rate-limitfel aldrig skapar fler delanrop. Ett stoppat snapshotjobb sparar strukturerad leverantörsdiagnostik i `worker_runs`.
+
+Publiceringsregeln från v14.4.2 är oförändrad: minst en plats måste vara färsk och alla 1 000 aktiva platser måste täckas av färsk data eller frisk fallback.
+
 ## Fullt platsregister i v14.4.3
 
 Registerkällan innehåller 500 aktiva Freeplatser och 500 aktiva Premiumplatser. Alla Premiumobjekt har verifierade GeoNames-ID:n och koordinater samt aktivitet utifrån källans objekttyp. Frontend och Worker använder fortsatt samma genererade register, och serverentitlement avgör om endast Free eller samtliga 1 000 platser är tillgängliga. Snapshotens publiceringsspärr kräver full täckning för alla 1 000 aktiva platser.

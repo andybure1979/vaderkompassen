@@ -5,11 +5,13 @@ import {readFile} from "node:fs/promises";
 const worker=await readFile(new URL("../cloudflare/src/index.js",import.meta.url),"utf8");
 const sql=await readFile(new URL("../supabase/migrations/20260801_1431_forecast_runtime_limits.sql",import.meta.url),"utf8");
 
-test("cron använder stora fasta batcher utan rekursiva nätverksförsök",()=>{
+test("cron använder fasta batcher med begränsad samtidighet och säker retry",()=>{
   assert.match(worker,/chunks\(PLACES,30\)/);
   assert.match(worker,/chunks\(marinePlaces,30\)/);
-  assert.doesNotMatch(worker,/return fetchWeatherBatch\(batch,attempt\+1\)/);
-  assert.doesNotMatch(worker,/fetchAdaptive\(batch\.slice/);
+  assert.match(worker,/const WEATHER_CONCURRENCY=2/);
+  assert.match(worker,/status===429\|\|status>=500/);
+  assert.match(worker,/retryAfterMs/);
+  assert.match(worker,/!lastError\?\.retryable&&batch\.length>1/);
 });
 
 test("fallback läser endast komplett snapshot och degraderad körning publiceras inte",()=>{

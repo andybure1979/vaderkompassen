@@ -12,7 +12,7 @@ De 500 tidigare platserna har stabila `free-{landskod}-{namn}`-ID:n eftersom den
 
 Statusarna är `verified`, `coordinate_verified`, `area_review_required`, `category_review_required`, `duplicate_review_required` och `disabled_pending_review`. En blockerande status kräver alltid `enabled=false`. Samma namn behåller unika ID:n och visas med kommunreferens eller area när förtydligande behövs.
 
-Importen innehåller 300 svenska, 100 norska och 100 danska Premiumplatser. I v14.4.3 har samtliga 500 poster verifierats mot GeoNames officiella landdump: käll-ID, namn och koordinat måste matcha. Objekttyp och aktivitetskategorier följer GeoNames feature class/code, officiell admin2 används som kommunetikett när den finns och verkliga homonymer behålls med geografisk särskiljning. Alla 500 är `verified` och aktiva.
+Importen innehåller 300 svenska, 100 norska och 100 danska Premiumplatser. I v14.4.4 har samtliga 500 poster verifierats mot GeoNames officiella landdump: käll-ID, namn och koordinat måste matcha. Objekttyp och aktivitetskategorier följer GeoNames feature class/code, officiell admin2 används som kommunetikett när den finns och verkliga homonymer behålls med geografisk särskiljning. Alla 500 är `verified` och aktiva.
 
 Kategorier har stramats åt vid import: sjöar och vattendrag får `fishing` men inte automatiskt `boat`; kust eller hamn får marina kategorier; breda destinationer får inte automatiskt bio eller badhus; surf och skidåkning kräver verifierad specialplats. Detta ändrar inte de gamla Free-kopplingarna.
 

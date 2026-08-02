@@ -30,6 +30,7 @@
 - **14.4.1** Centralt platsregister med 500 bevarade Free-platser, 500 Premiumkandidater, strikt kvalitetsgrind och serververifierad platsåtkomst.
 - **14.4.2** Snapshot-säkerhet som förhindrar publicering av tomma eller ofullständiga prognoskörningar och rättar komplett fallback.
 - **14.4.3** Fullt källgranskat register med 500 Freeplatser och 500 aktiva Premiumplatser.
+- **14.4.4** Begränsad Open-Meteo-samtidighet, säker retry och komplett feldiagnostik för snapshotjobb.
 
 ## Nästa
 
