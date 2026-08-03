@@ -12,7 +12,7 @@ window.VK_CONFIG = Object.freeze({
   preferCloud: true,
   allowLocalFallback: true,
   supabaseUrl: environment.supabaseUrl||"https://buyeqmczjatsyylvayti.supabase.co",
-  supabaseAnonKey: environment.supabaseAnonKey||"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYXNlIiwicmVmIjoiYnV5ZXFtY3pqYXRzeXlsdmF5dGkiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTc4NTAyNDc2NywiZXhwIjoyMTAwNjAwNzY3fQ.zHetxZBpflhP5or3eVa_9ZBnQ62OmQiiSi8VCTbWOwg",
+  supabaseAnonKey: environment.supabaseAnonKey||"sb_publishable_PGja4NB-UnrwVCsYAqKTMQ_svTB1Fow",
   supportUrl: environment.supportUrl||"https://andybure1979.github.io/vaderkompassen/public/support/",
   privacyPolicyUrl: environment.privacyPolicyUrl||"https://andybure1979.github.io/vaderkompassen/public/privacy/",
   termsUrl: environment.termsUrl||"https://andybure1979.github.io/vaderkompassen/public/terms/",
