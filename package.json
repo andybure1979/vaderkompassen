@@ -1,6 +1,6 @@
 {
   "name": "vaderkompassen",
-  "version": "14.4.5",
+  "version": "14.5.0",
   "private": true,
   "description": "Väderkompassen – beslutsstöd för dagens aktivitet",
   "scripts": {
@@ -14,6 +14,9 @@
     "dev": "wrangler dev",
     "build:web": "npm run places:build && node scripts/build-web.mjs",
     "version:check": "node scripts/check-version-sync.mjs",
+    "check:store-compliance": "node scripts/check-store-compliance.mjs",
+    "check:production-config": "node scripts/check-production-config.mjs",
+    "security:release-check": "node scripts/security-release-check.mjs",
     "cap:copy": "npm run build:web && cap copy",
     "cap:sync": "npm run build:web && cap sync",
     "cap:ios": "npm run build:web && cap sync ios",

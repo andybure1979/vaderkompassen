@@ -1,4 +1,10 @@
-# Native setup – v14.4.0
+# Native setup – v14.5.0 Release Candidate
+
+- App-ID/bundle-ID: `se.vaderkompassen.app`.
+- Version: `14.5.0`; iOS build `2`; Android versionCode `14500`.
+- Production-build ska använda `VK_SUBSCRIPTION_MODE=disabled` och `VK_ADS_MODE=disabled` tills verkliga providers, backendverifiering och samtycke är klara.
+- iOS archive kräver lokalt Apple Team/signing. Android release-AAB kräver `VK_ANDROID_KEYSTORE_PATH` och tillhörande lokala miljövariabler. Inget signingmaterial får committas.
+- Kör releasekontrollerna och följ `RELEASE_CHECKLIST.md`, `STORE_SUBSCRIPTIONS.md` och `STORE_ASSETS.md`.
 
 ## Status och verktyg
 
@@ -33,7 +39,7 @@ npm run version:check
 
 1. Gå med i Apple Developer Program.
 2. Registrera Bundle ID `se.vaderkompassen.app`.
-3. Skapa appen i App Store Connect med version 14.4.0 och stigande buildnummer.
+3. Skapa appen i App Store Connect med version 14.5.0 och stigande buildnummer.
 4. Installera Xcode 26 eller senare och öppna `ios/App/App.xcodeproj`.
 5. Välj Andreas Apple Developer Team under Signing & Capabilities. Inga certifikat/provisioningprofiler ska läggas i Git.
 6. Kontrollera iPhone/iPad, rotation, safe area, status bar, splash och den slutliga 1024×1024-ikonen.
@@ -75,7 +81,7 @@ npm run version:check
 
 ## CI och GitHub Environments
 
-Workflows bygger web/Worker, Android debug och osignerad iOS simulator. Skapa GitHub Environments `development`, `staging`, `production`. Framtida secrets kan omfatta publika miljövärden, Android signing och Apple/App Store Connect-credentials, men produktionsupload är inte aktiverad i v14.4.0.
+Workflows bygger web/Worker, Android debug och osignerad iOS simulator. Skapa GitHub Environments `development`, `staging`, `production`. Framtida secrets kan omfatta publika miljövärden, Android signing och Apple/App Store Connect-credentials, men produktionsupload är inte aktiverad i v14.5.0.
 
 ## Kvar före butiksdistribution
 

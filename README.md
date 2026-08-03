@@ -1,3 +1,11 @@
+## v14.5.0 – Store compliance och Release Candidate
+
+Release Candidate-underlaget innehåller svenska utkast till integritetspolicy och villkor, publika support-/integritets-/villkors-/kontoborttagningssidor, tydliga prenumerationsupplysningar, butikstexter, privacy/Data Safety-/åldersklassificeringsunderlag och maskinläsbara releasekontroller. Produktionsklienten har avstängda riktiga köp, lokala annonsplatshållare och explicit CORS-allowlist.
+
+Versionen är **BLOCKED för publik butiksproduktion** tills juridik och URL:er verifierats, StoreKit/Play Billing med backendverifiering fungerar, samtycke/annonser beslutats, signing finns lokalt och ikoner/skärmbilder godkänts. Kör `npm run check:store-compliance`, `npm run check:production-config` och `npm run security:release-check`.
+
+Poäng, ranking, prognosmodeller, aktiviteter och platsregister är oförändrade. Ingen Supabase-migration ingår.
+
 ## v14.4.5 – Prognosuppdatering varje timme
 
 Cloudflare Workerns snapshotjobb hämtar en ny prognos vid hel timme, en gång var 60:e minut i stället för var 30:e minut. Frontendens lätta snapshotkontroller är oförändrade och laddar endast ned prognosen när snapshot-ID har ändrats.

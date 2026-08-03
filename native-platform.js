@@ -14,6 +14,10 @@
     async setItem(key,value){if(native&&plugin("Preferences"))return plugin("Preferences").set({key,value});root.localStorage.setItem(key,value)},
     async removeItem(key){if(native&&plugin("Preferences"))return plugin("Preferences").remove({key});root.localStorage.removeItem(key)}
   };
+  async function clearLocalData(){
+    if(native&&plugin("Preferences"))await plugin("Preferences").clear();
+    try{root.localStorage.clear()}catch{}
+  }
   async function openExternal(url){
     const target=String(url||"");if(!/^https:\/\//i.test(target))throw new Error("Endast säkra HTTPS-länkar tillåts.");
     if(native){root.open(target,"_system","noopener,noreferrer");return true}
@@ -39,7 +43,7 @@
     const launch=await app?.getLaunchUrl?.();if(launch?.url)root.dispatchEvent(new CustomEvent("vk:native-url-open",{detail:{url:launch.url}}));
     await network?.addListener?.("networkStatusChange",status=>root.dispatchEvent(new CustomEvent("vk:native-network",{detail:status})));
   }
-  const api=Object.freeze({getRuntimePlatform,isNativePlatform,isWebPlatform,authRedirectUrl,storage,openExternal,openAuth,closeAuth,purchase,initialize});
+  const api=Object.freeze({getRuntimePlatform,isNativePlatform,isWebPlatform,authRedirectUrl,storage,clearLocalData,openExternal,openAuth,closeAuth,purchase,initialize});
   root.VK_NATIVE=api;
   root.addEventListener("DOMContentLoaded",()=>initialize().catch(error=>{if(root.VK_CONFIG?.debug)console.warn("Native init",error)}),{once:true});
 })(globalThis);

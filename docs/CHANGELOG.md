@@ -1,5 +1,33 @@
 # Ändringslogg
 
+## 14.5.0 – Store compliance och Release Candidate
+
+### Implementerat
+
+- Juridiska svenska utkast och publicerbara sidor för privacy, villkor, support och kontoborttagning.
+- Tydliga Premiumupplysningar om prisets källa, period, provperiod, automatisk förnyelse, uppsägning och periodslut.
+- Central compliancechecklista, production-config- och release-security-script.
+- Apple App Privacy-, Google Data Safety-, Apple/IARC-åldersklassificerings-, asset-, reviewkonto-, subscription- och tillgänglighetsunderlag.
+- Svensk Apple/Google-metadata och markerade strukturer för framtida engelska översättningar.
+- Explicit Worker CORS-allowlist för produktionens webb- och native-origin.
+
+### Verifierat lokalt
+
+- Kontoborttagning använder säker RPC, skiljer appkonto från butikprenumeration och rensar lokal appdata.
+- Androidmanifestet begär endast internet och nätverksstatus; iOS privacy manifest deklarerar ingen tracking.
+
+### Manuella steg
+
+- Juridisk granskning och publicering/verifiering av HTTPS-URL:er.
+- Portalernas privacy/Data Safety/age rating, reviewkonto, skärmbilder, ikoner och signing.
+
+### Blockerat före produktion
+
+- Riktiga StoreKit/Play Billing-köp, restore/manage och backendverifiering.
+- AdMob/samtycke, signerade builds samt godkända butiksbilder.
+
+Ingen poäng-, ranking-, väder- eller aktivitetsmodell och ingen Supabase-migration ändras.
+
 ## 14.4.5 – Prognosuppdatering varje timme
 
 - Ändrar snapshotjobbet från `*/30 * * * *` till `0 * * * *`.

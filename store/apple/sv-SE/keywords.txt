@@ -1,0 +1,1 @@
+väder,prognos,fiske,vandring,surf,skidor,kust,båt,karta,topplista,aktivitet
