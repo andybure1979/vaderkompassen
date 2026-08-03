@@ -336,8 +336,12 @@ const rankingStore={
     const head=heads[0],query=new URLSearchParams({select:'snapshot_version,generated_at,forecast_day,region,ranked_rows',snapshot_version:`eq.${head.snapshot_version}`,activity:`eq.${normalized.activity}`,order:'forecast_day.asc,region.asc'});
     if(normalized.days==='1')query.set('forecast_day',`eq.${head.active_date}`);
     if(normalized.regions.length)query.set('or',`(${normalized.regions.map(region=>`region.eq.${region}`).join(',')})`);
-    const queryStarted=now(),records=await sb(env,`forecast_rankings?${query}`,{},performanceMetrics);
-    performanceMetrics.snapshotQueryMs+=now()-queryStarted;performanceMetrics.supabaseCalls++;
+    const summaryQ=new URLSearchParams({select:'meta:payload->meta',activity:'eq.all',generated_at:`eq.${head.generated_at}`,limit:'1'});
+    const queryStarted=now(),[records,summaryRows]=await Promise.all([
+      sb(env,`forecast_rankings?${query}`,{},performanceMetrics),
+      sb(env,`forecast_snapshots?${summaryQ}`,{},performanceMetrics).catch(()=>[])
+    ]);
+    performanceMetrics.snapshotQueryMs+=now()-queryStarted;performanceMetrics.supabaseCalls+=2;
     if(!records?.length)return null;
     const areaSet=normalized.areas.length?new Set(normalized.areas):null,dailyResults={};
     const placeSet=normalized.activity==='coast'?COAST_PLACES:normalized.activity==='surf'?SURF_PLACES:null;
@@ -357,7 +361,7 @@ const rankingStore={
     }
     return {ok:true,version:env.APP_VERSION||'14.5.0',workerVersion:env.APP_VERSION||'14.5.0',snapshotVersion:head.snapshot_version,generatedAt:head.generated_at,
       activeDate:Object.keys(dailyResults).sort()[0]||null,dailyResults,
-      meta:{performance:performanceMetrics},activity:normalized.activity,rankingEngine:'cloud-v7-prebuilt',resultLimitPerDay:FORECAST_ROWS_PER_DAY};
+      meta:responseMeta(summaryRows?.[0]?.meta,performanceMetrics),activity:normalized.activity,rankingEngine:'cloud-v7-prebuilt',resultLimitPerDay:FORECAST_ROWS_PER_DAY};
   }
 };
 async function buildSnapshot(env){

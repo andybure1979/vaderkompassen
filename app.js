@@ -1109,9 +1109,9 @@ function applyCloudSnapshot(snapshot,places){
     :(snapshot.activeDate&&dailyResults[snapshot.activeDate]?snapshot.activeDate:availableDates[0]);
   setDataMode("cloud",`Uppdaterad ${formatUpdatedAt(snapshot.generatedAt||snapshot.savedAt||Date.now())}.`);diagnostics.lastLoad=new Date().toISOString();diagnostics.placeCount=places.length;diagnostics.snapshotVersion=snapshot.snapshotVersion||diagnostics.snapshotVersion||null;diagnostics.workerVersion=snapshot.workerVersion||diagnostics.workerVersion||null;
   const updated=snapshot.generatedAt||snapshot.savedAt||Date.now();
-  const meta=snapshot.meta||{},available=meta.placesAvailable??new Set(Object.values(dailyResults).flat().map(r=>r.place)).size;
-  const fresh=meta.placesFresh??meta.placesUpdated??available,fallback=meta.placesFallback??Math.max(0,available-fresh);
-  $("modelCount").textContent=`Moln · uppdaterad ${formatUpdatedAt(updated)} · ${available}/${meta.placesRequested||places.length} orter${fallback?` (${fresh} färska, ${fallback} reserv)`:""}`;
+  const meta=snapshot.meta||{},hasSnapshotCount=Number.isFinite(meta.placesAvailable),available=meta.placesAvailable;
+  const fresh=meta.placesFresh??meta.placesUpdated??available,fallback=meta.placesFallback??Math.max(0,(available||0)-(fresh||0));
+  $("modelCount").textContent=`Moln · uppdaterad ${formatUpdatedAt(updated)}${hasSnapshotCount?` · ${available}/${meta.placesRequested||places.length} platser hämtade totalt${fallback?` (${fresh} färska, ${fallback} reserv)`:""}`:""}`;
   $("modelCount").title="Centralt beräknad och cachad prognos";
   $("statusCard").classList.add("hidden");renderTabs();renderActivities();renderDay();
   saveWeatherCache({sourceStatus:snapshot.sourceStatus||[],cloud:true,generatedAt:updated,snapshotVersion:diagnostics.snapshotVersion});
