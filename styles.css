@@ -168,3 +168,4 @@ dialog{width:min(520px,calc(100% - 24px));border:0;border-radius:25px;padding:0;
   .decision-reasons.compact{grid-template-columns:repeat(2,minmax(0,1fr))}
   .decision-reasons.compact span{padding:5px 4px}
 }
+.legal-links{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0}.legal-links a,.legal-consent a{color:#087f8c;text-decoration:underline;text-underline-offset:3px}.legal-consent,.subscription-disclosure{font-size:.86rem;line-height:1.45;color:#536b80}.subscription-disclosure{background:#f4f8fb;border-radius:12px;padding:12px}

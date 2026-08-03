@@ -36,8 +36,8 @@ test("annonsplatser finns endast som lokala Free-platshållare",()=>{
   assert.match(ads,/return new WebPlaceholderAdProvider\(\)/);
 });
 
-test("Premiumdialogen visar endast den förenklade jämförelsen",()=>{
-  for(const text of ["Dagens prognos","En region åt gången","Lokala inställningar","Reklam","Alla prognosdagar","Jämför flera regioner","Molnsynk mellan enheter","Reklamfritt"]){
+test("Premiumdialogen visar endast den förenklade butiksjämförelsen",()=>{
+  for(const text of ["Dagens prognos","En region åt gången","Standardutbud av platser","Ingen molnsynk","Reklam","Alla prognosdagar","Flera regioner","Utökat platsregister","Molnsynk","Reklamfritt"]){
     assert.match(html,new RegExp(text));
   }
   assert.doesNotMatch(html,/Fler aktiviteter|Personliga rekommendationer|AI-rekommendationer|appen lär sig/i);

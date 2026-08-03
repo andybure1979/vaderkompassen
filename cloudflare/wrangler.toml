@@ -6,6 +6,6 @@ compatibility_date = "2026-07-26"
 crons = ["0 * * * *"]
 
 [vars]
-APP_VERSION = "14.4.5"
+APP_VERSION = "14.5.0"
 ENVIRONMENT = "production"
-ALLOWED_ORIGIN = "*"
+ALLOWED_ORIGINS = "https://andybure1979.github.io,capacitor://localhost,https://localhost"

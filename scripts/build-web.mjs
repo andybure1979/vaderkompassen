@@ -5,6 +5,8 @@ const root=resolve(import.meta.dirname,".."),dist=resolve(root,"dist");
 const files=["index.html","styles.css","place-registry.js","app.js","auth.js","admin.js","cloud-request.js","config.js","environment.js","native-platform.js","ads-provider.js","fishing-score.js","navigation.js","subscription-providers.js","manifest.webmanifest","sw.js","icon-180.png","icon-192.png","icon-512.png"];
 await rm(dist,{recursive:true,force:true});await mkdir(dist,{recursive:true});
 for(const file of files)await cp(resolve(root,file),resolve(dist,file));
+for(const directory of ["support","privacy","terms","delete-account"])await cp(resolve(root,"public",directory),resolve(dist,directory),{recursive:true});
+await cp(resolve(root,"public/legal.css"),resolve(dist,"legal.css"));
 await mkdir(resolve(dist,"vendor/leaflet/images"),{recursive:true});
 await cp(resolve(root,"node_modules/leaflet/dist/leaflet.css"),resolve(dist,"vendor/leaflet/leaflet.css"));
 await cp(resolve(root,"node_modules/leaflet/dist/leaflet.js"),resolve(dist,"vendor/leaflet/leaflet.js"));

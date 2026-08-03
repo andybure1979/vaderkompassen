@@ -32,6 +32,7 @@
 - **14.4.3** Fullt källgranskat register med 500 Freeplatser och 500 aktiva Premiumplatser.
 - **14.4.4** Begränsad Open-Meteo-samtidighet, säker retry och komplett feldiagnostik för snapshotjobb.
 - **14.4.5** Prognosens snapshotjobb körs en gång per hel timme för lägre leverantörs- och Workerbelastning.
+- **14.5.0 RC** Store-compliancekod, juridik-/supportsidor, butiksunderlag och blockerande releasekontroller. Publik butiksproduktion väntar på juridik, signing, butiksköp, samtycke och assets.
 
 ## Nästa
 

@@ -1,5 +1,11 @@
 # Arkitektur
 
+## Store compliance-gräns i v14.5.0
+
+Publika juridik- och supportsidor byggs in i native `dist/` men har också planerade stabila GitHub Pages-URL:er. Klientkonfigurationen exponerar endast publika endpoints och juridik-URL:er. Riktiga subscriptions är fail-closed: production använder `disabled` tills en native provider returnerar butiksproduktdata och backendverifiering finns. AdMob initieras inte; placeholders är den enda Free-annonsen i RC.
+
+Worker CORS använder explicit allowlist för GitHub Pages och native WebView-origins och svarar med `Vary: Origin`. Kontoborttagning fortsätter via security-definer-RPC utan service role i klienten. Compliance- och readinessstatus ligger separat från runtime och innehåller inga credentials.
+
 ## Timvis prognosuppdatering i v14.4.5
 
 Cloudflare Workerns schemalagda snapshotjobb använder cron-uttrycket `0 * * * *` och hämtar ny leverantörsdata vid hel timme. Frontendens polling styr endast kontrollen av snapshot-ID och kan därför fortsätta med befintliga intervall utan att skapa fler Open-Meteo-anrop.

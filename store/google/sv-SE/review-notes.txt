@@ -1,0 +1,5 @@
+Appen kräver nätverk för aktuell prognos. Free visar dagens prognos och en region. Premium testas med ett privat licens-/sandboxkonto som anges endast i Play Console.
+
+Kontoborttagning finns under Profil → Radera mitt konto och via angiven extern URL. Kartnavigation öppnar extern kartapp.
+
+RC har placeholders men ingen aktiv AdMob-SDK och inga riktiga Play Billing-köp. Aktivera inte produktion innan Billing, RTDN och backendverifiering är testade.

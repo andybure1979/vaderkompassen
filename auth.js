@@ -14,8 +14,8 @@
   let pendingVerificationNotice = false;
   let cloudSettingsRequested = false;
 
-  const PLANNED_PREMIUM_PRICE_SEK = 29;
   const subscriptionProvider = window.VK_SUBSCRIPTIONS?.createProvider(cfg, client);
+  let storeProduct = null;
   const entitlementProvider=()=>window.VK_SUBSCRIPTIONS?.createProvider({subscriptionMode:entitlement?.provider==="apple"?"apple_native":entitlement?.provider==="google"?"google_native":cfg.subscriptionMode},client);
   const PREMIUM_FEATURES = Object.freeze({
     forecastDays: "Alla prognosdagar",
@@ -172,8 +172,19 @@
         : "Se skillnaden mellan Free och Premium.";
     }
     renderPremiumInfo();
+    refreshStoreDisclosure();
     closeDialog("profileDialog");
     if (!$("premiumInfoDialog")?.open) $("premiumInfoDialog")?.showModal();
+  }
+
+  function productPrice(product){return product?.displayPrice||product?.localizedPrice||product?.priceString||null}
+  function productPeriod(product){return product?.billingPeriodLabel||product?.subscriptionPeriod?.localized||product?.billingPeriod||"månad"}
+  async function refreshStoreDisclosure(){
+    if(!["apple_native","google_native"].includes(cfg.subscriptionMode))return;
+    try{
+      const products=await subscriptionProvider.getProducts();storeProduct=Array.isArray(products)?products[0]:products?.products?.[0]||null;
+      renderPremiumInfo();
+    }catch(error){storeProduct=null;setMessage("premiumState","Butikens produktuppgifter kunde inte hämtas. Inget köp kan genomföras.",true)}
   }
 
   function requirePremium(feature, options = {}) {
@@ -191,11 +202,16 @@
     const trialUsed = entitlement?!entitlement.can_start_trial:Boolean(profile?.trial_used_at);
     const cancelled = Boolean(entitlement?.cancel_at_period_end||entitlement?.subscription_status==="cancelled_active"||profile?.cancel_at_period_end);
     const provider=entitlement?.provider||"manual_test";
-    if ($("premiumPrice")) $("premiumPrice").textContent = `Planerat pris: ${PLANNED_PREMIUM_PRICE_SEK} kr/månad`;
+    const nativeStore=["apple_native","google_native"].includes(cfg.subscriptionMode),price=productPrice(storeProduct),period=productPeriod(storeProduct);
+    if ($("premiumPrice")) $("premiumPrice").textContent = cfg.subscriptionMode==="manual_test"?"Testprovperiod: 0 kr":nativeStore&&price?`Väderkompassen Premium – ${price}/${period}`:"Butiksköp är inte aktiverade";
     if ($("premiumPriceNote")) $("premiumPriceNote").textContent = role === "trial"
       ? `${trialDays} dag${trialDays === 1 ? "" : "ar"} kvar av provperioden`
-      : "Ingen verklig debitering sker i webbversionen";
-    if ($("premiumTerms")) $("premiumTerms").textContent="Testprovperioden avslutas efter tre dagar. Ingen debitering sker i denna webbversion. Riktiga köp ansluts senare i native-apparna.";
+      : nativeStore&&price?"Butikens lokala pris; automatisk förnyelse enligt perioden":"Ingen verklig debitering sker i denna version";
+    if ($("premiumTerms")) $("premiumTerms").textContent=cfg.subscriptionMode==="manual_test"
+      ? "Testprovperioden varar tre dagar, kostar 0 kr, avslutas automatiskt och blir inte en betalprenumeration."
+      : nativeStore&&price
+        ? `Efter eventuell provperiod debiteras ${price} per ${period}. Prenumerationen förnyas automatiskt tills den sägs upp i butiken. Åtkomst behålls till periodens slut.`
+        : "Riktiga köp är avstängda tills butikens produktdata, backendverifiering och sandboxflöde fungerar.";
     if ($("premiumState")) {
       $("premiumState").textContent = cancelled&&hasPremiumAccess()
         ? `Uppsagd – Premium gäller till ${new Date(periodEnd).toLocaleDateString("sv-SE")}. Ingen debitering sker.`
@@ -360,6 +376,7 @@
     $("upgradePremium").classList.toggle("hidden", accountStatus!=="active");
     $("upgradePremium").textContent = mayStartTrial ? "Prova Premium gratis i 3 dagar" : "Visa Premiumstatus";
     $("openAdmin").classList.toggle("hidden", role !== "admin" || accountStatus!=="active");
+    $("manageBeforeDelete")?.classList.toggle("hidden",!["apple","google"].includes(entitlement?.provider));
   }
 
   function openAccount() {
@@ -492,7 +509,7 @@
       const {error}=await client.rpc("delete_own_account",{confirmation_text:"RADERA"});
       if(error)throw error;
       await client.auth.signOut({scope:"local"});
-      localStorage.clear();
+      await window.VK_NATIVE?.clearLocalData?.();
       $("profileDialog").close();
       setMessage("authMessage","Kontot och personliga appdata är raderade.");
       $("authDialog").showModal();
@@ -509,6 +526,7 @@
     $("resetPassword")?.addEventListener("click", resetPassword);
     $("signOut")?.addEventListener("click", signOut);
     $("deleteAccount")?.addEventListener("click", deleteAccount);
+    $("manageBeforeDelete")?.addEventListener("click", manageSubscription);
     $("saveProfileName")?.addEventListener("click", saveDisplayName);
     $("upgradePremium")?.addEventListener("click", () => openPremiumInfo());
     $("premiumPurchase")?.addEventListener("click", startPremiumTrial);
@@ -572,7 +590,7 @@
     saveSettings,
     client,
     manageSubscription,
-    premium: Object.freeze({ plannedPriceSek: PLANNED_PREMIUM_PRICE_SEK, features: PREMIUM_FEATURES })
+    premium: Object.freeze({ features: PREMIUM_FEATURES })
   });
   document.addEventListener("DOMContentLoaded", init, { once: true });
 })();

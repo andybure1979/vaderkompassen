@@ -1,0 +1,5 @@
+Väderkompassen kräver nätverk för aktuell prognos. Free visar dagens prognos och en region. Premium ska testas med portalens privata sandboxkonto; credentials får inte lagras i Git.
+
+Kontoborttagning: logga in, öppna Profil och välj Radera mitt konto. Kartnavigation öppnar en extern kartapp.
+
+Release Candidate har inga aktiva riktiga butiksköp eller produktionsannonser. Skicka inte subscription-IAP för granskning innan StoreKit 2, serververifiering och sandboxflöde är klara.
