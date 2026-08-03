@@ -20,6 +20,8 @@ const SURF_PROFILES = {
 const SURF_PLACES = new Set(Object.keys(SURF_PROFILES));
 const PLACE_BY_ID=new Map(ENABLED_PLACES.map(place=>[place.id,place]));
 const PLACE_BY_NAME=new Map(ENABLED_PLACES.map(place=>[place.name,place]));
+const PLACE_NAME_COUNTS=new Map();
+for(const place of ENABLED_PLACES)PLACE_NAME_COUNTS.set(place.name,(PLACE_NAME_COUNTS.get(place.name)||0)+1);
 for(const place of ENABLED_PLACES){if(place.coastal)COAST_PLACES.add(place.name);if(place.surfSpot)SURF_PLACES.add(place.name)}
 
 const JSON_HEADERS={"content-type":"application/json; charset=utf-8","cache-control":"no-store"};
@@ -92,7 +94,14 @@ const chunks=(a,n)=>Array.from({length:Math.ceil(a.length/n)},(_,i)=>a.slice(i*n
 const finite=v=>Number.isFinite(Number(v))?Number(v):null;
 const WEATHER_CONCURRENCY=2;
 const WEATHER_RETRY_DELAYS_MS=[500,1500];
+const WEATHER_RATE_LIMIT_DELAY_MS=61000;
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+
+export function snapshotPlaceId(row){
+  if(row?.placeId&&PLACE_BY_ID.has(row.placeId))return row.placeId;
+  if(row?.place&&PLACE_NAME_COUNTS.get(row.place)===1)return PLACE_BY_NAME.get(row.place)?.id||null;
+  return null;
+}
 
 function providerError(message,{status=null,retryAfterMs=null}={}){
   const error=new Error(message);error.status=status;error.retryAfterMs=retryAfterMs;
@@ -100,8 +109,12 @@ function providerError(message,{status=null,retryAfterMs=null}={}){
 }
 function retryAfterMs(response){
   const value=response.headers.get('retry-after');if(!value)return null;
-  const seconds=Number(value);if(Number.isFinite(seconds))return Math.max(0,Math.min(5000,seconds*1000));
-  const date=Date.parse(value);return Number.isFinite(date)?Math.max(0,Math.min(5000,date-Date.now())):null;
+  const seconds=Number(value);if(Number.isFinite(seconds))return Math.max(0,Math.min(120000,seconds*1000));
+  const date=Date.parse(value);return Number.isFinite(date)?Math.max(0,Math.min(120000,date-Date.now())):null;
+}
+function weatherRetryDelayMs(error,attempt){
+  if(error.status===429)return Math.max(error.retryAfterMs||0,WEATHER_RATE_LIMIT_DELAY_MS);
+  return error.retryAfterMs??WEATHER_RETRY_DELAYS_MS[attempt];
 }
 
 async function fetchWeatherBatch(batch){
@@ -171,7 +184,7 @@ async function fetchAdaptive(batch,batchIndex,{allowSplit=true}={}){
     catch(error){
       lastError=error;
       if(!error.retryable||attempt===WEATHER_RETRY_DELAYS_MS.length)break;
-      await wait(error.retryAfterMs??WEATHER_RETRY_DELAYS_MS[attempt]);
+      await wait(weatherRetryDelayMs(error,attempt));
     }
   }
   // Format- och datafel kan orsakas av en enskild plats. Dela då batchen en gång
@@ -356,15 +369,18 @@ async function buildSnapshot(env){
   const marineMap=new Map(marineParts.flat().map(m=>[`${m.day}|${m.place}`,m]));
   freshRows=freshRows.map(row=>{const m=marineMap.get(`${row.day}|${row.place}`);return m?{...row,...m,hasMarine:Number.isFinite(m.waveHeight)||Number.isFinite(m.seaTemp),spotName:SURF_PROFILES[row.place]?.spotName||null,offshoreDirection:SURF_PROFILES[row.place]?.offshore??null}:row});
   if(!freshRows.length&&!previous?.dailyResults)throw new Error(`Ingen prognos kunde hämtas: ${failures.map(x=>x.error).join(' · ')}`);
-  const freshPlaces=new Set(freshRows.map(r=>r.place)),missing=PLACES.filter(p=>!freshPlaces.has(p[0])).map(p=>p[0]);
+  const freshPlaces=new Set(freshRows.map(snapshotPlaceId).filter(Boolean));
+  const missingPlaceIds=new Set(PLACES.filter(place=>!freshPlaces.has(place[5])).map(place=>place[5]));
   const fallbackRows=[];
-  if(previous?.dailyResults&&missing.length){
-    const missingSet=new Set(missing);
-    for(const rows of Object.values(previous.dailyResults))for(const row of rows||[])if(missingSet.has(row.place))fallbackRows.push({...row,stale:true,fallbackFrom:previous.generatedAt||null});
+  if(previous?.dailyResults&&missingPlaceIds.size){
+    for(const rows of Object.values(previous.dailyResults))for(const row of rows||[]){
+      const placeId=snapshotPlaceId(row);
+      if(placeId&&missingPlaceIds.has(placeId))fallbackRows.push({...row,placeId,stale:true,fallbackFrom:previous.generatedAt||null});
+    }
   }
   const rows=[...freshRows,...fallbackRows].map(addServerScores),dailyResults={};
   for(const row of rows)(dailyResults[row.day]||=[]).push(row);
-  const days=Object.keys(dailyResults).sort(),availablePlaces=new Set(rows.map(r=>r.place));
+  const days=Object.keys(dailyResults).sort(),availablePlaces=new Set(rows.map(snapshotPlaceId).filter(Boolean));
   try{assertSnapshotPublishable({requestedPlaces:PLACES.length,freshPlaces:freshPlaces.size,availablePlaces:availablePlaces.size})}
   catch(error){
     error.details={placesRequested:PLACES.length,placesFresh:freshPlaces.size,placesFallback:availablePlaces.size-freshPlaces.size,placesAvailable:availablePlaces.size,

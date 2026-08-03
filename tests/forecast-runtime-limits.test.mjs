@@ -11,6 +11,7 @@ test("cron använder fasta batcher med begränsad samtidighet och säker retry",
   assert.match(worker,/const WEATHER_CONCURRENCY=2/);
   assert.match(worker,/status===429\|\|status>=500/);
   assert.match(worker,/retryAfterMs/);
+  assert.match(worker,/WEATHER_RATE_LIMIT_DELAY_MS=61000/);
   assert.match(worker,/!lastError\?\.retryable&&batch\.length>1/);
 });
 
