@@ -3,8 +3,8 @@ import {readFile} from "node:fs/promises";
 import test from "node:test";
 
 const read=path=>readFile(new URL(`../${path}`,import.meta.url),"utf8");
-const [pkg,capacitor,native,auth,app,ads,html,gitignore,migration]=await Promise.all([
-  read("package.json").then(JSON.parse),read("capacitor.config.ts"),read("native-platform.js"),read("auth.js"),read("app.js"),read("ads-provider.js"),read("index.html"),read(".gitignore"),read("supabase/migrations/20260802_1440_account_deletion.sql")
+const [pkg,capacitor,native,auth,app,ads,html,gitignore,migration,storekit,mainView]=await Promise.all([
+  read("package.json").then(JSON.parse),read("capacitor.config.ts"),read("native-platform.js"),read("auth.js"),read("app.js"),read("ads-provider.js"),read("index.html"),read(".gitignore"),read("supabase/migrations/20260802_1440_account_deletion.sql"),read("ios/App/App/VaderkompassenPurchasesPlugin.swift"),read("ios/App/App/MainViewController.swift")
 ]);
 
 test("Capacitor 8 och officiella plugins är exakt låsta",()=>{
@@ -37,12 +37,14 @@ test("native Auth använder deeplink, extern Browser och persistent adapter",()=
   assert.match(auth,/storage: window\.VK_NATIVE\?\.storage/);
 });
 
-test("köp och annonser är explicita stubbar utan produktionsaktivering",()=>{
+test("iOS använder StoreKit 2 medan annonser fortfarande är avstängda",()=>{
   assert.match(native,/VaderkompassenPurchases/);
-  assert.match(native,/Butiksköp är förberedda men ännu inte aktiverade/);
+  assert.match(storekit,/import StoreKit/);assert.match(storekit,/Product\.products/);assert.match(storekit,/\.appAccountToken\(token\)/);
+  assert.match(storekit,/AppStore\.sync/);assert.match(storekit,/showManageSubscriptions/);assert.match(storekit,/jwsRepresentation/);
+  assert.match(mainView,/registerPluginInstance\(VaderkompassenPurchasesPlugin\(\)\)/);
   assert.match(ads,/class AdMobProvider/);assert.match(ads,/this\.active=false/);
   assert.match(ads,/environment!=="production"&&this\.config\.adsMode==="test"/);
-  assert.match(html,/ads-provider\.js\?v=14\.5\.0/);
+  assert.match(html,/ads-provider\.js\?v=15\.0\.1/);
 });
 
 test("kontoborttagning kräver nylig auth och behåller minimal butiksrevision",()=>{

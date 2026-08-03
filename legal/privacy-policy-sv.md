@@ -27,7 +27,7 @@ Uppgifter används för att skapa och skydda konto, leverera tjänsten, synka va
 - Supabase: autentisering, databas, profil och prenumerationsstatus.
 - Cloudflare: API, cache, säkerhet och tekniska loggar.
 - Open-Meteo, MET Norway och andra dokumenterade väderleverantörer: prognosdata för valda orter; inget appkonto behöver skickas.
-- Apple och Google: inloggning när vald samt framtida butiksköp. Butiksköp är inte aktiverade i denna Release Candidate.
+- Apple och Google: inloggning när vald samt butiksköp när dessa senare har integrerats och verifierats. Butiksköp är inte aktiverade i nuvarande produktionskonfiguration.
 
 AdMob är inte aktivt. Free visar endast lokala annonsplatshållare. Om AdMob aktiveras senare krävs uppdaterad policy, butikernas datadeklarationer och tillämpligt samtyckesflöde innan produktionsannonser laddas.
 

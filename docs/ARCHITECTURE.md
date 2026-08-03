@@ -1,8 +1,14 @@
 # Arkitektur
 
-## Store compliance-gräns i v14.5.0
+## Apple-prenumerationer i v15.0.1
 
-Publika juridik- och supportsidor byggs in i native `dist/` men har också planerade stabila GitHub Pages-URL:er. Klientkonfigurationen exponerar endast publika endpoints och juridik-URL:er. Riktiga subscriptions är fail-closed: production använder `disabled` tills en native provider returnerar butiksproduktdata och backendverifiering finns. AdMob initieras inte; placeholders är den enda Free-annonsen i RC.
+iOS använder StoreKit 2 för UI och köpdialog, men klienten kan inte själv ge Premium. En verifierad StoreKit-transaktion skickas som signerad referens till Workern. Workern hämtar aktuell prenumerationsstatus från App Store Server API, verifierar Apples signerade data mot Apples publika rotcertifikat och skriver status genom den service-role-skyddade `sync_apple_subscription()`-RPC:n. Central `get_user_entitlement()` avgör fortsatt åtkomsten.
+
+App Store Server Notifications V2 verifieras och dedupliceras i `apple_notification_events`. Vid varje relevant händelse hämtas aktuell status på nytt från Apple, vilket gör flödet robust mot omkastad notifieringsordning, enhetsbyte, återbetalning, uppsägning och grace period. Rå JWS och Apple-hemligheter lagras inte i databasen eller klienten. Se `STOREKIT.md`.
+
+## Store compliance-gräns i v15.0.0
+
+Publika juridik- och supportsidor byggs in i native `dist/` och har stabila GitHub Pages-URL:er. Klientkonfigurationen exponerar endast publika endpoints och juridik-URL:er. Riktiga subscriptions är fail-closed: production använder `disabled` tills en native provider returnerar butiksproduktdata och backendverifiering finns. AdMob initieras inte i production innan plugin och samtycke är godkända.
 
 Worker CORS använder explicit allowlist för GitHub Pages och native WebView-origins och svarar med `Vary: Origin`. Kontoborttagning fortsätter via security-definer-RPC utan service role i klienten. Compliance- och readinessstatus ligger separat från runtime och innehåller inga credentials.
 

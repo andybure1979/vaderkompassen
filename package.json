@@ -1,6 +1,6 @@
 {
   "name": "vaderkompassen",
-  "version": "14.5.0",
+  "version": "15.0.1",
   "private": true,
   "description": "Väderkompassen – beslutsstöd för dagens aktivitet",
   "scripts": {
@@ -14,12 +14,14 @@
     "dev": "wrangler dev",
     "build:web": "npm run places:build && node scripts/build-web.mjs",
     "version:check": "node scripts/check-version-sync.mjs",
+    "check:versions": "node scripts/check-version-sync.mjs",
     "check:store-compliance": "node scripts/check-store-compliance.mjs",
     "check:production-config": "node scripts/check-production-config.mjs",
     "security:release-check": "node scripts/security-release-check.mjs",
     "cap:copy": "npm run build:web && cap copy",
     "cap:sync": "npm run build:web && cap sync",
     "cap:ios": "npm run build:web && cap sync ios",
+    "cap:ios:storekit": "VK_ENVIRONMENT=production VK_SUBSCRIPTION_MODE=apple_native npm run build:web && cap sync ios",
     "cap:android": "npm run build:web && cap sync android",
     "cap:open:ios": "cap open ios",
     "cap:open:android": "cap open android",
@@ -37,6 +39,7 @@
     "wrangler": "4.114.0"
   },
   "dependencies": {
+    "@apple/app-store-server-library": "3.1.0",
     "@capacitor/android": "8.5.0",
     "@capacitor/app": "8.1.1",
     "@capacitor/browser": "8.0.4",

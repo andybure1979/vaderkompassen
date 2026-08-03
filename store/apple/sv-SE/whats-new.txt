@@ -1,1 +1,1 @@
-Förbereder Väderkompassen för butiksgranskning med tydligare Premiumvillkor, integritets- och supportsidor, extern kontoborttagning samt samlade underlag för integritet och innehållsklassificering.
+Premium för iOS använder nu Apples StoreKit för köp, återställning och hantering av abonnemang. Prognoser, poäng, ranking och design är oförändrade.

@@ -1,4 +1,4 @@
-# Release checklist v14.5.0 RC
+# Release checklist v15.0.1
 
 Markera inte externa steg som klara utan bevis.
 
@@ -11,13 +11,15 @@ Markera inte externa steg som klara utan bevis.
 ## Backend/Auth
 
 - [ ] Migrationer verifierade i staging och production
-- [ ] Worker 14.5.0 deployad; cache och komplett 1 000-platssnapshot verifierade
+- [ ] Worker 15.0.0 deployad; cache och komplett 1 000-platssnapshot verifierade
 - [ ] Entitlement: Free, Trial, Premium, cancelled_active, expired, VIP och Admin
 - [ ] Registrering, verifieringsmejl, login/logout, reset, deeplink
 - [ ] Kontoborttagning i app och publicerad extern URL
 
 ## Premium och reklam
 
+- [ ] App Store Server API och Notifications V2 verifierade med rätt miljö, bundle/app-ID och produkt
+- [ ] `20260803_1501_apple_storekit.sql` körd och RLS/RPC-behörighet verifierad
 - [ ] Sandboxköp, trial, restore, manage, renewal/cancel/refund verifierade
 - [ ] Inga falska butiksköp; butikspris och intervall visas från produktdata
 - [ ] Reklam endast Free; inga produktionsannonser i test; samtycke och placering godkända

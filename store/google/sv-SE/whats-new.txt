@@ -1,1 +1,1 @@
-Tydligare Premiumvillkor, integritets- och supportsidor, extern kontoborttagning samt förberedelser för butikernas integritets- och innehållsgranskning.
+Första huvudversionen med aktivitetsbaserade väderrekommendationer, topplista, karta, faktaboxar, konton och platser i Sverige, Norge och Danmark.

@@ -27,7 +27,7 @@ Nuvarande manuella testprovperiod kostar 0 kr, debiteras inte och omvandlas inte
 
 ## Reklam
 
-Free kan visa reklam. Release Candidate använder endast tydligt märkta lokala platshållare; ingen extern annons hämtas. Premium, Trial, VIP och Admin är reklamfria.
+Free kan visa reklam. Produktionsannonser aktiveras först när AdMob och nödvändigt samtycke är godkända; tills dess används inga externa annonser. Premium, Trial, VIP och Admin är reklamfria.
 
 ## Tillgänglighet, rättigheter och ansvar
 

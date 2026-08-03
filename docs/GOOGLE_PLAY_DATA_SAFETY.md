@@ -11,7 +11,7 @@ Andreas måste fylla i och godkänna formuläret manuellt i Play Console. Kryssa
 | Purchase/subscription status | När test/butik aktiv | Apple/Google/service provider | Entitlement, fraud prevention | Premium | No | In transit | Konto kan raderas; minimal revision kan behållas | Supabase/butik |
 | Diagnostics/request metadata | Yes | Service provider | Security, diagnostics | Service operation | Delvis | In transit | Enligt fastställd loggrutin | Cloudflare/Supabase |
 | Precise/approximate device location | No | No | – | – | – | – | – | Ingen location permission |
-| Device/advertising ID | No i RC | No | – | – | – | – | – | AdMob ej aktivt |
+| Device/advertising ID | No currently | No | – | – | – | – | – | AdMob ej aktivt |
 
 Extern kontoborttagnings-URL att ange efter publicering: `https://andybure1979.github.io/vaderkompassen/public/delete-account/`.
 

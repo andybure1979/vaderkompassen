@@ -1,10 +1,18 @@
-## v14.5.0 – Store compliance och Release Candidate
+## v15.0.1 – Apple StoreKit och Premium för iOS
 
-Release Candidate-underlaget innehåller svenska utkast till integritetspolicy och villkor, publika support-/integritets-/villkors-/kontoborttagningssidor, tydliga prenumerationsupplysningar, butikstexter, privacy/Data Safety-/åldersklassificeringsunderlag och maskinläsbara releasekontroller. Produktionsklienten har avstängda riktiga köp, lokala annonsplatshållare och explicit CORS-allowlist.
+iOS har nu en StoreKit 2-brygga för produktdata, köp, återställning och Apples hanteringsvy. Premium aktiveras först efter att Cloudflare Workern hämtat och verifierat aktuell status genom App Store Server API. App Store Server Notifications V2 håller statusen synkroniserad vid förnyelse, uppsägning, grace period, betalningsproblem och återbetalning. Lokal kvittoverifiering eller klientstatus är aldrig sanningskälla.
 
-Versionen är **BLOCKED för publik butiksproduktion** tills juridik och URL:er verifierats, StoreKit/Play Billing med backendverifiering fungerar, samtycke/annonser beslutats, signing finns lokalt och ikoner/skärmbilder godkänts. Kör `npm run check:store-compliance`, `npm run check:production-config` och `npm run security:release-check`.
+Releasen är **BLOCKED för App Store-publicering** tills Apple-credentials och produkt är konfigurerade, Supabase-migrationen körts samt full Xcode-build och Sandbox-matrisen i `docs/STOREKIT.md` passerat. Android, reklam, poäng, ranking, prognoser och design ändras inte.
 
-Poäng, ranking, prognosmodeller, aktiviteter och platsregister är oförändrade. Ingen Supabase-migration ingår.
+## v15.0.0 – Första publika produktionsversionen
+
+Väderkompassen är versionsmässigt fryst för den första publika releasen på webb, iOS och Android. Releasen samlar aktivitetsbaserade väderrekommendationer, topplista, karta, 1 000 verifierade platser, konton och den beslutade Free/Premium-modellen utan att ändra poäng eller ranking.
+
+Releaseunderlaget innehåller juridiska utkast, offentliga support-/integritets-/villkors-/kontoborttagningssidor, butikstexter, privacy/Data Safety-/åldersklassificeringsunderlag, rollback- och hotfixplan samt automatiska releasekontroller.
+
+Versionen är **BLOCKED för butikspublicering** tills StoreKit/Play Billing med backendverifiering, köpåterställning och abonnemangshantering fungerar, AdMob/CMP och signing är konfigurerade, juridiken är granskad och signerade nativebyggen passerar. Produktionsklienten fabricerar inga köp eller annonser.
+
+Kör `npm run check:versions`, `npm run validate:places`, `npm run check:production-config`, `npm run check:store-compliance`, `npm run security:release-check`, `npm run build:web` och `npm test`. Poäng, ranking, prognosmodeller och aktiviteter är oförändrade. Ingen Supabase-migration ingår.
 
 ## v14.4.5 – Prognosuppdatering varje timme
 

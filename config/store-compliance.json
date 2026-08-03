@@ -1,6 +1,6 @@
 {
-  "version": "14.5.0",
-  "updatedAt": "2026-08-02",
+  "version": "15.0.1",
+  "updatedAt": "2026-08-03",
   "items": {
     "privacyPolicy": { "status": "manual_action_required", "evidence": ["legal/privacy-policy-sv.md", "public/privacy/index.html"], "note": "Publicera och verifiera stabil HTTPS-URL samt genomför juridisk granskning." },
     "termsOfUse": { "status": "manual_action_required", "evidence": ["legal/terms-of-use-sv.md", "public/terms/index.html"], "note": "Utkastet måste granskas juridiskt och publiceras." },
@@ -12,8 +12,11 @@
     "ageRatingApple": { "status": "manual_action_required", "evidence": ["docs/AGE_RATING.md"], "note": "Ange reklam och digitala köp i App Store Connect." },
     "ageRatingGoogle": { "status": "manual_action_required", "evidence": ["docs/AGE_RATING.md"], "note": "Fyll i IARC-formuläret och ange reklam." },
     "subscriptionDisclosure": { "status": "complete", "evidence": ["index.html", "auth.js"] },
-    "restorePurchases": { "status": "blocked", "evidence": ["subscription-providers.js"], "note": "Kräver native StoreKit 2/Play Billing-plugin och backendverifiering." },
-    "manageSubscription": { "status": "blocked", "evidence": ["subscription-providers.js"], "note": "Kräver verifierad native butikskoppling." },
+    "restorePurchases": { "status": "blocked", "evidence": ["subscription-providers.js", "ios/App/App/VaderkompassenPurchasesPlugin.swift"], "note": "StoreKit 2-flödet finns i kod men måste verifieras med en riktig Sandbox-produkt och serverkonfiguration." },
+    "manageSubscription": { "status": "blocked", "evidence": ["ios/App/App/VaderkompassenPurchasesPlugin.swift"], "note": "Apples officiella hanteringsvy är implementerad men kräver native Sandbox-verifiering." },
+    "appleServerApi": { "status": "blocked", "evidence": ["cloudflare/src/apple-subscriptions.js", "docs/STOREKIT.md"], "note": "App Store Connect-nyckel, issuer ID och appAppleId måste sättas som Worker-secrets och verifieras i Sandbox." },
+    "appleNotificationsV2": { "status": "blocked", "evidence": ["cloudflare/src/index.js", "docs/STOREKIT.md"], "note": "Notifications V2-URL måste registreras i App Store Connect och ett signerat testmeddelande måste passera." },
+    "appleSandboxTest": { "status": "blocked", "evidence": ["docs/STOREKIT.md"], "note": "Produkt, köp, restore, cancel, grace, billing retry, refund och ny enhet är inte körda i Apple Sandbox." },
     "testAccount": { "status": "manual_action_required", "evidence": ["docs/REVIEW_ACCOUNT.md"] },
     "screenshots": { "status": "manual_action_required", "evidence": ["docs/STORE_ASSETS.md"] },
     "appIcon": { "status": "manual_action_required", "evidence": ["docs/STORE_ASSETS.md"], "note": "Befintliga ikoner måste granskas visuellt och Play feature graphic saknas." },

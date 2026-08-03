@@ -1,5 +1,24 @@
 # Ändringslogg
 
+## 15.0.1 – Apple StoreKit och Premium för iOS
+
+- Implementerar StoreKit 2 för lokaliserad produktinformation, köp, pending/cancel, restore och Apples officiella hanteringsvy.
+- Använder App Store Server API och verifierade Apple-JWS som sanningskälla för Premium.
+- Tar emot och deduplicerar App Store Server Notifications V2.
+- Kopplar Apple-status till central entitlement via en service-role-skyddad Supabase-RPC utan att lagra rå JWS.
+- Behåller VIP/Admin som separata administrativa entitlements och ändrar inte Android, reklam, UI, poäng, ranking eller prognoser.
+- Är blockerad för App Store-publicering tills extern Apple-konfiguration, migration, Xcode-build och Sandbox-test är klara.
+
+## 15.0.0 – Första publika produktionsversionen
+
+- Fryser funktionaliteten för första publika webb-, iOS- och Androidreleasen.
+- Synkroniserar webb, Worker, Capacitor, iOS och Android till version 15.0.0 med separata stigande buildnummer.
+- Verifierar 1 000 aktiva platser: 500 Free och 500 Premium, samtliga källgranskade.
+- Bekräftar att senaste produktionssnapshoten täcker 1 000/1 000 platser utan fallback eller batchfel.
+- Lägger till release-, rollback-, hotfix- och övervakningsplaner samt GitHub release notes.
+- Behåller fail-closed för riktiga köp och annonser. StoreKit/Play Billing, backendverifiering, restore/manage, AdMob/CMP, signing och juridisk granskning är blockerare före butikspublicering.
+- Ändrar inte poäng, ranking, prognosalgoritmer, aktiviteter eller design och kräver ingen Supabase-migration.
+
 ## 14.5.0 – Store compliance och Release Candidate
 
 ### Implementerat

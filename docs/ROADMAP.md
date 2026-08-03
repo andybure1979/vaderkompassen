@@ -33,6 +33,8 @@
 - **14.4.4** Begränsad Open-Meteo-samtidighet, säker retry och komplett feldiagnostik för snapshotjobb.
 - **14.4.5** Prognosens snapshotjobb körs en gång per hel timme för lägre leverantörs- och Workerbelastning.
 - **14.5.0 RC** Store-compliancekod, juridik-/supportsidor, butiksunderlag och blockerande releasekontroller. Publik butiksproduktion väntar på juridik, signing, butiksköp, samtycke och assets.
+- **15.0.0 release freeze** Endast blockerande fel, säkerhet, datakvalitet, compliance, bygg och riskfri prestanda får ändras. Inga nya aktiviteter, poängmodeller, datakällor, Premiumförmåner, adminfunktioner eller UI-koncept.
+- **15.1.0 eller senare** Produktönskemål och större förbättringar tas först efter stabiliserad publik lansering.
 
 ## Nästa
 
