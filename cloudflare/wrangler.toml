@@ -6,9 +6,12 @@ compatibility_date = "2026-07-26"
 crons = ["0 * * * *"]
 
 [vars]
-APP_VERSION = "15.0.1"
+APP_VERSION = "15.0.2"
 ENVIRONMENT = "production"
 ALLOWED_ORIGINS = "https://andybure1979.github.io,capacitor://localhost,https://localhost"
 APPLE_ENVIRONMENT = "Production"
 APPLE_BUNDLE_ID = "se.vaderkompassen.app"
 APPLE_PRODUCT_ID = "se.vaderkompassen.premium.monthly"
+GOOGLE_PLAY_ENVIRONMENT = "Production"
+GOOGLE_PLAY_PACKAGE_NAME = "se.vaderkompassen.app"
+GOOGLE_PLAY_PRODUCT_ID = "premium_monthly"

@@ -1,7 +1,7 @@
-# Native setup – v15.0.1
+# Native setup – v15.0.2
 
 - App-ID/bundle-ID: `se.vaderkompassen.app`.
-- Version: iOS `15.0.1` build `4`; Android är oförändrad på `15.0.0`/versionCode `15000`.
+- Version: iOS är oförändrad på `15.0.1` build `4`; Android `15.0.2`/versionCode `15002`.
 - iOS har StoreKit 2 och serververifiering men är blockerad tills extern Apple-konfiguration och Sandbox-test är klara. Reklam är fortsatt avstängd.
 - iOS archive kräver lokalt Apple Team/signing. Android release-AAB kräver `VK_ANDROID_KEYSTORE_PATH` och tillhörande lokala miljövariabler. Inget signingmaterial får committas.
 - Kör releasekontrollerna och följ `RELEASE_CHECKLIST.md`, `STORE_SUBSCRIPTIONS.md` och `STORE_ASSETS.md`.
@@ -29,6 +29,7 @@ npm run cap:sync
 npm run cap:ios
 npm run cap:ios:storekit
 npm run cap:android
+npm run cap:android:billing
 npm run build:android:debug
 npm run build:android:bundle
 npm run version:check
@@ -59,7 +60,7 @@ npm run version:check
 4. Lägg `vaderkompassen://auth/callback` i Supabase redirect allowlist. Lägg senare till verifierad Android App Link när webbdomän och `assetlinks.json` finns.
 5. Skapa upload key lokalt och sätt `VK_ANDROID_KEYSTORE_PATH`, `VK_ANDROID_KEYSTORE_PASSWORD`, `VK_ANDROID_KEY_ALIAS`, `VK_ANDROID_KEY_PASSWORD`. Keystore och lösenord får aldrig läggas i Git.
 6. Kör `npm run build:android:bundle`; resultatet får laddas upp till Internal Testing först efter ikon-, Auth- och dataskyddskontroll.
-7. Skapa senare abonnemangsprodukten `premium_monthly`, licenstestare och backendverifiering/RTDN innan `google_native` aktiveras.
+7. Följ `GOOGLE_PLAY_BILLING.md` för produkten `premium_monthly`, base plan `monthly`, licenstestare, servicekonto och RTDN innan `google_native` distribueras.
 8. Skapa framtida AdMob Android-app och endast officiella testannonsenheter före pluginaktivering.
 9. Fyll i Data safety: konto/e-post, appinställningar och prenumerationsstatus; ingen plats, kamera eller fillagringsbehörighet används.
 

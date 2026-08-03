@@ -1,5 +1,9 @@
 # Installation och drift
 
+## Väderkompassen v15.0.2 – Google Play Billing
+
+Kör `supabase/migrations/20260803_1502_google_play_billing.sql` i testmiljön efter v15.0.1 och följ `GOOGLE_PLAY_BILLING.md` för Play Console, servicekonto, Developer API och RTDN. Bygg Android med `npm run cap:android:billing`. Production får inte aktiveras innan signerad Internal Testing-build och hela Google Play-matrisen har verifierats.
+
 ## Väderkompassen v15.0.1 – Apple StoreKit
 
 1. Kör `supabase/migrations/20260803_1501_apple_storekit.sql` i testmiljön.

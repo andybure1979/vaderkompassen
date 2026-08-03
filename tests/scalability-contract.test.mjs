@@ -10,11 +10,11 @@ const wrangler=await readFile(new URL("../wrangler.jsonc",import.meta.url),"utf8
 const cloudflareWrangler=await readFile(new URL("../cloudflare/wrangler.toml",import.meta.url),"utf8");
 
 test("deploykontraktet använder root-entrypoint och samma releaseversion",()=>{
-  assert.equal(packageJson.version,"15.0.1");
+  assert.equal(packageJson.version,"15.0.2");
   assert.equal(packageJson.scripts.deploy,"wrangler deploy --config wrangler.jsonc");
   assert.match(wrangler,/"main": "cloudflare\/src\/index\.js"/);
-  assert.match(wrangler,/"APP_VERSION": "15\.0\.1"/);
-  assert.match(worker,/workerVersion:env\.APP_VERSION\|\|'15\.0\.1'/);
+  assert.match(wrangler,/"APP_VERSION": "15\.0\.2"/);
+  assert.match(worker,/workerVersion:env\.APP_VERSION\|\|'15\.0\.2'/);
 });
 
 test("snapshotjobbet körs en gång per hel timme i båda deploykonfigurationerna",()=>{

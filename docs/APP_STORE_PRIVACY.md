@@ -21,7 +21,7 @@ Andreas måste verifiera och fylla i svaren manuellt i App Store Connect. Underl
 - Supabase JS: Auth, profil, entitlement och molnsynk.
 - Cloudflare Worker: API, cache, drift- och säkerhetsmetadata.
 - Leaflet/OpenStreetMap: kartvisning; externa tiles laddas i webbversionen.
-- StoreKit/Google Play Billing: inte integrerade eller aktiva i produktion.
+- StoreKit och Google Play Billing är implementerade men blockerade för produktion tills respektive externa butikskonfiguration och testmatris är verifierad.
 - AdMob: ingen plugin och ingen initiering i produktion.
 
 Appens `PrivacyInfo.xcprivacy` anger ingen tracking/insamlad data genom appmanifestet och deklarerar UserDefaults reason `CA92.1`. Capacitor och CapacitorCordova 8.5.0 innehåller egna privacy manifests utan tracking, insamlade datatyper eller Required Reason APIs. Kontrollera samtliga inbäddade manifests igen i det arkiverade bygget. Portalens svar ska omfatta serverbehandling även om appmanifestet inte gör det.

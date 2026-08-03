@@ -2,4 +2,4 @@ Appen kräver nätverk för aktuell prognos. Free visar dagens prognos och en re
 
 Kontoborttagning finns under Profil → Radera mitt konto och via angiven extern URL. Kartnavigation öppnar extern kartapp.
 
-Version 15.0.0 har ingen aktiv AdMob-SDK eller riktiga Play Billing-köp. Aktivera inte produktion innan Billing, restore/manage, RTDN, backendverifiering och samtycke är testade.
+Version 15.0.2 innehåller Google Play Billing 9.1, serververifiering, restore/manage och RTDN-struktur. Skicka inte bygget innan Play-produkten, servicekontot, Pub/Sub och hela Internal Testing-flödet är verifierade. Produktionsannonser är avstängda tills AdMob och samtycke är godkända.

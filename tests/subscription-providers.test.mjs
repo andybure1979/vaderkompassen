@@ -12,9 +12,19 @@ test("manual_test använder endast säkra RPC-anrop",async()=>{
   assert.deepEqual(calls,["start_manual_test_trial","cancel_manual_test_subscription"]);
 });
 
-test("Google förblir en tydlig native-stub i denna Apple-version",async()=>{
+test("Google har central produktkonfiguration och kräver Android native",async()=>{
   const provider=subscriptions.createProvider({subscriptionMode:"google_native"});
-  await assert.rejects(provider.startSubscription(),/inloggad/);
+  assert.equal(subscriptions.GOOGLE_PLAY_CONFIG.basePlanId,"monthly");
+  await assert.rejects(provider.startSubscription(),/inloggad|Android|native/);
+});
+
+test("Google acknowledge sker först efter backendverifiering",async()=>{
+  const previousNative=globalThis.VK_NATIVE,previousFetch=globalThis.fetch,order=[];
+  globalThis.VK_NATIVE={isNativePlatform:()=>true,getRuntimePlatform:()=>"android",purchase:async(method)=>{order.push(method);if(method==="startSubscription")return {purchases:[{purchaseToken:"secret-token",purchaseState:1,acknowledged:false}]};return {acknowledged:true}}};
+  globalThis.fetch=async()=>{order.push("backend");return new Response(JSON.stringify({ok:true,verified:true,acknowledgementRequired:true,entitlement:{provider:"google",is_premium:true}}),{status:200,headers:{"content-type":"application/json"}})};
+  const client={auth:{getSession:async()=>({data:{session:{access_token:"user-token",user:{id:"11111111-1111-4111-8111-111111111111"}}}})}};
+  try{const result=await subscriptions.createProvider({subscriptionMode:"google_native",apiBaseUrl:"https://worker.test"},client).startSubscription();assert.equal(result.is_premium,true);assert.deepEqual(order,["startSubscription","backend","acknowledgePurchase"])}
+  finally{globalThis.VK_NATIVE=previousNative;globalThis.fetch=previousFetch}
 });
 
 test("Apple skickar StoreKit-transaktionen till backend och använder serverns entitlement",async()=>{

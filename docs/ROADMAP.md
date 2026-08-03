@@ -2,6 +2,8 @@
 
 ## Klart
 
+- **15.0.2** Google Play Billing/Developer API/RTDN implementerat i repo; Play Console, Cloud och Internal Testing återstår manuellt.
+
 - **14.0.0** Identitet, autentisering, profiler och roller.
 - **14.0.1–14.0.2** Stabil konto- och profilupplevelse.
 - **14.0.3** Kontoprofil och molnsynk.

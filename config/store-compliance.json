@@ -1,5 +1,5 @@
 {
-  "version": "15.0.1",
+  "version": "15.0.2",
   "updatedAt": "2026-08-03",
   "items": {
     "privacyPolicy": { "status": "manual_action_required", "evidence": ["legal/privacy-policy-sv.md", "public/privacy/index.html"], "note": "Publicera och verifiera stabil HTTPS-URL samt genomför juridisk granskning." },
@@ -12,11 +12,14 @@
     "ageRatingApple": { "status": "manual_action_required", "evidence": ["docs/AGE_RATING.md"], "note": "Ange reklam och digitala köp i App Store Connect." },
     "ageRatingGoogle": { "status": "manual_action_required", "evidence": ["docs/AGE_RATING.md"], "note": "Fyll i IARC-formuläret och ange reklam." },
     "subscriptionDisclosure": { "status": "complete", "evidence": ["index.html", "auth.js"] },
-    "restorePurchases": { "status": "blocked", "evidence": ["subscription-providers.js", "ios/App/App/VaderkompassenPurchasesPlugin.swift"], "note": "StoreKit 2-flödet finns i kod men måste verifieras med en riktig Sandbox-produkt och serverkonfiguration." },
-    "manageSubscription": { "status": "blocked", "evidence": ["ios/App/App/VaderkompassenPurchasesPlugin.swift"], "note": "Apples officiella hanteringsvy är implementerad men kräver native Sandbox-verifiering." },
+    "restorePurchases": { "status": "blocked", "evidence": ["subscription-providers.js", "ios/App/App/VaderkompassenPurchasesPlugin.swift", "android/app/src/main/java/se/vaderkompassen/app/GooglePlayBillingPlugin.java"], "note": "Apple- och Google-flöden finns i kod men måste verifieras med riktiga Sandbox/Internal Testing-produkter." },
+    "manageSubscription": { "status": "blocked", "evidence": ["ios/App/App/VaderkompassenPurchasesPlugin.swift", "android/app/src/main/java/se/vaderkompassen/app/GooglePlayBillingPlugin.java"], "note": "Butikernas officiella hanteringsvyer kräver native testverifiering." },
     "appleServerApi": { "status": "blocked", "evidence": ["cloudflare/src/apple-subscriptions.js", "docs/STOREKIT.md"], "note": "App Store Connect-nyckel, issuer ID och appAppleId måste sättas som Worker-secrets och verifieras i Sandbox." },
     "appleNotificationsV2": { "status": "blocked", "evidence": ["cloudflare/src/index.js", "docs/STOREKIT.md"], "note": "Notifications V2-URL måste registreras i App Store Connect och ett signerat testmeddelande måste passera." },
     "appleSandboxTest": { "status": "blocked", "evidence": ["docs/STOREKIT.md"], "note": "Produkt, köp, restore, cancel, grace, billing retry, refund och ny enhet är inte körda i Apple Sandbox." },
+    "googlePlayDeveloperApi": { "status": "blocked", "evidence": ["cloudflare/src/google-play-subscriptions.js", "docs/GOOGLE_PLAY_BILLING.md"], "note": "Servicekonto, Play-produkt och Developer API måste konfigureras externt." },
+    "googleRtdn": { "status": "blocked", "evidence": ["cloudflare/src/index.js", "docs/GOOGLE_PLAY_BILLING.md"], "note": "Pub/Sub, OIDC audience och RTDN-topic måste konfigureras och testas." },
+    "googleInternalTesting": { "status": "blocked", "evidence": ["docs/GOOGLE_PLAY_BILLING.md"], "note": "Signerad build, licenstestare och hela köp-/livscykelmatrisen återstår." },
     "testAccount": { "status": "manual_action_required", "evidence": ["docs/REVIEW_ACCOUNT.md"] },
     "screenshots": { "status": "manual_action_required", "evidence": ["docs/STORE_ASSETS.md"] },
     "appIcon": { "status": "manual_action_required", "evidence": ["docs/STORE_ASSETS.md"], "note": "Befintliga ikoner måste granskas visuellt och Play feature graphic saknas." },
@@ -28,6 +31,6 @@
     "productionEndpoints": { "status": "complete", "evidence": ["config.js", "wrangler.jsonc"] },
     "productionSecrets": { "status": "manual_action_required", "evidence": ["docs/RELEASE_CHECKLIST.md"], "note": "Verifiera secrets i Cloudflare/Supabase utan att exportera dem." },
     "adsConfigured": { "status": "blocked", "evidence": ["ads-provider.js"], "note": "AdMob och samtyckesplattform är inte aktiverade; placeholders används." },
-    "subscriptionsConfigured": { "status": "blocked", "evidence": ["subscription-providers.js", "docs/STORE_SUBSCRIPTIONS.md"], "note": "Produkter, servernotiser och backendverifiering saknas." }
+    "subscriptionsConfigured": { "status": "blocked", "evidence": ["subscription-providers.js", "docs/STORE_SUBSCRIPTIONS.md", "docs/GOOGLE_PLAY_BILLING.md"], "note": "Kodflödena finns, men externa produkter, credentials, servernotiser och butikstester saknas." }
   }
 }

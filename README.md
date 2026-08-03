@@ -1,3 +1,9 @@
+## v15.0.2 – Google Play Billing och Premium för Android
+
+Android har en egen nativebrygga mot Google Play Billing 9.1.0 för butikens produktdata, köp, pending, restore/sync, acknowledgement och prenumerationshantering. Workern verifierar varje purchase token genom Google Play Developer API innan central entitlement kan ge Premium. RTDN är endast förändringssignal och följs alltid av en ny serverhämtning. Tokens lagras endast hashade.
+
+Implementation i repot är skild från externa krav: Play-produkten, base plan/offer, servicekonto, licenstestare, Internal Testing och Pub/Sub/RTDN måste skapas och verifieras av Andreas enligt `docs/GOOGLE_PLAY_BILLING.md`. Versionen är blockerad för Google Play-produktion tills detta är klart. Apple, iOS-build, design, väder, poäng, ranking, snapshots och cache är funktionellt oförändrade.
+
 ## v15.0.1 – Apple StoreKit och Premium för iOS
 
 iOS har nu en StoreKit 2-brygga för produktdata, köp, återställning och Apples hanteringsvy. Premium aktiveras först efter att Cloudflare Workern hämtat och verifierat aktuell status genom App Store Server API. App Store Server Notifications V2 håller statusen synkroniserad vid förnyelse, uppsägning, grace period, betalningsproblem och återbetalning. Lokal kvittoverifiering eller klientstatus är aldrig sanningskälla.

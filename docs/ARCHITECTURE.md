@@ -1,5 +1,11 @@
 # Arkitektur
 
+## Google Play-prenumerationer i v15.0.2
+
+Androids Capacitor-plugin använder Play Billing 9.1.0. Efter ett `PURCHASED`-resultat skickas token över autentiserad HTTPS till Workern; klienten ger ingen åtkomst. Workern kontrollerar användare, package/product, kontohash och aktuell `purchases.subscriptionsv2.get`, sparar endast tokenhash via service-role-RPC och returnerar central entitlement. Först därefter gör nativebryggan acknowledgement.
+
+RTDN verifierar Pub/Sub OIDC och deduplicerar message ID, men payloaden är aldrig sanningskälla. Workern hämtar aktuell Google-status och mappar trial, active, cancelled_active, grace, payment issue, expired och revoked. Se `GOOGLE_PLAY_BILLING.md`.
+
 ## Apple-prenumerationer i v15.0.1
 
 iOS använder StoreKit 2 för UI och köpdialog, men klienten kan inte själv ge Premium. En verifierad StoreKit-transaktion skickas som signerad referens till Workern. Workern hämtar aktuell prenumerationsstatus från App Store Server API, verifierar Apples signerade data mot Apples publika rotcertifikat och skriver status genom den service-role-skyddade `sync_apple_subscription()`-RPC:n. Central `get_user_entitlement()` avgör fortsatt åtkomsten.

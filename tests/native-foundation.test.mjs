@@ -3,8 +3,8 @@ import {readFile} from "node:fs/promises";
 import test from "node:test";
 
 const read=path=>readFile(new URL(`../${path}`,import.meta.url),"utf8");
-const [pkg,capacitor,native,auth,app,ads,html,gitignore,migration,storekit,mainView]=await Promise.all([
-  read("package.json").then(JSON.parse),read("capacitor.config.ts"),read("native-platform.js"),read("auth.js"),read("app.js"),read("ads-provider.js"),read("index.html"),read(".gitignore"),read("supabase/migrations/20260802_1440_account_deletion.sql"),read("ios/App/App/VaderkompassenPurchasesPlugin.swift"),read("ios/App/App/MainViewController.swift")
+const [pkg,capacitor,native,auth,app,ads,html,gitignore,migration,storekit,mainView,googleBilling]=await Promise.all([
+  read("package.json").then(JSON.parse),read("capacitor.config.ts"),read("native-platform.js"),read("auth.js"),read("app.js"),read("ads-provider.js"),read("index.html"),read(".gitignore"),read("supabase/migrations/20260802_1440_account_deletion.sql"),read("ios/App/App/VaderkompassenPurchasesPlugin.swift"),read("ios/App/App/MainViewController.swift"),read("android/app/src/main/java/se/vaderkompassen/app/GooglePlayBillingPlugin.java")
 ]);
 
 test("Capacitor 8 och officiella plugins är exakt låsta",()=>{
@@ -13,6 +13,11 @@ test("Capacitor 8 och officiella plugins är exakt låsta",()=>{
   for(const name of ["ios","android","app","browser","device","network","preferences","splash-screen","status-bar"]){
     const version=pkg.dependencies[`@capacitor/${name}`];assert.match(version,/^8\.\d+\.\d+$/);assert.doesNotMatch(version,/[~^*]/);
   }
+});
+
+test("Android använder Play Billing och acknowledge efter separat verifiering",()=>{
+  assert.match(googleBilling,/queryProductDetailsAsync/);assert.match(googleBilling,/enablePendingPurchases/);assert.match(googleBilling,/setObfuscatedAccountId/);
+  assert.match(googleBilling,/queryPurchasesAsync/);assert.match(googleBilling,/acknowledgePurchase/);assert.doesNotMatch(googleBilling,/Log\.|System\.out/);
 });
 
 test("native-konfiguration paketerar dist och tillåter bara explicit lokal devserver",()=>{
@@ -44,7 +49,7 @@ test("iOS använder StoreKit 2 medan annonser fortfarande är avstängda",()=>{
   assert.match(mainView,/registerPluginInstance\(VaderkompassenPurchasesPlugin\(\)\)/);
   assert.match(ads,/class AdMobProvider/);assert.match(ads,/this\.active=false/);
   assert.match(ads,/environment!=="production"&&this\.config\.adsMode==="test"/);
-  assert.match(html,/ads-provider\.js\?v=15\.0\.1/);
+  assert.match(html,/ads-provider\.js\?v=15\.0\.2/);
 });
 
 test("kontoborttagning kräver nylig auth och behåller minimal butiksrevision",()=>{

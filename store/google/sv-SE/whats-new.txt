@@ -1,1 +1,1 @@
-Första huvudversionen med aktivitetsbaserade väderrekommendationer, topplista, karta, faktaboxar, konton och platser i Sverige, Norge och Danmark.
+Premium för Android använder nu Google Play för produktinformation, köp, återställning och prenumerationshantering. Prognoser, poäng, ranking och design är oförändrade.

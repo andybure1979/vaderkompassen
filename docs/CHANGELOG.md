@@ -1,5 +1,14 @@
 # Ändringslogg
 
+## 15.0.2 – Google Play Billing och Premium för Android
+
+- Integrerar officiella Google Play Billing Library 9.1.0 via en avgränsad nativebrygga.
+- Implementerar ProductDetails, base plan/offer, pending, restore/sync, manage och acknowledgement efter serververifiering.
+- Verifierar subscriptions med Google Play Developer API och synkar RTDN idempotent genom central entitlement.
+- Lagrar endast tokenhash och håller service account utanför klient och Git.
+- Kräver manuell Play Console-, Google Cloud-, Supabase- och Internal Testing-konfiguration före produktion.
+- Ändrar inte Apple, UI-design, väder, poäng, ranking, snapshots eller cache.
+
 ## 15.0.1 – Apple StoreKit och Premium för iOS
 
 - Implementerar StoreKit 2 för lokaliserad produktinformation, köp, pending/cancel, restore och Apples officiella hanteringsvy.

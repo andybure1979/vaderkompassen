@@ -1,5 +1,5 @@
-const CACHE="vaderkompassen-v15-0-1";
-const ASSETS=["./","index.html","styles.css?v=15.0.1","environment.js?v=15.0.1","native-platform.js?v=15.0.1","config.js?v=15.0.1","place-registry.js?v=15.0.1","fishing-score.js?v=15.0.1","navigation.js?v=15.0.1","cloud-request.js?v=15.0.1","subscription-providers.js?v=15.0.1","ads-provider.js?v=15.0.1","auth.js?v=15.0.1","admin.js?v=15.0.1","app.js?v=15.0.1","manifest.webmanifest","icon-192.png","icon-512.png","icon-180.png"];
+const CACHE="vaderkompassen-v15-0-2";
+const ASSETS=["./","index.html","styles.css?v=15.0.2","environment.js?v=15.0.2","native-platform.js?v=15.0.2","config.js?v=15.0.2","place-registry.js?v=15.0.2","fishing-score.js?v=15.0.2","navigation.js?v=15.0.2","cloud-request.js?v=15.0.2","subscription-providers.js?v=15.0.2","ads-provider.js?v=15.0.2","auth.js?v=15.0.2","admin.js?v=15.0.2","app.js?v=15.0.2","manifest.webmanifest","icon-192.png","icon-512.png","icon-180.png"];
 self.addEventListener("install",e=>{self.skipWaiting();e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)))});
 self.addEventListener("activate",e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==CACHE).map(x=>caches.delete(x)))).then(()=>self.clients.claim()))});
 self.addEventListener("message",e=>{if(e.data?.type==="SKIP_WAITING")self.skipWaiting()});

@@ -1,5 +1,6 @@
 import { PLACES,ENABLED_PLACES } from './place-registry.js';
 import {appleConfigurationReady,appleSubscriptionRow,configuredAppleEnvironment,decodeTransactionHint,fetchVerifiedAppleSubscription,verifyAppleNotification} from './apple-subscriptions.js';
+import {decodeRtdn,getGoogleSubscription,GOOGLE_PLAY_CONFIG,googleConfigurationReady,googleSubscriptionRow,resolveGoogleState,validateGoogleRequest,verifyPubSubIdentity} from './google-play-subscriptions.js';
 import '../../fishing-score.js';
 
 const COAST_PLACES = new Set([
@@ -32,7 +33,7 @@ const allowedOrigin=(req,env)=>{
   const allowed=String(env.ALLOWED_ORIGINS||env.ALLOWED_ORIGIN||"https://andybure1979.github.io").split(',').map(value=>value.trim()).filter(Boolean);
   const origin=req?.headers?.get('origin');return origin&&allowed.includes(origin)?origin:allowed[0];
 };
-const cors=(env,req)=>({"access-control-allow-origin":allowedOrigin(req,env),"vary":"Origin","access-control-allow-methods":"GET,POST,OPTIONS","access-control-allow-headers":"content-type,authorization,x-admin-token,x-load-test-token,if-none-match","access-control-expose-headers":"etag,x-vaderkompassen-snapshot-version,x-vaderkompassen-worker-version,x-vaderkompassen-cache,x-vaderkompassen-rows-read,x-vaderkompassen-rows-returned,x-vaderkompassen-response-bytes,x-vaderkompassen-total-ms,x-vaderkompassen-worker-cpu-approx-ms,x-vaderkompassen-supabase-calls","X-Vaderkompassen-Worker-Version":env.APP_VERSION||"15.0.1"});
+const cors=(env,req)=>({"access-control-allow-origin":allowedOrigin(req,env),"vary":"Origin","access-control-allow-methods":"GET,POST,OPTIONS","access-control-allow-headers":"content-type,authorization,x-admin-token,x-load-test-token,if-none-match","access-control-expose-headers":"etag,x-vaderkompassen-snapshot-version,x-vaderkompassen-worker-version,x-vaderkompassen-cache,x-vaderkompassen-rows-read,x-vaderkompassen-rows-returned,x-vaderkompassen-response-bytes,x-vaderkompassen-total-ms,x-vaderkompassen-worker-cpu-approx-ms,x-vaderkompassen-supabase-calls","X-Vaderkompassen-Worker-Version":env.APP_VERSION||"15.0.2"});
 const supabaseKeyType=env=>String(env.SUPABASE_SERVICE_ROLE_KEY||'').startsWith('sb_secret_')?'secret':'legacy-service-role';
 const sbHeaders=env=>{
   const key=String(env.SUPABASE_SERVICE_ROLE_KEY||'').trim();
@@ -97,7 +98,7 @@ async function adminHealth(req,env){
   const responseMs=Math.round((performance.now()-started)*10)/10,row=latest?.[0]||null;
   const generated=row?.generated_at||null,ageMinutes=generated?Math.max(0,Math.round((Date.now()-new Date(generated).getTime())/60000)):null;
   try{await sb(env,'admin_audit_log',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify({actor_user_id:admin.id,action:'admin_health_check',entity_type:'worker',reason:'Manuell hälsokontroll från adminvyn',new_value:{ok:Boolean(row),responseMs}})});}catch(error){console.warn('Kunde inte logga admin health:',error.message)}
-  return {ok:Boolean(row),checkedAt:new Date().toISOString(),workerVersion:env.APP_VERSION||'15.0.1',environment:env.ENVIRONMENT||'production',buildId:env.BUILD_ID||null,forecast:{status:row?'ok':'warning',responseMs,cache:null,rowsRead:row?1:0,rowsReturned:row?1:0},snapshot:{status:row&&ageMinutes<=90?'ok':row?'warning':'error',generatedAt:generated,ageMinutes,shards:null},supabase:{status:'ok'},auth:{status:'ok'},subscriptions:{status:'ok'}};
+  return {ok:Boolean(row),checkedAt:new Date().toISOString(),workerVersion:env.APP_VERSION||'15.0.2',environment:env.ENVIRONMENT||'production',buildId:env.BUILD_ID||null,forecast:{status:row?'ok':'warning',responseMs,cache:null,rowsRead:row?1:0,rowsReturned:row?1:0},snapshot:{status:row&&ageMinutes<=90?'ok':row?'warning':'error',generatedAt:generated,ageMinutes,shards:null},supabase:{status:'ok'},auth:{status:'ok'},subscriptions:{status:'ok'}};
 }
 const chunks=(a,n)=>Array.from({length:Math.ceil(a.length/n)},(_,i)=>a.slice(i*n,(i+1)*n));
 const finite=v=>Number.isFinite(Number(v))?Number(v):null;
@@ -368,7 +369,7 @@ const rankingStore={
       performanceMetrics.rowsReturned+=dailyResults[day].length;
       if(!dailyResults[day].length)delete dailyResults[day];
     }
-    return {ok:true,version:env.APP_VERSION||'15.0.1',workerVersion:env.APP_VERSION||'15.0.1',snapshotVersion:head.snapshot_version,generatedAt:head.generated_at,
+    return {ok:true,version:env.APP_VERSION||'15.0.2',workerVersion:env.APP_VERSION||'15.0.2',snapshotVersion:head.snapshot_version,generatedAt:head.generated_at,
       activeDate:Object.keys(dailyResults).sort()[0]||null,dailyResults,
       meta:responseMeta(summaryRows?.[0]?.meta,performanceMetrics),activity:normalized.activity,rankingEngine:'cloud-v7-prebuilt',resultLimitPerDay:FORECAST_ROWS_PER_DAY};
   }
@@ -402,7 +403,7 @@ async function buildSnapshot(env){
     console.error('Snapshotleverantörsfel',JSON.stringify(error.details));throw error;
   }
   const generatedAt=new Date().toISOString();
-  return {ok:true,version:env.APP_VERSION||'15.0.1',workerVersion:env.APP_VERSION||'15.0.1',snapshotVersion:snapshotVersionFor(generatedAt),generatedAt,activeDate:days[0]||null,dailyResults,
+  return {ok:true,version:env.APP_VERSION||'15.0.2',workerVersion:env.APP_VERSION||'15.0.2',snapshotVersion:snapshotVersionFor(generatedAt),generatedAt,activeDate:days[0]||null,dailyResults,
     sourceStatus:[{name:'Open-Meteo',ok:freshPlaces.size>0,rows:freshRows.length,error:failedParts.map(part=>`Batch ${part.batchIndex+1}: ${part.error}`).join(' · ')}],
     meta:{placesRequested:PLACES.length,placesUpdated:freshPlaces.size,placesFresh:freshPlaces.size,placesFallback:availablePlaces.size-freshPlaces.size,placesAvailable:availablePlaces.size,days:days.length,batches:batches.length,failedBatches:failedParts.length,failedBatchIndexes:failedParts.map(part=>part.batchIndex+1),failedPlaces:failures.map(x=>x.place)}};
 }
@@ -523,7 +524,7 @@ async function latestSnapshot(env,normalized,performanceMetrics){
   }
   performanceMetrics.shards=storedRows.length;
   const firstPayload=storedRows[0].payload||{};
-  return {ok:firstPayload.ok!==false,version:env.APP_VERSION||firstPayload.version||'15.0.1',workerVersion:env.APP_VERSION||'15.0.1',
+  return {ok:firstPayload.ok!==false,version:env.APP_VERSION||firstPayload.version||'15.0.2',workerVersion:env.APP_VERSION||'15.0.2',
     snapshotVersion:firstPayload.snapshotVersion||snapshotVersionFor(generatedAt),generatedAt,
     activeDate:firstPayload.activeDate||Object.keys(dailyResults).sort()[0]||null,dailyResults,
     sourceStatus,meta:responseMeta(payloadMeta,performanceMetrics),activity:requested,
@@ -569,14 +570,14 @@ async function databaseRankedForecast(env,normalized,c){
     method:'POST',headers:{...sbHeaders(env),accept:'application/json'},
     body:JSON.stringify({p_activity:normalized.activity,p_regions:normalized.regions,p_areas:normalized.areas,
       p_places:allowedPlaceNames(normalized),
-      p_limit:FORECAST_ROWS_PER_DAY,p_version:env.APP_VERSION||'15.0.1'})
+      p_limit:FORECAST_ROWS_PER_DAY,p_version:env.APP_VERSION||'15.0.2'})
   });
   const rawBody=await response.text();
   if(response.status===404||response.status===400&&/get_ranked_forecast|schema cache/i.test(rawBody))return null;
   if(!response.ok)throw new Error(`Supabase ranking ${response.status}: ${rawBody.slice(0,300)}`);
   if(!rawBody||rawBody==='null')return {body:JSON.stringify({ok:false,error:'Ingen molnprognos sparad ännu'}),status:404,headers:{...JSON_HEADERS,...c}};
   const parsed=payloadForDays(JSON.parse(rawBody),normalized.days),snapshotVersion=parsed.snapshotVersion||snapshotVersionFor(parsed.generatedAt);
-  parsed.snapshotVersion=snapshotVersion;parsed.workerVersion=env.APP_VERSION||'15.0.1';parsed.version=env.APP_VERSION||'15.0.1';
+  parsed.snapshotVersion=snapshotVersion;parsed.workerVersion=env.APP_VERSION||'15.0.2';parsed.version=env.APP_VERSION||'15.0.2';
   const body=JSON.stringify(parsed);
   return {body,status:200,snapshotVersion,headers:{...JSON_HEADERS,...c,'cache-control':'public, max-age=300, stale-while-revalidate=600','X-Vaderkompassen-Database-Ranked':'true','X-Vaderkompassen-Response-Bytes':String(body.length),'X-Vaderkompassen-Supabase-Calls':'1'}};
 }
@@ -613,7 +614,7 @@ async function buildForecastResult(env,normalized,c,totalStarted){
 const forecastCacheKeys=new Set();
 async function buildCacheableForecast(env,normalized,c,totalStarted,canonicalUrl){
   const result=await buildForecastResult(env,normalized,c,totalStarted),snapshotVersion=result.snapshotVersion||'unknown';
-  result.headers={...result.headers,etag:resultEtag(snapshotVersion,canonicalUrl),'X-Vaderkompassen-Snapshot-Version':snapshotVersion,'X-Vaderkompassen-Worker-Version':env.APP_VERSION||'15.0.1','X-Vaderkompassen-Cached-At':new Date().toISOString()};
+  result.headers={...result.headers,etag:resultEtag(snapshotVersion,canonicalUrl),'X-Vaderkompassen-Snapshot-Version':snapshotVersion,'X-Vaderkompassen-Worker-Version':env.APP_VERSION||'15.0.2','X-Vaderkompassen-Cached-At':new Date().toISOString()};
   return result;
 }
 async function invalidateForecastCache(){
@@ -663,7 +664,7 @@ async function status(env){
     sb(env,'worker_runs?select=started_at,finished_at,status,message,details&order=started_at.desc&limit=10')
   ]);
   const latest=snapshots?.[0]||null;
-  return {ok:true,service:'Väderkompassen API',version:env.APP_VERSION||'15.0.1',workerVersion:env.APP_VERSION||'15.0.1',time:new Date().toISOString(),
+  return {ok:true,service:'Väderkompassen API',version:env.APP_VERSION||'15.0.2',workerVersion:env.APP_VERSION||'15.0.2',time:new Date().toISOString(),
     latestSnapshot:latest?{id:latest.id,generated_at:latest.generated_at,activity:latest.activity,meta:latest.payload?.meta||null}:null,recentRuns:runs||[]};
 }
 async function appleSubscriptionOwner(env,subscription){
@@ -713,6 +714,41 @@ async function appleServerNotification(req,env,c){
   })});
   return json({ok:true},200,c);
 }
+async function googleOwnerByHash(env,tokenHash,linkedHash=null){
+  const values=[tokenHash,linkedHash].filter(Boolean);
+  for(const value of values){const rows=await sb(env,`subscriptions?provider=eq.google&or=(purchase_token_hash.eq.${encodeURIComponent(value)},linked_purchase_token_hash.eq.${encodeURIComponent(value)})&select=user_id&limit=1`);if(rows?.[0]?.user_id)return rows[0].user_id}
+  return null;
+}
+async function saveVerifiedGoogleSubscription(env,state,userId,tokenHash,source,notificationType=null){
+  const linkedHash=state.linkedPurchaseToken?await sha256Hex(state.linkedPurchaseToken):null;
+  const environment=String(env.GOOGLE_PLAY_ENVIRONMENT||"production").toLowerCase()==="production"?"production":"test";
+  const row=googleSubscriptionRow({...state,linkedPurchaseToken:linkedHash,environment},userId,tokenHash,source,{notificationType});
+  return sb(env,"rpc/sync_google_subscription",{method:"POST",body:JSON.stringify(row)});
+}
+async function googleClientVerify(req,env,c){
+  if(!googleConfigurationReady(env))throw Object.assign(new Error("Google Play-verifieringen är inte konfigurerad"),{status:503});
+  const {user,token}=await authenticatedUser(req,env),body=await req.json();validateGoogleRequest(env,body||{});
+  const purchaseToken=String(body?.purchaseToken||"");if(!purchaseToken||purchaseToken.length>4096)throw Object.assign(new Error("Google Play purchase token saknas"),{status:400});
+  const tokenHash=await sha256Hex(purchaseToken),data=await getGoogleSubscription(env,purchaseToken),state=resolveGoogleState(data);
+  const expectedAccountHash=await sha256Hex(user.id),owner=await googleOwnerByHash(env,tokenHash,state.linkedPurchaseToken?await sha256Hex(state.linkedPurchaseToken):null);
+  if(owner&&owner!==user.id)throw Object.assign(new Error("Google Play-prenumerationen är kopplad till ett annat konto"),{status:409});
+  if(state.externalAccountHash!==expectedAccountHash)throw Object.assign(new Error("Google Play-köpet saknar en giltig kontokoppling"),{status:422});
+  if(!data?.lineItems?.some(item=>item?.productId===GOOGLE_PLAY_CONFIG.productId))throw Object.assign(new Error("Google Play verifierade inte Premiumprodukten"),{status:422});
+  if(state.basePlanId!==GOOGLE_PLAY_CONFIG.basePlanId)throw Object.assign(new Error("Google Play verifierade inte Premium-basplanen"),{status:422});
+  await saveVerifiedGoogleSubscription(env,state,user.id,tokenHash,String(body?.source||"client"));
+  return json({ok:true,provider:"google",verified:true,acknowledgementRequired:state.acknowledgementRequired,entitlement:await currentEntitlement(env,token)},200,c);
+}
+async function googleRtdn(req,env,c){
+  if(!googleConfigurationReady(env))throw Object.assign(new Error("Google Play-verifieringen är inte konfigurerad"),{status:503});
+  await verifyPubSubIdentity(req,env);const body=await req.json(),event=decodeRtdn(body);
+  const existing=await sb(env,`google_notification_events?message_id=eq.${encodeURIComponent(event.messageId)}&select=message_id&limit=1`);if(existing?.length)return json({ok:true,duplicate:true},200,c);
+  const tokenHash=await sha256Hex(event.purchaseToken),data=await getGoogleSubscription(env,event.purchaseToken),state=resolveGoogleState(data,Date.now(),event.notificationType);
+  const linkedHash=state.linkedPurchaseToken?await sha256Hex(state.linkedPurchaseToken):null,owner=await googleOwnerByHash(env,tokenHash,linkedHash);
+  const relevant=data?.lineItems?.some(item=>item?.productId===GOOGLE_PLAY_CONFIG.productId)&&state.basePlanId===GOOGLE_PLAY_CONFIG.basePlanId;
+  if(owner&&relevant)await saveVerifiedGoogleSubscription(env,state,owner,tokenHash,"rtdn",event.notificationType);
+  await sb(env,"google_notification_events",{method:"POST",headers:{Prefer:"resolution=ignore-duplicates,return=minimal"},body:JSON.stringify({message_id:event.messageId,notification_type:event.notificationType,event_time:event.eventTimeMillis?new Date(Number(event.eventTimeMillis)).toISOString():null,purchase_token_hash:tokenHash,user_id:owner||null,processed:Boolean(owner&&relevant)})});
+  return json({ok:true,processed:Boolean(owner&&relevant)},200,c);
+}
 async function saveSnapshot(req,env,c){
   const body=await req.json(); if(!body?.dailyResults||typeof body.dailyResults!=="object")return json({ok:false,error:"dailyResults krävs"},400,c);
   await saveBuiltSnapshot(env,body); return json({ok:true,generatedAt:body.generatedAt||new Date().toISOString()},201,c);
@@ -739,7 +775,7 @@ export default {
   async fetch(req,env,ctx){
     const c=cors(env,req); if(req.method==='OPTIONS')return new Response(null,{status:204,headers:c}); const url=new URL(req.url);
     try{
-      if(url.pathname==='/'||url.pathname==='/health')return json({ok:true,service:'Väderkompassen API',version:env.APP_VERSION||'15.0.1',workerVersion:env.APP_VERSION||'15.0.1',time:new Date().toISOString()},200,c);
+      if(url.pathname==='/'||url.pathname==='/health')return json({ok:true,service:'Väderkompassen API',version:env.APP_VERSION||'15.0.2',workerVersion:env.APP_VERSION||'15.0.2',time:new Date().toISOString()},200,c);
       if((url.pathname==='/v1/status'||url.pathname==='/status')&&req.method==='GET'){
         await authenticatedAdmin(req,env);
         return json(await status(env),200,c);
@@ -753,7 +789,8 @@ export default {
       }
       if(url.pathname==='/v1/subscriptions/apple/sync'&&req.method==='POST')return await appleClientSync(req,env,c);
       if(url.pathname==='/v1/subscriptions/apple/notifications'&&req.method==='POST')return await appleServerNotification(req,env,c);
-      if(url.pathname.startsWith('/v1/subscriptions/google/')&&req.method==='POST')return json({ok:false,error:'Google Play ingår inte i v15.0.1'},501,c);
+      if(url.pathname==='/v1/subscriptions/google/verify'&&req.method==='POST')return await googleClientVerify(req,env,c);
+      if(url.pathname==='/v1/subscriptions/google/rtdn'&&req.method==='POST')return await googleRtdn(req,env,c);
       if(url.pathname==='/v1/admin/health'&&req.method==='GET')return json(await adminHealth(req,env),200,c);
       if(url.pathname==='/v1/admin/snapshot'&&req.method==='POST')return authorized(req,env)?saveSnapshot(req,env,c):json({ok:false,error:'Obehörig'},401,c);
       if((url.pathname==='/v1/admin/run'||url.pathname==='/admin/update')&&req.method==='POST'){

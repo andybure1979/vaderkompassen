@@ -1,4 +1,4 @@
-# Release checklist v15.0.1
+# Release checklist v15.0.2
 
 Markera inte externa steg som klara utan bevis.
 
@@ -18,6 +18,9 @@ Markera inte externa steg som klara utan bevis.
 
 ## Premium och reklam
 
+- [ ] Google Play-produkt/base plan/offer, servicekonto och `subscriptionsv2.get` verifierade
+- [ ] RTDN Pub/Sub OIDC, idempotens och Developer API-återhämtning verifierade
+- [ ] `20260803_1502_google_play_billing.sql` körd och RLS/RPC-behörighet verifierad
 - [ ] App Store Server API och Notifications V2 verifierade med rätt miljö, bundle/app-ID och produkt
 - [ ] `20260803_1501_apple_storekit.sql` körd och RLS/RPC-behörighet verifierad
 - [ ] Sandboxköp, trial, restore, manage, renewal/cancel/refund verifierade

@@ -232,10 +232,10 @@
               : "Du har inte aktiverat provperioden.";
     }
     if ($("premiumPurchase")) {
-      const canStart = Boolean(session?.user) && role === "free" && (cfg.subscriptionMode==="apple_native"||cfg.subscriptionMode==="manual_test"&&!trialUsed);
+      const canStart = Boolean(session?.user) && role === "free" && (["apple_native","google_native"].includes(cfg.subscriptionMode)||cfg.subscriptionMode==="manual_test"&&!trialUsed);
       $("premiumPurchase").classList.toggle("hidden", !canStart);
       $("premiumPurchase").disabled = !canStart;
-      $("premiumPurchase").textContent = cfg.subscriptionMode==="apple_native"?"Bli Premium":"Starta 3 dagars gratis provperiod";
+      $("premiumPurchase").textContent = ["apple_native","google_native"].includes(cfg.subscriptionMode)?"Bli Premium":"Starta 3 dagars gratis provperiod";
     }
     if ($("premiumCancel")) {
       const canCancel = entitlement?.can_manage_subscription && ["trial", "premium"].includes(role) && !cancelled;
@@ -250,9 +250,9 @@
       setMessage("premiumState", "Du måste vara inloggad för att starta provperioden.", true);
       return;
     }
-    const applePurchase=cfg.subscriptionMode==="apple_native";
-    if (!applePurchase&&cfg.subscriptionMode!=="manual_test")return setMessage("premiumState","Premiumköp kräver native-appen.",true);
-    if (!applePurchase&&!window.confirm("Starta en tre dagar lång testprovperiod? Ingen debitering sker och perioden blir inte automatiskt betald Premium.")) return;
+    const nativePurchase=["apple_native","google_native"].includes(cfg.subscriptionMode),googlePurchase=cfg.subscriptionMode==="google_native";
+    if (!nativePurchase&&cfg.subscriptionMode!=="manual_test")return setMessage("premiumState","Premiumköp kräver native-appen.",true);
+    if (!nativePurchase&&!window.confirm("Starta en tre dagar lång testprovperiod? Ingen debitering sker och perioden blir inte automatiskt betald Premium.")) return;
 
     const button = $("premiumPurchase");
     const originalText = button?.textContent || "Starta 3 dagars gratis provperiod";
@@ -264,14 +264,14 @@
 
     try {
       entitlement=await subscriptionProvider.startSubscription();
-      if(entitlement?.pending){setMessage("premiumState","Köpet väntar på godkännande hos Apple. Premium aktiveras först efter serververifiering.");return}
+      if(entitlement?.pending){setMessage("premiumState","Köpet väntar på bekräftelse. Premium aktiveras först efter serververifiering.");return}
       await loadProfile();
       if (!hasPremiumAccess()) {
-        throw new Error(applePurchase?"Apple-köpet genomfördes men backend har ännu inte verifierat Premium.":"Provperioden kunde inte aktiveras. Kontrollera att den senaste Supabase-migrationen är körd.");
+        throw new Error(nativePurchase?`${googlePurchase?"Google Play":"Apple"}-köpet genomfördes men backend har ännu inte verifierat Premium.`:"Provperioden kunde inte aktiveras. Kontrollera att den senaste Supabase-migrationen är körd.");
       }
 
       renderPremiumInfo();
-      setMessage("premiumState",applePurchase?(entitlement?.is_trial?"Apples provperiod är verifierad och Premium är aktivt.":"Apple-prenumerationen är verifierad och Premium är aktivt."):"Testprovperioden är aktiv i tre dagar. Ingen debitering sker i webbversionen.");
+      setMessage("premiumState",nativePurchase?(entitlement?.is_trial?`${googlePurchase?"Google Plays":"Apples"} provperiod är verifierad och Premium är aktivt.`:`${googlePurchase?"Google Play":"Apple"}-prenumerationen är verifierad och Premium är aktivt.`):"Testprovperioden är aktiv i tre dagar. Ingen debitering sker i webbversionen.");
       window.dispatchEvent(new CustomEvent("vk:access-changed", { detail: getAccessState() }));
     } catch (error) {
       console.error("Kunde inte starta Premium-provperiod", error);
