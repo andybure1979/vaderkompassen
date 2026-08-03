@@ -1,8 +1,12 @@
 import {Buffer} from "node:buffer";
-import {
-  AppStoreServerAPIClient,AutoRenewStatus,Environment,OfferDiscountType,SignedDataVerifier,Status
-} from "@apple/app-store-server-library";
 import {APPLE_ROOT_CA_DER_BASE64} from "./apple-root-certificates.js";
+
+const Environment={SANDBOX:"Sandbox",PRODUCTION:"Production"};
+const Status={ACTIVE:1,EXPIRED:2,BILLING_RETRY:3,BILLING_GRACE_PERIOD:4,REVOKED:5};
+const AutoRenewStatus={OFF:0,ON:1};
+const OfferDiscountType={FREE_TRIAL:"FREE_TRIAL"};
+let appleLibraryPromise;
+function appleLibrary(){return appleLibraryPromise||(appleLibraryPromise=import("@apple/app-store-server-library"))}
 
 const PREMIUM_STATUSES=new Set(["trialing","active","cancelled_active","grace_period"]);
 const REQUIRED_ENV_KEYS=["APPLE_IAP_KEY_ID","APPLE_IAP_ISSUER_ID","APPLE_IAP_PRIVATE_KEY","APPLE_BUNDLE_ID","APPLE_PRODUCT_ID","APPLE_ENVIRONMENT"];
@@ -24,13 +28,15 @@ export function appleConfigurationReady(env){
     &&(!production||Number.isSafeInteger(Number(env.APPLE_APP_ID)));
 }
 
-function appleVerifier(env){
+async function appleVerifier(env){
+  const {SignedDataVerifier}=await appleLibrary();
   const environment=configuredAppleEnvironment(env),bundleId=required(env,"APPLE_BUNDLE_ID");
   const appAppleId=environment===Environment.PRODUCTION?Number(required(env,"APPLE_APP_ID")):undefined;
   if(environment===Environment.PRODUCTION&&!Number.isSafeInteger(appAppleId))throw Object.assign(new Error("APPLE_APP_ID måste vara ett heltal i production"),{status:503});
   return new SignedDataVerifier(APPLE_ROOT_CA_DER_BASE64.map(value=>Buffer.from(value,"base64")),true,environment,bundleId,appAppleId);
 }
-function appleClient(env){
+async function appleClient(env){
+  const {AppStoreServerAPIClient}=await appleLibrary();
   return new AppStoreServerAPIClient(
     required(env,"APPLE_IAP_PRIVATE_KEY").replaceAll("\\n","\n"),required(env,"APPLE_IAP_KEY_ID"),required(env,"APPLE_IAP_ISSUER_ID"),
     required(env,"APPLE_BUNDLE_ID"),configuredAppleEnvironment(env)
@@ -64,8 +70,8 @@ export function resolveAppleState(status,transaction={},renewal={},nowMs=Date.no
 }
 function candidateItems(response){return (response?.data||[]).flatMap(group=>group?.lastTransactions||[])}
 export async function fetchVerifiedAppleSubscription(env,transactionId){
-  const productId=required(env,"APPLE_PRODUCT_ID"),verifier=appleVerifier(env);
-  const response=await appleClient(env).getAllSubscriptionStatuses(String(transactionId));
+  const productId=required(env,"APPLE_PRODUCT_ID"),verifier=await appleVerifier(env),client=await appleClient(env);
+  const response=await client.getAllSubscriptionStatuses(String(transactionId));
   if(response?.environment!==configuredAppleEnvironment(env))throw Object.assign(new Error("Apple svarade från fel miljö"),{status:502});
   const verified=[];
   for(const item of candidateItems(response)){
@@ -89,11 +95,12 @@ export async function fetchVerifiedAppleSubscription(env,transactionId){
   };
 }
 export async function verifyAppleNotification(env,signedPayload){
-  const notification=await appleVerifier(env).verifyAndDecodeNotification(String(signedPayload||""));
+  const verifier=await appleVerifier(env);
+  const notification=await verifier.verifyAndDecodeNotification(String(signedPayload||""));
   if(!notification.notificationUUID)throw Object.assign(new Error("Apple-notisen saknar notificationUUID"),{status:400});
   const signedTransaction=notification.data?.signedTransactionInfo;
   if(!signedTransaction)return {notification,subscription:null};
-  const transaction=await appleVerifier(env).verifyAndDecodeTransaction(signedTransaction);
+  const transaction=await verifier.verifyAndDecodeTransaction(signedTransaction);
   const subscription=await fetchVerifiedAppleSubscription(env,transaction.originalTransactionId||transaction.transactionId);
   return {notification,subscription};
 }
