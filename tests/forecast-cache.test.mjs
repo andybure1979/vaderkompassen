@@ -13,7 +13,7 @@ const rows=Array.from({length:80},(_,index)=>({day:"2026-08-01",place:["Varberg"
 const shard={payload:{ok:true,version:"14.4.1",workerVersion:"14.4.1",snapshotVersion:"snapshot-20260801T000000Z",generatedAt:"2026-08-01T00:00:00Z",activeDate:"2026-08-01",dailyResults:{"2026-08-01":rows},meta:{}},source_status:[]};
 
 function setup({delay=0,failSnapshot=false,rankedBody=null,prebuiltRecords=null,shardValue=shard,premium=false}={}){
-  const calls={head:0,snapshot:0,ranked:0,prebuilt:0};globalThis.caches={default:new MemoryCache()};
+  const calls={head:0,snapshot:0,ranked:0,prebuilt:0,summary:0};globalThis.caches={default:new MemoryCache()};
   globalThis.fetch=async input=>{
     const url=new URL(String(input));
     if(url.pathname.endsWith("/auth/v1/user"))return premium?new Response(JSON.stringify({id:"premium-user"}),{status:200}):new Response("{}",{status:401});
@@ -27,6 +27,10 @@ function setup({delay=0,failSnapshot=false,rankedBody=null,prebuiltRecords=null,
       if(!prebuiltRecords)return new Response(JSON.stringify({message:"forecast_rankings missing"}),{status:404});
       const dayFilter=String(url.searchParams.get("forecast_day")||"").replace(/^eq\./,"");
       return new Response(JSON.stringify(dayFilter?prebuiltRecords.filter(record=>record.forecast_day===dayFilter):prebuiltRecords),{status:200});
+    }
+    if(url.pathname.endsWith("/forecast_snapshots")&&url.searchParams.get("select")==="meta:payload->meta"){
+      calls.summary++;
+      return new Response(JSON.stringify([{meta:{placesRequested:1000,placesFresh:809,placesFallback:21,placesAvailable:830}}]),{status:200});
     }
     if(url.pathname.endsWith("/rpc/get_ranked_forecast")){
       calls.ranked++;
@@ -87,8 +91,9 @@ test("förbyggd ranking undviker legacy-RPC och regional JSON-expansion",async()
   const records=[{snapshot_version:"snapshot-20260801",generated_at:"2026-08-01T00:00:00Z",forecast_day:"2026-08-01",region:"Södra Sverige",ranked_rows:rankedRows}];
   const state=setup({prebuiltRecords:records}),response=await worker.fetch(request("activity=general&regions=S%C3%B6dra%20Sverige&days=1"),env,state.ctx),body=await response.json();
   assert.equal(body.rankingEngine,"cloud-v7-prebuilt");assert.equal(body.dailyResults["2026-08-01"].length,75);
-  assert.equal(state.calls.ranked,0);assert.equal(state.calls.head,0);assert.equal(state.calls.snapshot,0);assert.equal(state.calls.prebuilt,2);
-  assert.equal(response.headers.get("X-Vaderkompassen-Supabase-Calls"),"2");
+  assert.equal(state.calls.ranked,0);assert.equal(state.calls.head,0);assert.equal(state.calls.snapshot,0);assert.equal(state.calls.prebuilt,2);assert.equal(state.calls.summary,1);
+  assert.equal(response.headers.get("X-Vaderkompassen-Supabase-Calls"),"3");
+  assert.deepEqual({requested:body.meta.placesRequested,fresh:body.meta.placesFresh,fallback:body.meta.placesFallback,available:body.meta.placesAvailable},{requested:1000,fresh:809,fallback:21,available:830});
 });
 
 test("legacy-RPC får ett serverbestämt platsurval och går direkt till cache",async()=>{
