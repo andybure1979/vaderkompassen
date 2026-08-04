@@ -197,8 +197,18 @@ window.addEventListener("vk:cloud-settings-empty",()=>{
 let dailyResults={}, cloudRankings={}, activeDate=null, map=null, markerLayer=null;
 const $=id=>document.getElementById(id);
 let accessState=window.VK_AUTH?.getAccessState?.()||{role:"free",premium:false,admin:false};
+let accessResolved=false;
 const hasPremiumUiAccess=()=>Boolean(accessState?.premium);
-const adProvider=()=>window.VK_ADS?.createProvider?.(window.VK_CONFIG,hasPremiumUiAccess());
+const adsController=window.VK_ADS?.createController?.(window.ADS_CONFIG||{mode:"disabled",enabled:false});
+const updateAdPrivacyControl=()=>{
+  const button=$("adPrivacySettings"),message=$("adPrivacyMessage"),status=adsController?.getStatus?.()||{};
+  if(button)button.classList.toggle("hidden",!status.privacyOptionsRequired);
+  if(message){message.textContent=status.lastError?"Annonsinställningarna är inte tillgängliga just nu.":"";message.classList.toggle("hidden",!message.textContent)}
+};
+async function syncAds(){
+  await adsController?.setAccess?.({...accessState,resolved:accessResolved});
+  updateAdPrivacyControl();
+}
 function requestPremium(feature){
   if($("settingsDialog")?.open)$("settingsDialog").close();
   window.VK_AUTH?.openPremiumInfo?.(feature);
@@ -208,7 +218,7 @@ function renderAccessUi(){
   $("premiumWeekLock")?.classList.toggle("hidden",premium||!Object.keys(dailyResults).length);
   $("cloudSyncHint")?.classList.toggle("hidden",premium);
   $("premiumPlacesHint")?.classList.toggle("hidden",premium);
-  adProvider()?.show?.($("mainBottomBanner"));
+  adsController?.showBanner?.("main_bottom_banner",$("mainBottomBanner"));
 }
 function singleRegionSettings(candidate){
   const normalized=normalizeSettings(candidate);
@@ -1784,7 +1794,7 @@ function renderDay(){
       ad.setAttribute("aria-label","Annons");
       ad.textContent="Annons";
       ranking.appendChild(ad);
-      adProvider()?.show?.(ad);
+      adsController?.loadNativeAd?.("ranking_inline_native",ad);
     }
   });
 }
@@ -1906,6 +1916,7 @@ $("showPremiumWeek").onclick=()=>requestPremium("forecastDays");
 window.addEventListener("vk:access-changed",event=>{
   const previousPremium=hasPremiumUiAccess();
   accessState=event.detail||window.VK_AUTH?.getAccessState?.()||{role:"free",premium:false,admin:false};
+  accessResolved=true;
   const accessChanged=previousPremium!==hasPremiumUiAccess();
   let settingsChanged=false;
   if(!hasPremiumUiAccess()){
@@ -1913,11 +1924,21 @@ window.addEventListener("vk:access-changed",event=>{
     settingsChanged=JSON.stringify(restricted)!==JSON.stringify(settings);
     if(settingsChanged)persistSettings(restricted,{cloud:false});
   }
+  syncAds();
   renderAccessUi();
   renderTabs();
   if(settingsChanged||accessChanged)load({background:false});
   else if(Object.keys(dailyResults).length)renderDay();
   scheduleBackgroundRefresh(Date.now());
+});
+$("adPrivacySettings")?.addEventListener("click",async()=>{
+  const opened=await adsController?.showPrivacyOptions?.();
+  if(!opened){const message=$("adPrivacyMessage");if(message){message.textContent="Annons- och integritetsinställningar behöver inte visas för din region eller är tillfälligt otillgängliga.";message.classList.remove("hidden")}}
+  updateAdPrivacyControl();
+});
+window.addEventListener("vk:native-app-state",event=>{
+  if(event.detail?.isActive)syncAds();
+  else adsController?.provider?.hideBanner?.("main_bottom_banner",$("mainBottomBanner"));
 });
 if(!window.VK_NATIVE?.isNativePlatform?.()&&"serviceWorker"in navigator)window.addEventListener("load",async()=>{
   // Registrera listenern först: en redan nedladdad worker kan annars hinna ta

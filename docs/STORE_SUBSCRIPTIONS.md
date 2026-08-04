@@ -1,5 +1,7 @@
 # Butikskonfiguration för prenumerationer
 
+Trial, aktiv Premium, uppsagd Premium med kvarvarande åtkomst, VIP och Admin är reklamfria. Den centrala entitlementmodellen är sanningskälla även för annonsprovidern; annons-SDK får aldrig avgöra åtkomst.
+
 Google Play-flödet finns tekniskt i v15.0.2 men externa resurser och teststeg återstår. Se `GOOGLE_PLAY_BILLING.md`. Backend och central entitlement är sanningskälla; Billing-klienten får aldrig själv ge Premium.
 
 Centrala produkt-ID:n i `subscription-providers.js`:

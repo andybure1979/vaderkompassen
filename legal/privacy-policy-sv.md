@@ -1,6 +1,6 @@
 # Integritetspolicy för Väderkompassen
 
-Senast uppdaterad: 2 augusti 2026
+Senast uppdaterad: 4 augusti 2026
 Status: Utkast – juridisk granskning krävs före publicering.
 
 ## Ansvarig och kontakt
@@ -16,7 +16,7 @@ Väderkompassen drivs av Andreas Bure. Frågor om integritet och begäran om reg
 - Användning: valda aktiviteter, regioner och lokala inställningar. Free-inställningar ligger lokalt; Premium kan molnsynka inställningar.
 - Kontoborttagning: en pseudonymiserad hash och minsta nödvändiga prenumerationsfakta kan behållas för revision och butikshantering. Pseudonymiserat betyder inte anonymt.
 
-Appen läser inte enhetens GPS-position. Val av ort eller kartdestination är inte samma sak som insamling av exakt enhetsposition. Ingen aktiv analys- eller krasch-SDK finns i denna version.
+Appen läser inte enhetens GPS-position. Val av ort eller kartdestination är inte samma sak som insamling av exakt enhetsposition. Ingen separat analys- eller krasch-SDK finns i denna version. Nativeappen innehåller Google Mobile Ads/UMP-grunden, men produktionsannonser är avstängda tills samtycke och extern konfiguration är godkända.
 
 ## Ändamål och rättslig grund
 
@@ -29,7 +29,7 @@ Uppgifter används för att skapa och skydda konto, leverera tjänsten, synka va
 - Open-Meteo, MET Norway och andra dokumenterade väderleverantörer: prognosdata för valda orter; inget appkonto behöver skickas.
 - Apple och Google: inloggning när vald samt butiksköp när dessa senare har integrerats och verifierats. Butiksköp är inte aktiverade i nuvarande produktionskonfiguration.
 
-AdMob är inte aktivt. Free visar endast lokala annonsplatshållare. Om AdMob aktiveras senare krävs uppdaterad policy, butikernas datadeklarationer och tillämpligt samtyckesflöde innan produktionsannonser laddas.
+Google AdMob och User Messaging Platform (UMP) är förberedda för native Free. När produktionsannonser aktiveras kan Google behandla IP-adress och ungefärlig plats, enhets-/annonsidentifierare när tillåtet, annonsvisningar och interaktioner samt krasch- och prestandadiagnostik. UMP begär samtycke där det krävs och användaren kan öppna **Annons- och integritetsinställningar** igen. Vid okänt eller felaktigt samtyckestillstånd visas ingen annons. Trial, Premium, VIP och Admin är reklamfria. Slutlig rättslig grund, leverantörslista och internationella överföringar kräver juridisk granskning innan aktivering.
 
 ## Lagring, överföring och säkerhet
 

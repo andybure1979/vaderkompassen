@@ -2,4 +2,4 @@ Väderkompassen kräver nätverk för aktuell prognos. Free visar dagens prognos
 
 Kontoborttagning: logga in, öppna Profil och välj Radera mitt konto. Kartnavigation öppnar en extern kartapp.
 
-Version 15.0.1 innehåller StoreKit 2, restore/manage, App Store Server API och Notifications V2. Bygget får inte skickas innan Apple-konfiguration, migration och hela Sandboxflödet har verifierats. Produktionsannonser är avstängda tills AdMob och samtycke är godkända.
+Version 15.0.5 innehåller en fail-closed AdMob/Google UMP-grund. Endast Free kan visa adaptiv banner; Trial, Premium, VIP och Admin är reklamfria. Produktionsannonser är avstängda tills plattformens app-/unit-ID, publicerad CMP, App Privacy och enhetstest är godkända. Annons- och integritetsval kan öppnas igen från Om-sektionen när UMP kräver det.

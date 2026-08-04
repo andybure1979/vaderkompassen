@@ -1,3 +1,7 @@
+## v15.0.5 – AdMob och samtycke (CMP)
+
+Native Free har en central, entitlementstyrd och fail-closed AdMob/Google UMP-grund. Trial, Premium, VIP och Admin är helt reklamfria. Produktionsannonser är avstängda tills externa app-/unit-ID:n, publicerad CMP och butikernas integritetsdeklarationer är verifierade. Native inlineannons är blockerad eftersom vald plugin saknar ett säkert native-ad-API; bannern är implementerad.
+
 ## v15.0.4 – Native Android, signering och Google Play Internal Testing
 
 Androidprojektet har en reproducerbar JDK 21/SDK 36/Gradle-byggkedja, toolchain- och releasekontroller, säker lokal upload-signering samt dokumenterade steg för emulator, fysisk enhet, signerad AAB och Internal Testing. Identiteten är `se.vaderkompassen.app`, minSdk 24, compile/target 36, versionName 15.0.4 och versionCode 15004.

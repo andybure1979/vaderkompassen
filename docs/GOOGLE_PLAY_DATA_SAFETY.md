@@ -1,6 +1,6 @@
 # Google Play Data Safety – svarunderlag
 
-Andreas måste fylla i och godkänna formuläret manuellt i Play Console. Kryssa inte i AdMob-data innan SDK:n faktiskt aktiveras; uppdatera före aktivering.
+Andreas måste fylla i och godkänna formuläret manuellt i Play Console. Juridisk och portalbaserad slutgranskning är **MANUAL ACTION REQUIRED** före produktionsannonser.
 
 | Datatyp | Collected | Shared | Purpose | Required/optional | Ephemeral | Krypterad | Radering | Källa |
 |---|---|---|---|---|---|---|---|---|
@@ -11,10 +11,12 @@ Andreas måste fylla i och godkänna formuläret manuellt i Play Console. Kryssa
 | Purchase/subscription status | När test/butik aktiv | Apple/Google/service provider | Entitlement, fraud prevention | Premium | No | In transit | Konto kan raderas; minimal revision kan behållas | Supabase/butik |
 | Diagnostics/request metadata | Yes | Service provider | Security, diagnostics | Service operation | Delvis | In transit | Enligt fastställd loggrutin | Cloudflare/Supabase |
 | Precise/approximate device location | No | No | – | – | – | – | – | Ingen location permission |
-| Device/advertising ID | No currently | No | – | – | – | – | – | AdMob ej aktivt |
+| Device/advertising ID | Kan behandlas när AdMob aktiveras | Google enligt portaldefinition | Advertising, analytics, fraud prevention | Free-annonser | Verifiera | In transit | Enligt Google/val | Google Mobile Ads |
+| App interactions/advertising data | Kan behandlas när aktivt | Google | Advertising, analytics | Free-annonser | Verifiera | In transit | Enligt Google/val | Google Mobile Ads |
+| Crash/performance diagnostics | Kan behandlas när aktivt | Google | Diagnostics | Free-annonser | Verifiera | In transit | Enligt Google | Google Mobile Ads |
 
 Extern kontoborttagnings-URL att ange efter publicering: `https://andybure1979.github.io/vaderkompassen/public/delete-account/`.
 
 Android permissions: `INTERNET` för API/Auth/karta och `ACCESS_NETWORK_STATE` för begriplig offlinehantering. Ingen plats, kamera, mikrofon, kontakter, foton eller bred lagringsåtkomst begärs. Kontrollera merged manifest efter varje SDK-ändring.
 
-v15.0.4 använder Capacitor App, Browser, Device, Network, Preferences, SplashScreen och StatusBar samt Google Play Billing 9.1.0. Device-plugin finns installerad men appkoden läser inte reklam-ID eller beständig enhetsidentifierare. Köpstatus och pseudonymiserat konto-ID behandlas för entitlement/fraud prevention; rå purchase token skickas krypterat till backend och lagras endast hashad. AdMob är inte aktiverat, så reklam- eller annonsidentifierardata ska inte deklareras förrän en riktig SDK/CMP införs.
+v15.0.5 innehåller Google Mobile Ads och UMP via Capacitor-plugin men production är fail-closed. När annonser aktiveras ska Play Console deklarera att appen innehåller annonser samt SDK:ns faktiska datahantering. Ingen platsbehörighet läggs till; ungefärlig plats kan ändå härledas från IP av Google. UMP-val kan ändras via appens integritetsinställning. Trial/Premium/VIP/Admin är reklamfria.

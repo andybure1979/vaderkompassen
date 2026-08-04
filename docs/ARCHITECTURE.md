@@ -1,5 +1,9 @@
 # Arkitektur
 
+## Annonser och CMP i v15.0.5
+
+`ads-provider.js` är enda runtimegränsen mot AdMob. Den väntar på central entitlement innan provider väljs, begär UMP-status och initierar Google Mobile Ads först när `canRequestAds` tillåter det. Premiumroller använder `NoAdsProvider`; en ändring under pågående laddning invalidiserar begäran och förstör placeringen. `ADS_CONFIG` är miljö- och plattformsspecifik samt avstängd som produktionsstandard. Worker, ranking och prognosflöde berörs inte.
+
 ## Google Play-prenumerationer i v15.0.2
 
 Androids Capacitor-plugin använder Play Billing 9.1.0. Efter ett `PURCHASED`-resultat skickas token över autentiserad HTTPS till Workern; klienten ger ingen åtkomst. Workern kontrollerar användare, package/product, kontohash och aktuell `purchases.subscriptionsv2.get`, sparar endast tokenhash via service-role-RPC och returnerar central entitlement. Först därefter gör nativebryggan acknowledgement.
