@@ -1,6 +1,10 @@
 # Roadmap
 
+- **15.0.6** Juridik, lokaliserat butiksmaterial och publiceringschecklistor. Extern juridisk granskning, portaldata, assets, signing och butikstester återstår manuellt.
+
 ## Klart
+
+- **15.0.5** Central AdMob/UMP-grund och adaptiv Free-banner. Produktionsannonser, publicerad CMP, portaldeklarationer och native-inlinebrygga återstår manuellt.
 
 - **15.0.3** Reproducerbar iOS/Xcode-byggkedja och TestFlight-förberedelse; signing, Archive/Validate och verklig TestFlight återstår manuellt.
 - **15.0.4** Reproducerbar Android/SDK 36-byggkedja, säker upload-signering och Google Play Internal Testing-förberedelse; riktig Play-installation och Billingmatris återstår manuellt.

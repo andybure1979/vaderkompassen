@@ -1,6 +1,6 @@
 # App Store Privacy – svarunderlag
 
-Andreas måste verifiera och fylla i svaren manuellt i App Store Connect. Underlaget är granskat mot iOS v15.0.3; ändra svaren om SDK:er eller funktioner ändras.
+Andreas måste verifiera och fylla i svaren manuellt i App Store Connect. Underlaget är granskat mot iOS v15.0.6; juridisk och portalbaserad slutgranskning är **MANUAL ACTION REQUIRED** innan AdMob aktiveras.
 
 | Datatyp | Samlas in | Kopplad till användare | Tracking | Ändamål | Obligatorisk | Lagring/tredjepart |
 |---|---|---|---|---|---|---|
@@ -10,8 +10,9 @@ Andreas måste verifiera och fylla i svaren manuellt i App Store Connect. Underl
 | Produktinteraktioner/inställningar | Ja för molnsynk | Ja | Nej | Appfunktion | Premium molnsynk frivillig | Supabase; Free lokalt |
 | Köp-/prenumerationsstatus | Ja när aktiverat/test | Ja | Nej | Entitlement, support, revision | Premium | Supabase; Apple/Google vid framtida butiksköp |
 | Diagnostik och requestmetadata | Ja | Kan indirekt kopplas | Nej | Drift, säkerhet | Tjänsteleverans | Cloudflare/Supabase; lagringstid ska fastställas |
-| Kraschdata | Nej | Nej | Nej | – | – | Ingen krasch-SDK |
-| Enhets-/annons-ID | Nej nu | Nej | Nej | – | – | AdMob ej aktivt |
+| Krasch-/prestandadata | Kan behandlas av AdMob när aktivt | Normalt inte av appkonto; verifiera Googledeklaration | Beroende på konfiguration | Diagnostik | Free-annonser | Google Mobile Ads |
+| Enhets-/annons-ID | Kan behandlas när AdMob är aktivt och tillåtet | Verifiera | Kan användas för tracking om personalisering/ATT tillåts | Reklam, mätning, fraud prevention | Free-annonser | Google Mobile Ads |
+| Annonsdata och produktinteraktion | Kan behandlas när aktivt | Normalt inte av appkonto | Beroende på konfiguration | Reklam, mätning | Free-annonser | Google Mobile Ads |
 | Exakt/ungefärlig enhetsplats | Nej | Nej | Nej | – | – | Appen läser inte GPS; manuellt valda orter är appinnehåll |
 | Användarinnehåll | Endast visningsnamn/supportmejl | Ja | Nej | Profil/support | Frivillig | Supabase/e-postleverantör |
 
@@ -22,6 +23,6 @@ Andreas måste verifiera och fylla i svaren manuellt i App Store Connect. Underl
 - Cloudflare Worker: API, cache, drift- och säkerhetsmetadata.
 - Leaflet/OpenStreetMap: kartvisning; externa tiles laddas i webbversionen.
 - StoreKit och Google Play Billing är implementerade men blockerade för produktion tills respektive externa butikskonfiguration och testmatris är verifierad.
-- AdMob: ingen plugin och ingen initiering i produktion.
+- Google Mobile Ads/UMP via `@capacitor-community/admob` 8.0.0: inbyggd men fail-closed i produktion. UMP styr om annonser får begäras; Premium initierar inte SDK:n om det kan undvikas.
 
-Appens `PrivacyInfo.xcprivacy` anger ingen tracking/insamlad data genom appmanifestet och deklarerar UserDefaults reason `CA92.1`. Capacitor och CapacitorCordova 8.5.0 innehåller egna privacy manifests utan tracking, insamlade datatyper eller Required Reason APIs. Kontrollera samtliga inbäddade manifests igen i det arkiverade bygget. Portalens svar ska omfatta serverbehandling även om appmanifestet inte gör det.
+Appens eget `PrivacyInfo.xcprivacy` anger ingen egen tracking/insamlad data och deklarerar UserDefaults reason `CA92.1`. Google Mobile Ads levererar eget privacy manifest i aktuell SDK. Kontrollera samtliga inbäddade manifests och faktisk AdMob-konfiguration i arkivet; portalens svar ska omfatta tredjeparts-SDK och serverbehandling. ATT begärs inte rutinmässigt i v15.0.6.

@@ -1,5 +1,22 @@
 # Ändringslogg
 
+## 15.0.6 – Juridik, butiksmaterial och publicering
+
+- Färdigställer svenskt och engelskt butiksunderlag för App Store och Google Play.
+- Lägger till planer för skärmbilder, app preview, ikoner, support, åldersklassning, ASO, testkonton och releasearbete.
+- Inventerar tredjepartslicenser och samlar App Privacy- och Google Data Safety-underlag.
+- Synkroniserar frontend/iOS/Android till 15.0.6 (iOS build 7, Android versionCode 15006); Worker stannar på 15.0.2.
+- Ändrar inte appfunktionalitet, design, väder, poäng, ranking, cache, Premium, Auth, Billing eller annonser.
+- Är blockerad för butikspublicering tills juridik, externa URL:er, assets, portaldeklarationer, signing och butikstester är manuellt godkända.
+
+## 15.0.5 – AdMob och samtycke (CMP)
+
+- Lägger till central, race-säker annonsprovider och Google UMP före native annonsinitiering.
+- Free kan visa en adaptiv bottenbanner; Trial/Premium/cancelled-active/VIP/Admin får ingen annons eller reserverad yta.
+- Production är fail-closed utan verifierade plattformsspecifika ID:n och publicerad CMP. Webben hämtar ingen extern reklam.
+- Inline-nativeplaceringen finns kvar efter resultat tre men är blockerad i native eftersom pluginen saknar säkert stöd.
+- Synkroniserar frontend/iOS/Android till 15.0.5 (iOS build 6, Android versionCode 15005); Worker stannar på 15.0.2.
+
 ## 15.0.4 – Native Android, signering och Google Play Internal Testing
 
 - Synkroniserar frontend/Android till 15.0.4 och versionCode 15004; iOS stannar på 15.0.3 build 5 och Worker på 15.0.2.

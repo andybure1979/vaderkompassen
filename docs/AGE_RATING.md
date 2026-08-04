@@ -24,3 +24,5 @@ Slutlig rating bestäms av Apple respektive Google/IARC. Andreas ska fylla i por
 - Weather/outdoor risk: beskriv prognos- och aktivitetsfunktionen sakligt om formuläret frågar.
 
 Data Safety är ett separat formulär men ska vara konsekvent: konto- och diagnostikdata behandlas; ingen GPS; AdMob-data först när SDK:n aktiveras.
+
+Appen är inte uttryckligen barnriktad. Slutligt val för målgrupp, `tagForChildDirectedTreatment`, under-age-of-consent och konservativ maximal annonsklassificering måste beslutas och verifieras manuellt i AdMob/portalerna; v15.0.6 hittar inte på en juridisk åldersgräns.

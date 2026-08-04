@@ -31,7 +31,7 @@ Free kan visa reklam. Produktionsannonser aktiveras först när AdMob och nödv�
 
 ## Tillgänglighet, rättigheter och ansvar
 
-Tjänsten kan ändras, avbrytas eller vara otillgänglig. Programvara, design och innehåll skyddas av tillämpliga immateriella rättigheter. Ansvarsbegränsning och tillämplig lag måste granskas juridiskt och anpassas till tvingande konsumenträtt; inga garantier utöver tvingande lag utlovas här.
+Tjänsten kan ändras, avbrytas eller vara otillgänglig. Programvara, design och innehåll skyddas av tillämpliga immateriella rättigheter. Svensk lag gäller, med förbehåll för tvingande konsumenträtt. Ansvarsbegränsningen måste granskas juridiskt; inga garantier utöver tvingande lag utlovas här.
 
 ## Avsluta konto
 
@@ -39,4 +39,4 @@ Kontot kan raderas i profilen. Radering av appkontot avslutar inte nödvändigtv
 
 ## Kontakt
 
-Frågor: [andreas.bure@gmail.com](mailto:andreas.bure@gmail.com). Ansvarig aktör, adress, lagval och tvistlösning ska kompletteras efter juridisk granskning.
+Juridisk aktör: **Privatperson Andreas Bure**. Organisationsnummer och postadress: **ej tillämpligt**. Frågor skickas till [support.vaderkompassen@gmail.com](mailto:support.vaderkompassen@gmail.com). Svensk lag gäller.

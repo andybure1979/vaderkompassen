@@ -1,6 +1,6 @@
 {
-  "version": "15.0.4",
-  "updatedAt": "2026-08-03",
+  "version": "15.0.6",
+  "updatedAt": "2026-08-04",
   "items": {
     "privacyPolicy": { "status": "manual_action_required", "evidence": ["legal/privacy-policy-sv.md", "public/privacy/index.html"], "note": "Publicera och verifiera stabil HTTPS-URL samt genomför juridisk granskning." },
     "termsOfUse": { "status": "manual_action_required", "evidence": ["legal/terms-of-use-sv.md", "public/terms/index.html"], "note": "Utkastet måste granskas juridiskt och publiceras." },
@@ -21,16 +21,16 @@
     "googleRtdn": { "status": "blocked", "evidence": ["cloudflare/src/index.js", "docs/GOOGLE_PLAY_BILLING.md"], "note": "Pub/Sub, OIDC audience och RTDN-topic måste konfigureras och testas." },
     "googleInternalTesting": { "status": "blocked", "evidence": ["docs/GOOGLE_PLAY_BILLING.md"], "note": "Signerad build, licenstestare och hela köp-/livscykelmatrisen återstår." },
     "testAccount": { "status": "manual_action_required", "evidence": ["docs/REVIEW_ACCOUNT.md"] },
-    "screenshots": { "status": "manual_action_required", "evidence": ["docs/STORE_ASSETS.md"] },
-    "appIcon": { "status": "manual_action_required", "evidence": ["docs/STORE_ASSETS.md"], "note": "Befintliga ikoner måste granskas visuellt och Play feature graphic saknas." },
-    "storeDescriptions": { "status": "complete", "evidence": ["store/apple/sv-SE/description.txt", "store/google/sv-SE/full-description.txt"] },
+    "screenshots": { "status": "manual_action_required", "evidence": ["docs/SCREENSHOTS.md"] },
+    "appIcon": { "status": "manual_action_required", "evidence": ["docs/APP_ICONS.md"], "note": "Tekniska ikonmått är verifierade; visuell originalgranskning och separat Play Store-ikon/feature graphic återstår." },
+    "storeDescriptions": { "status": "complete", "evidence": ["store/apple/sv-SE/description.txt", "store/apple/en-US/description.txt", "store/google/sv-SE/full_description.txt", "store/google/en-US/full_description.txt"] },
     "reviewNotes": { "status": "complete", "evidence": ["store/apple/sv-SE/review-notes.txt", "store/google/sv-SE/review-notes.txt"] },
     "iosBuild": { "status": "manual_action_required", "evidence": ["docs/RELEASE_CHECKLIST.md"], "note": "Arkiv och TestFlight-uppladdning kräver Xcode och signing-team." },
     "androidBundle": { "status": "manual_action_required", "evidence": ["docs/RELEASE_CHECKLIST.md"], "note": "Signerad AAB kräver lokal keystore." },
     "signingConfigured": { "status": "blocked", "evidence": ["docs/NATIVE_SETUP.md"], "note": "Signingmaterial får inte lagras i Git." },
     "productionEndpoints": { "status": "complete", "evidence": ["config.js", "wrangler.jsonc"] },
     "productionSecrets": { "status": "manual_action_required", "evidence": ["docs/RELEASE_CHECKLIST.md"], "note": "Verifiera secrets i Cloudflare/Supabase utan att exportera dem." },
-    "adsConfigured": { "status": "blocked", "evidence": ["ads-provider.js"], "note": "AdMob och samtyckesplattform är inte aktiverade; placeholders används." },
+    "adsConfigured": { "status": "blocked", "evidence": ["ads-provider.js", "docs/ADMOB_CMP.md", "docs/ADMOB_SETUP.md"], "note": "AdMob/UMP är implementerat fail-closed, men riktiga ID:n, publicerad CMP och portaldeklarationer saknas." },
     "subscriptionsConfigured": { "status": "blocked", "evidence": ["subscription-providers.js", "docs/STORE_SUBSCRIPTIONS.md", "docs/GOOGLE_PLAY_BILLING.md"], "note": "Kodflödena finns, men externa produkter, credentials, servernotiser och butikstester saknas." }
   }
 }

@@ -11,7 +11,7 @@ test("central compliancechecklista har alla obligatoriska statusposter",()=>{
   const required=["privacyPolicy","termsOfUse","supportPage","accountDeletionInApp","accountDeletionWeb","appPrivacyAnswers","googleDataSafetyAnswers","ageRatingApple","ageRatingGoogle","subscriptionDisclosure","restorePurchases","manageSubscription","testAccount","screenshots","appIcon","storeDescriptions","reviewNotes","iosBuild","androidBundle","signingConfigured","productionEndpoints","productionSecrets","adsConfigured","subscriptionsConfigured"];
   for(const key of required)assert.ok(config.items[key],key);
   for(const item of Object.values(config.items))assert.match(item.status,/^(complete|manual_action_required|blocked|not_applicable)$/);
-  assert.equal(config.version,"15.0.4");
+  assert.equal(config.version,"15.0.6");
 });
 
 test("releasekontrollscript finns i npm och produktion fabricerar inte köp",()=>{

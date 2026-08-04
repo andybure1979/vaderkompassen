@@ -11,20 +11,27 @@ node_modules/
 dist/
 .DS_Store
 **/.DS_Store
+.idea/
+**/.idea/
+supabase/.temp/
 
 # Native lokalfiler och privata signingartefakter
 ios/App/xcuserdata/
 ios/DerivedData/
+**/DerivedData/
+**/.swiftpm/
 **/*.xcuserstate
 **/*.xcworkspace/xcuserdata/
 **/*.mobileprovision
 **/*.p12
+**/*.pfx
 **/*.cer
 **/AuthKey_*.p8
 **/*.xcarchive
 **/*.jks
 **/*.keystore
 **/*.aab
+**/*.apk
 **/google-services.json
 android/.gradle/
 android/local.properties

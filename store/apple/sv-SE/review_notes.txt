@@ -1,0 +1,7 @@
+Väderkompassen kräver nätverk för aktuell prognos. Free visar dagens prognos, en region och standardplatser. Premium visar alla prognosdagar, flera regioner, utökat platsregister, molnsynk och är reklamfritt. Prognos, poäng och ranking är identiska.
+
+Ange ett beständigt Free-konto, ett riktigt Apple Sandbox-Premiumkonto och ett separat Admin-konto i App Store Connect. Credentials lagras aldrig i Git. Admin är en separat administrativ entitlement och fabricerar inte ett Appleköp.
+
+Premium: öppna Profil och välj Premium. Där visas lokaliserat butikspris, period, automatisk förnyelse, köp, återställning och hantering när Sandboxprodukten är konfigurerad. Kontoborttagning: Profil → Radera mitt konto. Kartnavigation öppnar extern kartapp.
+
+Free kan visa adaptiv AdMob-banner först efter UMP. Trial, Premium, VIP och Admin är reklamfria. Produktionsannonser är fail-closed utan godkänd app-/unit-ID och CMP. Annons- och integritetsinställningar finns i Om när UMP kräver det.

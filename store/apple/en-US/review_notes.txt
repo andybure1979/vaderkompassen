@@ -1,0 +1,7 @@
+Weather Compass requires a network connection for current forecasts. Free shows today, one region and standard locations. Premium shows all forecast days, multiple regions, the expanded location catalogue, cloud sync and no ads. Forecasts, scores and rankings are identical.
+
+Provide persistent Free, genuine Apple Sandbox Premium and separate Admin accounts in App Store Connect only. Admin is a separate administrative entitlement and does not fabricate an Apple purchase.
+
+Premium is available from Profile. Localised price, billing interval, automatic renewal, purchase, restore and management are shown when the Sandbox product is configured. Account deletion: Profile → Delete my account. Map navigation opens an external map app.
+
+Free may show an adaptive AdMob banner only after UMP. Trial, Premium, VIP and Admin are ad-free. Production ads fail closed without approved IDs and CMP.

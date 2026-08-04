@@ -42,14 +42,14 @@ test("native Auth använder deeplink, extern Browser och persistent adapter",()=
   assert.match(auth,/storage: window\.VK_NATIVE\?\.storage/);
 });
 
-test("iOS använder StoreKit 2 medan annonser fortfarande är avstängda",()=>{
+test("iOS använder StoreKit 2 och central fail-closed annonsprovider",()=>{
   assert.match(native,/VaderkompassenPurchases/);
   assert.match(storekit,/import StoreKit/);assert.match(storekit,/Product\.products/);assert.match(storekit,/\.appAccountToken\(token\)/);
   assert.match(storekit,/AppStore\.sync/);assert.match(storekit,/showManageSubscriptions/);assert.match(storekit,/jwsRepresentation/);
   assert.match(mainView,/registerPluginInstance\(VaderkompassenPurchasesPlugin\(\)\)/);
-  assert.match(ads,/class AdMobProvider/);assert.match(ads,/this\.active=false/);
-  assert.match(ads,/environment!=="production"&&this\.config\.adsMode==="test"/);
-  assert.match(html,/ads-provider\.js\?v=15\.0\.4/);
+  assert.match(ads,/class AdMobProvider/);assert.match(ads,/async requestConsent\(\)/);
+  assert.match(ads,/if\(!consent\.canRequestAds\)throw/);
+  assert.match(html,/ads-provider\.js\?v=15\.0\.6/);
 });
 
 test("kontoborttagning kräver nylig auth och behåller minimal butiksrevision",()=>{

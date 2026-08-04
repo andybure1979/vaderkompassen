@@ -2,7 +2,7 @@ import {cp,mkdir,readFile,rm,writeFile} from "node:fs/promises";
 import {resolve} from "node:path";
 
 const root=resolve(import.meta.dirname,".."),dist=resolve(root,"dist");
-const files=["index.html","styles.css","place-registry.js","app.js","auth.js","admin.js","cloud-request.js","config.js","environment.js","native-platform.js","ads-provider.js","fishing-score.js","navigation.js","subscription-providers.js","manifest.webmanifest","sw.js","icon-180.png","icon-192.png","icon-512.png"];
+const files=["index.html","styles.css","place-registry.js","app.js","auth.js","admin.js","cloud-request.js","config.js","environment.js","native-platform.js","ads-config.js","ads-provider.js","fishing-score.js","navigation.js","subscription-providers.js","manifest.webmanifest","sw.js","icon-180.png","icon-192.png","icon-512.png"];
 await rm(dist,{recursive:true,force:true});await mkdir(dist,{recursive:true});
 for(const file of files)await cp(resolve(root,file),resolve(dist,file));
 for(const directory of ["support","privacy","terms","delete-account"])await cp(resolve(root,"public",directory),resolve(dist,directory),{recursive:true});
@@ -15,7 +15,16 @@ await mkdir(resolve(dist,"vendor/supabase"),{recursive:true});
 await cp(resolve(root,"node_modules/@supabase/supabase-js/dist/umd/supabase.js"),resolve(dist,"vendor/supabase/supabase.js"));
 const name=process.env.VK_ENVIRONMENT||"production";
 if(!["development","staging","production"].includes(name))throw new Error(`Ogiltig VK_ENVIRONMENT: ${name}`);
-const publicConfig={name,debug:name==="development",apiBaseUrl:process.env.VK_PUBLIC_WORKER_URL||undefined,supabaseUrl:process.env.VK_PUBLIC_SUPABASE_URL||undefined,supabaseAnonKey:process.env.VK_PUBLIC_SUPABASE_ANON_KEY||undefined,subscriptionMode:process.env.VK_SUBSCRIPTION_MODE||(name==="development"?"manual_test":"disabled"),adsMode:process.env.VK_ADS_MODE||(name==="production"?"disabled":"placeholder")};
+const adsMode=process.env.VK_ADS_MODE||(name==="production"?"disabled":name==="staging"?"test":"placeholder");
+if(!["disabled","placeholder","test","production"].includes(adsMode))throw new Error(`Ogiltigt VK_ADS_MODE: ${adsMode}`);
+const officialTestIds={
+  IOS:{appId:"ca-app-pub-3940256099942544~1458002511",banner:"ca-app-pub-3940256099942544/2435281174",native:"ca-app-pub-3940256099942544/3986624511"},
+  ANDROID:{appId:"ca-app-pub-3940256099942544~3347511713",banner:"ca-app-pub-3940256099942544/9214589741",native:"ca-app-pub-3940256099942544/2247696110"}
+};
+const adPlatform=prefix=>({appId:adsMode==="test"?officialTestIds[prefix].appId:(process.env[`VK_ADMOB_${prefix}_APP_ID`]||""),placements:{main_bottom_banner:adsMode==="test"?officialTestIds[prefix].banner:(process.env[`VK_ADMOB_${prefix}_BANNER_ID`]||""),ranking_inline_native:adsMode==="test"?officialTestIds[prefix].native:(process.env[`VK_ADMOB_${prefix}_NATIVE_ID`]||"")}});
+const publicConfig={name,debug:name==="development",apiBaseUrl:process.env.VK_PUBLIC_WORKER_URL||undefined,supabaseUrl:process.env.VK_PUBLIC_SUPABASE_URL||undefined,supabaseAnonKey:process.env.VK_PUBLIC_SUPABASE_ANON_KEY||undefined,subscriptionMode:process.env.VK_SUBSCRIPTION_MODE||(name==="development"?"manual_test":"disabled"),adsMode,adsEnabled:process.env.VK_ADS_ENABLED?process.env.VK_ADS_ENABLED==="true":name==="staging",adsConsentDebugGeography:process.env.VK_ADS_CONSENT_DEBUG_GEOGRAPHY||undefined,ads:{ios:adPlatform("IOS"),android:adPlatform("ANDROID")}};
+if(name==="production"&&adsMode==="test")throw new Error("Produktionsbygge får inte använda testannonser");
+if(name==="production"&&adsMode==="production"&&(!publicConfig.adsEnabled||!publicConfig.ads.ios.appId||!publicConfig.ads.android.appId||!publicConfig.ads.ios.placements.main_bottom_banner||!publicConfig.ads.android.placements.main_bottom_banner))throw new Error("Produktionsannonser saknar fullständig verifierad konfiguration");
 for(const key of Object.keys(publicConfig))if(publicConfig[key]===undefined)delete publicConfig[key];
 await writeFile(resolve(dist,"environment.js"),`window.VK_ENVIRONMENT=Object.freeze(${JSON.stringify(publicConfig)});\n`);
 const html=(await readFile(resolve(dist,"index.html"),"utf8"))

@@ -1,0 +1,1 @@
+weather,forecast,wind,fishing,hiking,surf,skiing,swimming,Sweden,Norway,Denmark

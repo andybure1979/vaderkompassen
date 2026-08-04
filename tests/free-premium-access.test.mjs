@@ -27,13 +27,13 @@ test("Free begränsas till en region medan Premium behåller flerval",()=>{
   assert.match(app,/requestPremium\("multiRegion"\)/);
 });
 
-test("annonsplatser finns endast som lokala Free-platshållare",()=>{
+test("annonsplatser går endast genom central entitlementstyrd provider",()=>{
   assert.match(html,/data-placement="main_bottom_banner"[^>]*aria-label="Annons">Annons</);
   assert.match(app,/ad\.dataset\.placement="ranking_inline_native"/);
   assert.match(app,/if\(!hasPremiumUiAccess\(\)&&i===2\)/);
-  assert.match(app,/adProvider\(\)\?\.show\?\.\(\$\("mainBottomBanner"\)\)/);
-  assert.match(ads,/if\(premium\)return new NoAdsProvider\(\)/);
-  assert.match(ads,/return new WebPlaceholderAdProvider\(\)/);
+  assert.match(app,/adsController\?\.showBanner\?\.\("main_bottom_banner"/);
+  assert.match(ads,/if\(!accessAllowsAds\(this\.access\)\)return NoAdsProvider/);
+  assert.match(ads,/this\.config\.mode==="placeholder"\?WebPlaceholderAdProvider:NoAdsProvider/);
 });
 
 test("Premiumdialogen visar endast den förenklade butiksjämförelsen",()=>{
