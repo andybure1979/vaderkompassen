@@ -6,7 +6,7 @@ compatibility_date = "2026-07-26"
 crons = ["0 * * * *"]
 
 [vars]
-APP_VERSION = "15.0.2"
+APP_VERSION = "15.0.6"
 ENVIRONMENT = "production"
 ALLOWED_ORIGINS = "https://andybure1979.github.io,capacitor://localhost,https://localhost"
 APPLE_ENVIRONMENT = "Production"

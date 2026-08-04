@@ -13,8 +13,8 @@ test("deploykontraktet använder root-entrypoint och samma releaseversion",()=>{
   assert.equal(packageJson.version,"15.0.6");
   assert.equal(packageJson.scripts.deploy,"wrangler deploy --config wrangler.jsonc");
   assert.match(wrangler,/"main": "cloudflare\/src\/index\.js"/);
-  assert.match(wrangler,/"APP_VERSION": "15\.0\.2"/);
-  assert.match(worker,/workerVersion:env\.APP_VERSION\|\|'15\.0\.2'/);
+  assert.match(wrangler,/"APP_VERSION": "15\.0\.6"/);
+  assert.match(worker,/workerVersion:env\.APP_VERSION\|\|'15\.0\.6'/);
 });
 
 test("snapshotjobbet körs en gång per hel timme i båda deploykonfigurationerna",()=>{
