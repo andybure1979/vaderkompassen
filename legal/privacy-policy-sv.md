@@ -5,7 +5,7 @@ Status: Utkast – juridisk granskning krävs före publicering.
 
 ## Ansvarig och kontakt
 
-Väderkompassen drivs av Andreas Bure. Frågor om integritet och begäran om registrerades rättigheter skickas till [andreas.bure@gmail.com](mailto:andreas.bure@gmail.com). Organisationsform, postadress och eventuell dataskyddskontakt ska fastställas före publik lansering.
+Personuppgiftsansvarig och juridisk aktör är **Privatperson Andreas Bure**. Organisationsnummer och postadress är **ej tillämpligt**. Frågor om integritet och begäran om registrerades rättigheter skickas till [support.vaderkompassen@gmail.com](mailto:support.vaderkompassen@gmail.com).
 
 ## Uppgifter som behandlas
 
@@ -20,7 +20,12 @@ Appen läser inte enhetens GPS-position. Val av ort eller kartdestination är in
 
 ## Ändamål och rättslig grund
 
-Uppgifter används för att skapa och skydda konto, leverera tjänsten, synka valda inställningar, hantera behörighet, förebygga missbruk, felsöka och uppfylla rättsliga skyldigheter. Exakt rättslig grund per behandling (avtal, berättigat intresse, samtycke eller rättslig förpliktelse) ska fastställas genom juridisk granskning innan produktion.
+- Konto och inloggning: fullgörande av avtal.
+- Molnsynk: fullgörande av avtal.
+- Premiumprenumeration och betalningsverifiering: fullgörande av avtal.
+- Supportärenden: berättigat intresse.
+- Tekniska loggar och säkerhetsloggar: berättigat intresse för drift, felsökning och säkerhet.
+- Annons- och samtyckeshantering: samtycke när det krävs enligt tillämplig lagstiftning.
 
 ## Tjänsteleverantörer
 
@@ -29,11 +34,19 @@ Uppgifter används för att skapa och skydda konto, leverera tjänsten, synka va
 - Open-Meteo, MET Norway och andra dokumenterade väderleverantörer: prognosdata för valda orter; inget appkonto behöver skickas.
 - Apple och Google: inloggning när vald samt butiksköp när dessa senare har integrerats och verifierats. Butiksköp är inte aktiverade i nuvarande produktionskonfiguration.
 
-Google AdMob och User Messaging Platform (UMP) är förberedda för native Free. När produktionsannonser aktiveras kan Google behandla IP-adress och ungefärlig plats, enhets-/annonsidentifierare när tillåtet, annonsvisningar och interaktioner samt krasch- och prestandadiagnostik. UMP begär samtycke där det krävs och användaren kan öppna **Annons- och integritetsinställningar** igen. Vid okänt eller felaktigt samtyckestillstånd visas ingen annons. Trial, Premium, VIP och Admin är reklamfria. Slutlig rättslig grund, leverantörslista och internationella överföringar kräver juridisk granskning innan aktivering.
+Google AdMob och User Messaging Platform (UMP) är förberedda för native Free. När produktionsannonser aktiveras kan Google behandla IP-adress och ungefärlig plats, enhets-/annonsidentifierare när tillåtet, annonsvisningar och interaktioner samt krasch- och prestandadiagnostik. UMP begär samtycke där det krävs och användaren kan öppna **Annons- och integritetsinställningar** igen. Vid okänt eller felaktigt samtyckestillstånd visas ingen annons. Trial, Premium, VIP och Admin är reklamfria. Leverantörslista och internationella överföringar kräver juridisk granskning innan aktivering.
 
 ## Lagring, överföring och säkerhet
 
-Kontodata lagras tills kontot raderas eller så länge behandlingen annars behövs. Exakta lagringstider för driftloggar, revisionsdata och prenumerationsfakta är inte slutligt beslutade och måste fastställas före publicering. Leverantörer kan behandla data utanför Sverige/EES enligt sina avtal och tillämpliga skyddsåtgärder; detta ska verifieras juridiskt.
+- Kontouppgifter sparas tills användaren raderar sitt konto eller begär radering.
+- Molnsynkade uppgifter sparas tills kontot raderas.
+- Supportärenden sparas i 24 månader efter avslutat ärende.
+- Tekniska felloggar sparas i 30 dagar.
+- Säkerhets- och auditloggar sparas i 12 månader.
+- Prenumerationsuppgifter sparas så länge det krävs för att administrera prenumerationen och uppfylla tillämpliga bokförings- och avtalsrättsliga skyldigheter.
+- Samtyckesinformation sparas enligt CMP-leverantörens hantering eller tills användaren ändrar sina val.
+
+Leverantörer kan behandla data utanför Sverige/EES enligt sina avtal och tillämpliga skyddsåtgärder; detta ska verifieras juridiskt.
 
 Kommunikation sker över HTTPS. Behörighetskontroller görs server-side och service-role-nycklar finns inte i klienten. Ingen metod kan ge absolut säkerhet.
 
@@ -41,7 +54,7 @@ Kommunikation sker över HTTPS. Behörighetskontroller görs server-side och ser
 
 Du kan, beroende på tillämplig lag, begära tillgång, rättelse, radering, begränsning, invända eller begära dataportabilitet. Radera normalt kontot via **Profil → Radera mitt konto**. Extern väg finns på kontoborttagningssidan. Identiteten verifieras innan extern permanent radering.
 
-Radering av appkontot avslutar inte automatiskt en Apple- eller Google-prenumeration; den måste hanteras i respektive butik. Minimal revisions- och betalningsinformation kan behöva behållas enligt butikskrav eller lag. Slutlig lagringstid ska fastställas juridiskt.
+Radering av appkontot avslutar inte automatiskt en Apple- eller Google-prenumeration; den måste hanteras i respektive butik. Prenumerationsuppgifter kan behöva behållas så länge det krävs för att administrera prenumerationen och uppfylla tillämpliga bokförings- och avtalsrättsliga skyldigheter.
 
 Du kan klaga till Integritetsskyddsmyndigheten (IMY) eller annan behörig tillsynsmyndighet.
 

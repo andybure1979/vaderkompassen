@@ -2,7 +2,7 @@
 
 ## Offentliga vägar
 
-- Supportmail: `andreas.bure@gmail.com`
+- Supportmail: `support.vaderkompassen@gmail.com`
 - Support: `https://andybure1979.github.io/vaderkompassen/public/support/`
 - Integritet: `https://andybure1979.github.io/vaderkompassen/public/privacy/`
 - Villkor: `https://andybure1979.github.io/vaderkompassen/public/terms/`
@@ -20,4 +20,4 @@ Supportwebben täcker inloggning/verifieringsmejl, Premium/provperiod, köpåter
 4. Kontoborttagning görs i appen eller från registrerad e-post efter identitetskontroll.
 5. Säkerhets- och integritetsincidenter eskaleras och dokumenteras utan hemligheter i ärendet.
 
-Status: URL-filer och sidor finns i repot, men deras publika HTTPS-tillgänglighet och slutliga ansvarig aktör/postadress måste verifieras före publicering.
+Status: URL-filer och sidor finns i repot, men deras publika HTTPS-tillgänglighet måste verifieras före publicering. Juridisk aktör är Privatperson Andreas Bure; organisationsnummer och postadress är ej tillämpligt.
