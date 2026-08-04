@@ -2,6 +2,8 @@
 
 ## Klart
 
+- **15.0.3** Reproducerbar iOS/Xcode-byggkedja och TestFlight-förberedelse; signing, Archive/Validate och verklig TestFlight återstår manuellt.
+
 - **15.0.2** Google Play Billing/Developer API/RTDN implementerat i repo; Play Console, Cloud och Internal Testing återstår manuellt.
 
 - **14.0.0** Identitet, autentisering, profiler och roller.

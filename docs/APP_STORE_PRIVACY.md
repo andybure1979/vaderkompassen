@@ -1,6 +1,6 @@
 # App Store Privacy – svarunderlag
 
-Andreas måste verifiera och fylla i svaren manuellt i App Store Connect. Underlaget beskriver v15.0.0; ändra svaren om SDK:er eller funktioner ändras.
+Andreas måste verifiera och fylla i svaren manuellt i App Store Connect. Underlaget är granskat mot iOS v15.0.3; ändra svaren om SDK:er eller funktioner ändras.
 
 | Datatyp | Samlas in | Kopplad till användare | Tracking | Ändamål | Obligatorisk | Lagring/tredjepart |
 |---|---|---|---|---|---|---|

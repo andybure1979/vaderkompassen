@@ -9,6 +9,8 @@
 !.env.production.example
 node_modules/
 dist/
+.DS_Store
+**/.DS_Store
 
 # Native lokalfiler och privata signingartefakter
 ios/App/xcuserdata/
@@ -18,6 +20,8 @@ ios/DerivedData/
 **/*.mobileprovision
 **/*.p12
 **/*.cer
+**/AuthKey_*.p8
+**/*.xcarchive
 android/.gradle/
 android/local.properties
 android/**/build/

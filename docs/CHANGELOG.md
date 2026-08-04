@@ -1,5 +1,14 @@
 # Ändringslogg
 
+## 15.0.3 – Native iOS, Xcode och TestFlight
+
+- Synkroniserar frontend/iOS till 15.0.3 och höjer iOS build från 4 till 5; Worker och Android stannar på 15.0.2.
+- Lägger till toolchain-, simulator-, osignerad release-, archive- och iOS-säkerhetskontroller.
+- Förbereder automatiskt signing utan att committa Team, certifikat, profiler eller privata nycklar.
+- Verifierar Info.plist, callback, privacy manifest, ikon och production-assets samt dokumenterar Archive/Validate/TestFlight.
+- Begränsar target till iPhone tills iPad-layout har godkänts separat.
+- Ändrar inte StoreKit-logik, Android, väder, poäng, ranking, snapshots, cache eller design.
+
 ## 15.0.2 – Google Play Billing och Premium för Android
 
 - Integrerar officiella Google Play Billing Library 9.1.0 via en avgränsad nativebrygga.

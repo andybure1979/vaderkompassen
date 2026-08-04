@@ -1,1 +1,1 @@
-Premium för iOS använder nu Apples StoreKit för köp, återställning och hantering av abonnemang. Prognoser, poäng, ranking och design är oförändrade.
+iOS-versionen är förberedd för simulator, fysisk iPhone, Archive och TestFlight. Premium använder Apples StoreKit för köp, återställning och hantering. Prognoser, poäng, ranking och design är oförändrade.

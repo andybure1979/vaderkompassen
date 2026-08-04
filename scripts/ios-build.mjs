@@ -1,0 +1,11 @@
+import {execFileSync} from "node:child_process";
+import fs from "node:fs";
+const mode=process.argv[2]||"simulator",root=new URL("../",import.meta.url),project=new URL("../ios/App/App.xcodeproj",import.meta.url).pathname;
+const common=["-project",project,"-scheme","App","-derivedDataPath","/tmp/vaderkompassen-ios-derived","-skipPackagePluginValidation"];
+const configurations={simulator:["-configuration","Debug","-sdk","iphonesimulator","-destination","generic/platform=iOS Simulator","CODE_SIGNING_ALLOWED=NO","build"],release:["-configuration","Release","-sdk","iphoneos","-destination","generic/platform=iOS","CODE_SIGNING_ALLOWED=NO","build"]};
+if(!configurations[mode])throw new Error(`Okänt iOS-buildläge: ${mode}`);
+const environment=fs.readFileSync(new URL("../dist/environment.js",import.meta.url),"utf8");
+const environmentMatch=environment.match(/Object\.freeze\((\{.*\})\)/s);
+const releaseEnvironment=environmentMatch?JSON.parse(environmentMatch[1]):null;
+if(mode==="release"&&(!releaseEnvironment||releaseEnvironment.name!=="production"||releaseEnvironment.subscriptionMode!=="apple_native"||/manual_test|localhost|127\.0\.0\.1/.test(environment)))throw new Error("Release-assets är inte en ren production-build.");
+execFileSync("xcodebuild",[...common,...configurations[mode]],{stdio:"inherit"});

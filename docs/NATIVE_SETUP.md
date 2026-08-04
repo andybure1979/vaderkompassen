@@ -1,7 +1,7 @@
-# Native setup – v15.0.2
+# Native setup – v15.0.3
 
 - App-ID/bundle-ID: `se.vaderkompassen.app`.
-- Version: iOS är oförändrad på `15.0.1` build `4`; Android `15.0.2`/versionCode `15002`.
+- Version: iOS `15.0.3` build `5`; Android är oförändrad på `15.0.2`/versionCode `15002`.
 - iOS har StoreKit 2 och serververifiering men är blockerad tills extern Apple-konfiguration och Sandbox-test är klara. Reklam är fortsatt avstängd.
 - iOS archive kräver lokalt Apple Team/signing. Android release-AAB kräver `VK_ANDROID_KEYSTORE_PATH` och tillhörande lokala miljövariabler. Inget signingmaterial får committas.
 - Kör releasekontrollerna och följ `RELEASE_CHECKLIST.md`, `STORE_SUBSCRIPTIONS.md` och `STORE_ASSETS.md`.

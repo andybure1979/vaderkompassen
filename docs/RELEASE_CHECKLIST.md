@@ -1,4 +1,4 @@
-# Release checklist v15.0.2
+# Release checklist v15.0.3
 
 Markera inte externa steg som klara utan bevis.
 
@@ -29,6 +29,9 @@ Markera inte externa steg som klara utan bevis.
 
 ## iOS
 
+- [ ] Full Xcode/toolchain, simulatorbuild, osignerad releasebuild och archive-check passerar
+- [ ] Team väljs lokalt; Archive och Validate App passerar utan privata signingfiler i Git
+- [ ] Build 5 processas i TestFlight och kan installeras av intern testare
 - [ ] Signing/team, bundle ID, buildnummer, archive
 - [ ] Ikon, privacy manifest/answers, age rating, skärmbilder, review notes
 - [ ] TestFlight genomfört

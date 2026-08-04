@@ -1,5 +1,7 @@
 # StoreKit 2 och Apple-prenumerationer – v15.0.1
 
+iOS-byggkedjan och TestFlight-stegen för v15.0.3 finns i `IOS_SETUP.md` och `TESTFLIGHT.md`. StoreKit-logiken är funktionellt oförändrad och kräver fortsatt riktig Sandbox-/serververifiering.
+
 Status: **BLOCKED för App Store-publicering** tills App Store Connect, Worker-hemligheter, Supabase-migration, full Xcode-build och Sandbox-test är verifierade. Koden aktiverar inte Premium från ett lokalt kvitto; Workern och Apples servrar är sanningskälla.
 
 ## Arkitektur

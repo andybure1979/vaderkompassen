@@ -1,6 +1,6 @@
 {
   "name": "vaderkompassen",
-  "version": "15.0.2",
+  "version": "15.0.3",
   "private": true,
   "description": "Väderkompassen – beslutsstöd för dagens aktivitet",
   "scripts": {
@@ -22,6 +22,13 @@
     "cap:sync": "npm run build:web && cap sync",
     "cap:ios": "npm run build:web && cap sync ios",
     "cap:ios:storekit": "VK_ENVIRONMENT=production VK_SUBSCRIPTION_MODE=apple_native npm run build:web && cap sync ios",
+    "ios:sync": "VK_ENVIRONMENT=production VK_SUBSCRIPTION_MODE=apple_native npm run build:web && cap sync ios",
+    "ios:open": "cap open ios",
+    "check:ios-toolchain": "node scripts/check-ios-toolchain.mjs",
+    "ios:build:simulator": "npm run check:ios-toolchain && npm run ios:sync && node scripts/ios-build.mjs simulator",
+    "ios:build:release-check": "npm run check:ios-toolchain && npm run ios:sync && node scripts/ios-build.mjs release",
+    "ios:archive-check": "npm run check:ios-toolchain && node scripts/ios-archive-check.mjs",
+    "security:ios-release-check": "node scripts/security-ios-release-check.mjs",
     "cap:android": "npm run build:web && cap sync android",
     "cap:android:billing": "VK_ENVIRONMENT=production VK_SUBSCRIPTION_MODE=google_native npm run build:web && cap sync android",
     "cap:open:ios": "cap open ios",

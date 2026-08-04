@@ -1,3 +1,9 @@
+## v15.0.3 – Native iOS, Xcode och TestFlight
+
+iOS-projektet har en reproducerbar production-sync, simulator- och osignerad releasebuild, toolchain-/archivekontroll samt en separat iOS-säkerhetskontroll. Bundle-ID är `se.vaderkompassen.app`, minimum iOS 15, version 15.0.3 och build 5. Full signing väljs lokalt i Xcode; inga certifikat, profiler eller Apple-hemligheter finns i Git.
+
+Versionen förbereder men laddar inte upp till TestFlight. Fysisk enhet, Archive, Validate, App Store Connect, riktig StoreKit Sandbox och intern TestFlight-installation kräver Andreas Team och externa Apple-inställningar. Android, Worker/backend, väder, poäng, ranking, snapshots, cache och webbdesign är oförändrade. Se `docs/IOS_SETUP.md` och `docs/TESTFLIGHT.md`.
+
 ## v15.0.2 – Google Play Billing och Premium för Android
 
 Android har en egen nativebrygga mot Google Play Billing 9.1.0 för butikens produktdata, köp, pending, restore/sync, acknowledgement och prenumerationshantering. Workern verifierar varje purchase token genom Google Play Developer API innan central entitlement kan ge Premium. RTDN är endast förändringssignal och följs alltid av en ny serverhämtning. Tokens lagras endast hashade.
