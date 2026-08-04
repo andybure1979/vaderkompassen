@@ -1,6 +1,6 @@
 {
   "name": "vaderkompassen",
-  "version": "15.0.5",
+  "version": "15.0.6",
   "private": true,
   "description": "Väderkompassen – beslutsstöd för dagens aktivitet",
   "scripts": {

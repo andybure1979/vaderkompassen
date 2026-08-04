@@ -1,5 +1,6 @@
 # Roadmap
 
+- **15.0.6** Juridik, lokaliserat butiksmaterial och publiceringschecklistor. Extern juridisk granskning, portaldata, assets, signing och butikstester återstår manuellt.
 
 ## Klart
 

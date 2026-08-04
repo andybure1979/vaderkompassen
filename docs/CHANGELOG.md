@@ -1,5 +1,14 @@
 # Ändringslogg
 
+## 15.0.6 – Juridik, butiksmaterial och publicering
+
+- Färdigställer svenskt och engelskt butiksunderlag för App Store och Google Play.
+- Lägger till planer för skärmbilder, app preview, ikoner, support, åldersklassning, ASO, testkonton och releasearbete.
+- Inventerar tredjepartslicenser och samlar App Privacy- och Google Data Safety-underlag.
+- Synkroniserar frontend/iOS/Android till 15.0.6 (iOS build 7, Android versionCode 15006); Worker stannar på 15.0.2.
+- Ändrar inte appfunktionalitet, design, väder, poäng, ranking, cache, Premium, Auth, Billing eller annonser.
+- Är blockerad för butikspublicering tills juridik, externa URL:er, assets, portaldeklarationer, signing och butikstester är manuellt godkända.
+
 ## 15.0.5 – AdMob och samtycke (CMP)
 
 - Lägger till central, race-säker annonsprovider och Google UMP före native annonsinitiering.

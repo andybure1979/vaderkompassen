@@ -2,4 +2,4 @@ Väderkompassen kräver nätverk för aktuell prognos. Free visar dagens prognos
 
 Kontoborttagning: logga in, öppna Profil och välj Radera mitt konto. Kartnavigation öppnar en extern kartapp.
 
-Version 15.0.5 innehåller en fail-closed AdMob/Google UMP-grund. Endast Free kan visa adaptiv banner; Trial, Premium, VIP och Admin är reklamfria. Produktionsannonser är avstängda tills plattformens app-/unit-ID, publicerad CMP, App Privacy och enhetstest är godkända. Annons- och integritetsval kan öppnas igen från Om-sektionen när UMP kräver det.
+Version 15.0.6 färdigställer juridik- och butiksunderlag utan att ändra appflöden. AdMob/Google UMP är fortsatt fail-closed. Endast Free kan visa adaptiv banner; Trial, Premium, VIP och Admin är reklamfria. Produktionsannonser är avstängda tills plattformens app-/unit-ID, publicerad CMP, App Privacy och enhetstest är godkända. Annons- och integritetsval kan öppnas igen från Om-sektionen när UMP kräver det.

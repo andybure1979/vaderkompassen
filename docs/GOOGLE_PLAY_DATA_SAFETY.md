@@ -19,4 +19,4 @@ Extern kontoborttagnings-URL att ange efter publicering: `https://andybure1979.g
 
 Android permissions: `INTERNET` för API/Auth/karta och `ACCESS_NETWORK_STATE` för begriplig offlinehantering. Ingen plats, kamera, mikrofon, kontakter, foton eller bred lagringsåtkomst begärs. Kontrollera merged manifest efter varje SDK-ändring.
 
-v15.0.5 innehåller Google Mobile Ads och UMP via Capacitor-plugin men production är fail-closed. När annonser aktiveras ska Play Console deklarera att appen innehåller annonser samt SDK:ns faktiska datahantering. Ingen platsbehörighet läggs till; ungefärlig plats kan ändå härledas från IP av Google. UMP-val kan ändras via appens integritetsinställning. Trial/Premium/VIP/Admin är reklamfria.
+v15.0.6 innehåller Google Mobile Ads och UMP via Capacitor-plugin men production är fail-closed. När annonser aktiveras ska Play Console deklarera att appen innehåller annonser samt SDK:ns faktiska datahantering. Ingen platsbehörighet läggs till; ungefärlig plats kan ändå härledas från IP av Google. UMP-val kan ändras via appens integritetsinställning. Trial/Premium/VIP/Admin är reklamfria.

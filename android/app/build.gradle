@@ -17,8 +17,8 @@ android {
         applicationId "se.vaderkompassen.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 15005
-        versionName "15.0.5"
+        versionCode 15006
+        versionName "15.0.6"
         manifestPlaceholders = [admobAppId: admobAppId, admobEnabled: !admobAppId.isBlank()]
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {

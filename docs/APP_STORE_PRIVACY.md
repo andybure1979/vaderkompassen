@@ -1,6 +1,6 @@
 # App Store Privacy – svarunderlag
 
-Andreas måste verifiera och fylla i svaren manuellt i App Store Connect. Underlaget är granskat mot iOS v15.0.5; juridisk och portalbaserad slutgranskning är **MANUAL ACTION REQUIRED** innan AdMob aktiveras.
+Andreas måste verifiera och fylla i svaren manuellt i App Store Connect. Underlaget är granskat mot iOS v15.0.6; juridisk och portalbaserad slutgranskning är **MANUAL ACTION REQUIRED** innan AdMob aktiveras.
 
 | Datatyp | Samlas in | Kopplad till användare | Tracking | Ändamål | Obligatorisk | Lagring/tredjepart |
 |---|---|---|---|---|---|---|
@@ -25,4 +25,4 @@ Andreas måste verifiera och fylla i svaren manuellt i App Store Connect. Underl
 - StoreKit och Google Play Billing är implementerade men blockerade för produktion tills respektive externa butikskonfiguration och testmatris är verifierad.
 - Google Mobile Ads/UMP via `@capacitor-community/admob` 8.0.0: inbyggd men fail-closed i produktion. UMP styr om annonser får begäras; Premium initierar inte SDK:n om det kan undvikas.
 
-Appens eget `PrivacyInfo.xcprivacy` anger ingen egen tracking/insamlad data och deklarerar UserDefaults reason `CA92.1`. Google Mobile Ads levererar eget privacy manifest i aktuell SDK. Kontrollera samtliga inbäddade manifests och faktisk AdMob-konfiguration i arkivet; portalens svar ska omfatta tredjeparts-SDK och serverbehandling. ATT begärs inte rutinmässigt i v15.0.5.
+Appens eget `PrivacyInfo.xcprivacy` anger ingen egen tracking/insamlad data och deklarerar UserDefaults reason `CA92.1`. Google Mobile Ads levererar eget privacy manifest i aktuell SDK. Kontrollera samtliga inbäddade manifests och faktisk AdMob-konfiguration i arkivet; portalens svar ska omfatta tredjeparts-SDK och serverbehandling. ATT begärs inte rutinmässigt i v15.0.6.

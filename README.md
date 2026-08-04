@@ -1,3 +1,9 @@
+## v15.0.6 – Juridik, butiksmaterial och publicering
+
+Releaseunderlaget för App Store och Google Play innehåller nu svensk och engelsk metadata, skärmbilds- och previewplan, ikonverifiering, privacy/Data Safety-/åldersklassificeringsunderlag, support, testkonton, tredjepartslicenser samt pre-/post-releasechecklistor. Appfunktionalitet, design, väder, ranking, Premium, Billing, annonser och Worker är oförändrade.
+
+Releasen är **BLOCKED för butikspublicering** tills juridiska utkast är granskade, publika URL:er verifierade, produktionens ikoner/skärmbilder färdigställda, butiksköp/annonser externt konfigurerade och signerade nativebyggen godkända. Se `docs/PRE_RELEASE.md`.
+
 ## v15.0.5 – AdMob och samtycke (CMP)
 
 Native Free har en central, entitlementstyrd och fail-closed AdMob/Google UMP-grund. Trial, Premium, VIP och Admin är helt reklamfria. Produktionsannonser är avstängda tills externa app-/unit-ID:n, publicerad CMP och butikernas integritetsdeklarationer är verifierade. Native inlineannons är blockerad eftersom vald plugin saknar ett säkert native-ad-API; bannern är implementerad.
