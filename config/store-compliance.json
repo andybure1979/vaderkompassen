@@ -1,5 +1,5 @@
 {
-  "version": "15.0.3",
+  "version": "15.0.4",
   "updatedAt": "2026-08-03",
   "items": {
     "privacyPolicy": { "status": "manual_action_required", "evidence": ["legal/privacy-policy-sv.md", "public/privacy/index.html"], "note": "Publicera och verifiera stabil HTTPS-URL samt genomför juridisk granskning." },

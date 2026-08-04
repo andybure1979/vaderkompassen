@@ -49,7 +49,7 @@ test("iOS använder StoreKit 2 medan annonser fortfarande är avstängda",()=>{
   assert.match(mainView,/registerPluginInstance\(VaderkompassenPurchasesPlugin\(\)\)/);
   assert.match(ads,/class AdMobProvider/);assert.match(ads,/this\.active=false/);
   assert.match(ads,/environment!=="production"&&this\.config\.adsMode==="test"/);
-  assert.match(html,/ads-provider\.js\?v=15\.0\.3/);
+  assert.match(html,/ads-provider\.js\?v=15\.0\.4/);
 });
 
 test("kontoborttagning kräver nylig auth och behåller minimal butiksrevision",()=>{

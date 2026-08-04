@@ -1,6 +1,6 @@
 {
   "name": "vaderkompassen",
-  "version": "15.0.3",
+  "version": "15.0.4",
   "private": true,
   "description": "Väderkompassen – beslutsstöd för dagens aktivitet",
   "scripts": {
@@ -29,6 +29,14 @@
     "ios:build:release-check": "npm run check:ios-toolchain && npm run ios:sync && node scripts/ios-build.mjs release",
     "ios:archive-check": "npm run check:ios-toolchain && node scripts/ios-archive-check.mjs",
     "security:ios-release-check": "node scripts/security-ios-release-check.mjs",
+    "check:android-toolchain": "node scripts/check-android-toolchain.mjs",
+    "android:sync": "VK_ENVIRONMENT=production VK_SUBSCRIPTION_MODE=google_native npm run build:web && cap sync android",
+    "android:open": "cap open android",
+    "android:build:debug": "npm run check:android-toolchain && npm run android:sync && node scripts/android-build.mjs debug",
+    "android:build:release-check": "npm run check:android-toolchain && npm run android:sync && node scripts/android-build.mjs release",
+    "android:bundle:release": "npm run check:android-toolchain && npm run android:sync && node scripts/android-build.mjs bundle",
+    "android:install:debug": "npm run android:build:debug && cd android && ./gradlew installDebug",
+    "security:android-release-check": "node scripts/security-android-release-check.mjs",
     "cap:android": "npm run build:web && cap sync android",
     "cap:android:billing": "VK_ENVIRONMENT=production VK_SUBSCRIPTION_MODE=google_native npm run build:web && cap sync android",
     "cap:open:ios": "cap open ios",

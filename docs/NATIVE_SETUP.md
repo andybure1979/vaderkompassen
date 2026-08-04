@@ -1,9 +1,9 @@
-# Native setup – v15.0.3
+# Native setup – v15.0.4
 
 - App-ID/bundle-ID: `se.vaderkompassen.app`.
-- Version: iOS `15.0.3` build `5`; Android är oförändrad på `15.0.2`/versionCode `15002`.
+- Version: iOS `15.0.3` build `5`; Android `15.0.4`/versionCode `15004`.
 - iOS har StoreKit 2 och serververifiering men är blockerad tills extern Apple-konfiguration och Sandbox-test är klara. Reklam är fortsatt avstängd.
-- iOS archive kräver lokalt Apple Team/signing. Android release-AAB kräver `VK_ANDROID_KEYSTORE_PATH` och tillhörande lokala miljövariabler. Inget signingmaterial får committas.
+- iOS archive kräver lokalt Apple Team/signing. Android release-AAB använder privata `VADERKOMPASSEN_UPLOAD_*`-värden enligt `ANDROID_SIGNING.md`. Inget signingmaterial får committas.
 - Kör releasekontrollerna och följ `RELEASE_CHECKLIST.md`, `STORE_SUBSCRIPTIONS.md` och `STORE_ASSETS.md`.
 
 ## Status och verktyg
@@ -32,6 +32,11 @@ npm run cap:android
 npm run cap:android:billing
 npm run build:android:debug
 npm run build:android:bundle
+npm run check:android-toolchain
+npm run android:build:debug
+npm run android:build:release-check
+npm run android:bundle:release
+npm run security:android-release-check
 npm run version:check
 ```
 
@@ -58,8 +63,8 @@ npm run version:check
 2. Skapa Play Console-app med package name `se.vaderkompassen.app` och aktivera Play App Signing.
 3. Öppna katalogen `android/` i Android Studio och testa telefon samt surfplatta.
 4. Lägg `vaderkompassen://auth/callback` i Supabase redirect allowlist. Lägg senare till verifierad Android App Link när webbdomän och `assetlinks.json` finns.
-5. Skapa upload key lokalt och sätt `VK_ANDROID_KEYSTORE_PATH`, `VK_ANDROID_KEYSTORE_PASSWORD`, `VK_ANDROID_KEY_ALIAS`, `VK_ANDROID_KEY_PASSWORD`. Keystore och lösenord får aldrig läggas i Git.
-6. Kör `npm run build:android:bundle`; resultatet får laddas upp till Internal Testing först efter ikon-, Auth- och dataskyddskontroll.
+5. Skapa upload key lokalt och konfigurera `VADERKOMPASSEN_UPLOAD_*` enligt `ANDROID_SIGNING.md`. Keystore och lösenord får aldrig läggas i Git.
+6. Kör `npm run android:bundle:release`; resultatet får laddas upp till Internal Testing först efter ikon-, Auth- och dataskyddskontroll.
 7. Följ `GOOGLE_PLAY_BILLING.md` för produkten `premium_monthly`, base plan `monthly`, licenstestare, servicekonto och RTDN innan `google_native` distribueras.
 8. Skapa framtida AdMob Android-app och endast officiella testannonsenheter före pluginaktivering.
 9. Fyll i Data safety: konto/e-post, appinställningar och prenumerationsstatus; ingen plats, kamera eller fillagringsbehörighet används.

@@ -1,3 +1,9 @@
+## v15.0.4 – Native Android, signering och Google Play Internal Testing
+
+Androidprojektet har en reproducerbar JDK 21/SDK 36/Gradle-byggkedja, toolchain- och releasekontroller, säker lokal upload-signering samt dokumenterade steg för emulator, fysisk enhet, signerad AAB och Internal Testing. Identiteten är `se.vaderkompassen.app`, minSdk 24, compile/target 36, versionName 15.0.4 och versionCode 15004.
+
+Google Play Billing från v15.0.2 är funktionellt oförändrat och kräver fortsatt Play Console-produkt, licenstestare, servicekonto, RTDN och riktig Internal Testing. iOS stannar på 15.0.3 build 5 och Workern på 15.0.2. Ingen väder-, poäng-, ranking-, snapshot-, Premium- eller designlogik ändras. Se `docs/ANDROID_SETUP.md`, `docs/ANDROID_SIGNING.md` och `docs/GOOGLE_INTERNAL_TESTING.md`.
+
 ## v15.0.3 – Native iOS, Xcode och TestFlight
 
 iOS-projektet har en reproducerbar production-sync, simulator- och osignerad releasebuild, toolchain-/archivekontroll samt en separat iOS-säkerhetskontroll. Bundle-ID är `se.vaderkompassen.app`, minimum iOS 15, version 15.0.3 och build 5. Full signing väljs lokalt i Xcode; inga certifikat, profiler eller Apple-hemligheter finns i Git.

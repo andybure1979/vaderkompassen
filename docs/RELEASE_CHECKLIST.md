@@ -1,4 +1,4 @@
-# Release checklist v15.0.3
+# Release checklist v15.0.4
 
 Markera inte externa steg som klara utan bevis.
 
@@ -38,9 +38,12 @@ Markera inte externa steg som klara utan bevis.
 
 ## Android
 
-- [ ] Signing/keystore lokalt, package ID, target SDK, signerad AAB
+- [ ] JDK 21, SDK/Build Tools 36, Platform Tools och Gradle Wrapper passerar `check:android-toolchain`
+- [ ] Debug- och osignerad Release-build passerar; emulator/fysisk enhet testad
+- [ ] Signing/keystore lokalt, package ID, target SDK, signerad AAB 15.0.4/15004
 - [ ] Merged permissions, Data Safety, IARC, account deletion URL
 - [ ] Ikon/feature graphic/skärmbilder och Internal/Closed Testing
+- [ ] ProductDetails, köp, pending, backendverifiering, acknowledgement, restore och manage testade från Play-installation
 
 ## Juridik
 

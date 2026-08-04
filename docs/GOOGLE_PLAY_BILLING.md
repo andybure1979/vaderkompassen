@@ -1,4 +1,4 @@
-# Google Play Billing – v15.0.2
+# Google Play Billing – v15.0.4
 
 Status: **MANUAL ACTION REQUIRED** för Internal Testing och **BLOCKED** för produktion tills Play Console-produkt, licenstestare, servicekonto, RTDN och signerad Androidbuild har verifierats. Repot innehåller det tekniska flödet men skapar inga externa resurser.
 
@@ -45,5 +45,7 @@ Kör `supabase/migrations/20260803_1502_google_play_billing.sql` efter v15.0.1. 
 ## Kvarvarande testgräns
 
 Lokala tester kan verifiera mapping, säkerhetskontrakt, SQL, JavaScript, Worker-bundle och Androidkompilering. Verklig ProductDetails, debitering, licensstatus, acknowledgement mot Play, Developer API-svar och RTDN kan bara godkännas med ovanstående externa resurser.
+
+Androidbyggkedjan, upload-signering och Internal Testing-flödet dokumenteras i `ANDROID_SETUP.md`, `ANDROID_SIGNING.md` och `GOOGLE_INTERNAL_TESTING.md`. Billinglogiken från v15.0.2 är funktionellt oförändrad i v15.0.4.
 
 Officiella referenser: [Billing 9.1 release notes](https://developer.android.com/google/play/billing/release-notes), [integrationsguide](https://developer.android.com/google/play/billing/integrate), [backend](https://developer.android.com/google/play/billing/backend), [subscriptionsv2.get](https://developers.google.com/android-publisher/api-ref/rest/v3/purchases.subscriptionsv2/get) och [RTDN](https://developer.android.com/google/play/billing/rtdn-reference).

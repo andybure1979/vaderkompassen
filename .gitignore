@@ -22,6 +22,10 @@ ios/DerivedData/
 **/*.cer
 **/AuthKey_*.p8
 **/*.xcarchive
+**/*.jks
+**/*.keystore
+**/*.aab
+**/google-services.json
 android/.gradle/
 android/local.properties
 android/**/build/

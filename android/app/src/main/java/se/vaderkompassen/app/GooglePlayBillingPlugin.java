@@ -110,7 +110,7 @@ public class GooglePlayBillingPlugin extends Plugin implements PurchasesUpdatedL
   }
 
   private void queryPurchases(PluginCall call) {
-    billing().queryPurchasesAsync(QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.SUBS).setIncludeSuspendedSubscriptions(true).build(),
+    billing().queryPurchasesAsync(QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.SUBS).build(),
       (result, purchases) -> {
         if (result.getResponseCode() != BillingClient.BillingResponseCode.OK) { rejectResult(call, result, "Google Play-köp kunde inte hämtas."); return; }
         JSArray values = new JSArray(); for (Purchase purchase : purchases) values.put(purchaseJson(purchase));

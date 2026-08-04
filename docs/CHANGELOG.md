@@ -1,5 +1,14 @@
 # Ändringslogg
 
+## 15.0.4 – Native Android, signering och Google Play Internal Testing
+
+- Synkroniserar frontend/Android till 15.0.4 och versionCode 15004; iOS stannar på 15.0.3 build 5 och Worker på 15.0.2.
+- Lägger till JDK/SDK/adb/Gradle-toolchainkontroll samt reproducerbara debug-, osignerade release- och signerade AAB-kommandon.
+- Stödjer upload-signering via privat Gradle-konfiguration eller miljö utan keystore/lösenord i Git.
+- Verifierar manifest, minimala permissions, production-assets, deeplink, Billingkontrakt, ikoner och Android release-säkerhet.
+- Dokumenterar Android Studio, emulator, fysisk enhet, Play App Signing, Data Safety och Internal Testing.
+- Ändrar inte Billinglogik, StoreKit, väder, poäng, ranking, snapshots, cache, Premium eller design.
+
 ## 15.0.3 – Native iOS, Xcode och TestFlight
 
 - Synkroniserar frontend/iOS till 15.0.3 och höjer iOS build från 4 till 5; Worker och Android stannar på 15.0.2.

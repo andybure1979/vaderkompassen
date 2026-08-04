@@ -1,1 +1,1 @@
-Premium för Android använder nu Google Play för produktinformation, köp, återställning och prenumerationshantering. Prognoser, poäng, ranking och design är oförändrade.
+Androidversionen är förberedd för Android Studio, signerad AAB och Google Play Internal Testing. Premium använder fortsatt Google Play med serververifiering. Prognoser, poäng, ranking och design är oförändrade.

@@ -16,3 +16,5 @@ Andreas måste fylla i och godkänna formuläret manuellt i Play Console. Kryssa
 Extern kontoborttagnings-URL att ange efter publicering: `https://andybure1979.github.io/vaderkompassen/public/delete-account/`.
 
 Android permissions: `INTERNET` för API/Auth/karta och `ACCESS_NETWORK_STATE` för begriplig offlinehantering. Ingen plats, kamera, mikrofon, kontakter, foton eller bred lagringsåtkomst begärs. Kontrollera merged manifest efter varje SDK-ändring.
+
+v15.0.4 använder Capacitor App, Browser, Device, Network, Preferences, SplashScreen och StatusBar samt Google Play Billing 9.1.0. Device-plugin finns installerad men appkoden läser inte reklam-ID eller beständig enhetsidentifierare. Köpstatus och pseudonymiserat konto-ID behandlas för entitlement/fraud prevention; rå purchase token skickas krypterat till backend och lagras endast hashad. AdMob är inte aktiverat, så reklam- eller annonsidentifierardata ska inte deklareras förrän en riktig SDK/CMP införs.
