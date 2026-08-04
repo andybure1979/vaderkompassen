@@ -1,5 +1,51 @@
 # Ändringslogg
 
+## 15.0.4 – Native Android, signering och Google Play Internal Testing
+
+- Synkroniserar frontend/Android till 15.0.4 och versionCode 15004; iOS stannar på 15.0.3 build 5 och Worker på 15.0.2.
+- Lägger till JDK/SDK/adb/Gradle-toolchainkontroll samt reproducerbara debug-, osignerade release- och signerade AAB-kommandon.
+- Stödjer upload-signering via privat Gradle-konfiguration eller miljö utan keystore/lösenord i Git.
+- Verifierar manifest, minimala permissions, production-assets, deeplink, Billingkontrakt, ikoner och Android release-säkerhet.
+- Dokumenterar Android Studio, emulator, fysisk enhet, Play App Signing, Data Safety och Internal Testing.
+- Ändrar inte Billinglogik, StoreKit, väder, poäng, ranking, snapshots, cache, Premium eller design.
+
+## 15.0.3 – Native iOS, Xcode och TestFlight
+
+- Synkroniserar frontend/iOS till 15.0.3 och höjer iOS build från 4 till 5; Worker och Android stannar på 15.0.2.
+- Lägger till toolchain-, simulator-, osignerad release-, archive- och iOS-säkerhetskontroller.
+- Förbereder automatiskt signing utan att committa Team, certifikat, profiler eller privata nycklar.
+- Verifierar Info.plist, callback, privacy manifest, ikon och production-assets samt dokumenterar Archive/Validate/TestFlight.
+- Begränsar target till iPhone tills iPad-layout har godkänts separat.
+- Ändrar inte StoreKit-logik, Android, väder, poäng, ranking, snapshots, cache eller design.
+
+## 15.0.2 – Google Play Billing och Premium för Android
+
+- Integrerar officiella Google Play Billing Library 9.1.0 via en avgränsad nativebrygga.
+- Implementerar ProductDetails, base plan/offer, pending, restore/sync, manage och acknowledgement efter serververifiering.
+- Verifierar subscriptions med Google Play Developer API och synkar RTDN idempotent genom central entitlement.
+- Lagrar endast tokenhash och håller service account utanför klient och Git.
+- Kräver manuell Play Console-, Google Cloud-, Supabase- och Internal Testing-konfiguration före produktion.
+- Ändrar inte Apple, UI-design, väder, poäng, ranking, snapshots eller cache.
+
+## 15.0.1 – Apple StoreKit och Premium för iOS
+
+- Implementerar StoreKit 2 för lokaliserad produktinformation, köp, pending/cancel, restore och Apples officiella hanteringsvy.
+- Använder App Store Server API och verifierade Apple-JWS som sanningskälla för Premium.
+- Tar emot och deduplicerar App Store Server Notifications V2.
+- Kopplar Apple-status till central entitlement via en service-role-skyddad Supabase-RPC utan att lagra rå JWS.
+- Behåller VIP/Admin som separata administrativa entitlements och ändrar inte Android, reklam, UI, poäng, ranking eller prognoser.
+- Är blockerad för App Store-publicering tills extern Apple-konfiguration, migration, Xcode-build och Sandbox-test är klara.
+
+## 15.0.0 – Första publika produktionsversionen
+
+- Fryser funktionaliteten för första publika webb-, iOS- och Androidreleasen.
+- Synkroniserar webb, Worker, Capacitor, iOS och Android till version 15.0.0 med separata stigande buildnummer.
+- Verifierar 1 000 aktiva platser: 500 Free och 500 Premium, samtliga källgranskade.
+- Bekräftar att senaste produktionssnapshoten täcker 1 000/1 000 platser utan fallback eller batchfel.
+- Lägger till release-, rollback-, hotfix- och övervakningsplaner samt GitHub release notes.
+- Behåller fail-closed för riktiga köp och annonser. StoreKit/Play Billing, backendverifiering, restore/manage, AdMob/CMP, signing och juridisk granskning är blockerare före butikspublicering.
+- Ändrar inte poäng, ranking, prognosalgoritmer, aktiviteter eller design och kräver ingen Supabase-migration.
+
 ## 14.5.0 – Store compliance och Release Candidate
 
 ### Implementerat

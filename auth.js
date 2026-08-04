@@ -13,6 +13,7 @@
   let entitlement = null;
   let pendingVerificationNotice = false;
   let cloudSettingsRequested = false;
+  let lastAppleSyncAt=0,appleSyncPromise=null;
 
   const subscriptionProvider = window.VK_SUBSCRIPTIONS?.createProvider(cfg, client);
   let storeProduct = null;
@@ -179,6 +180,7 @@
 
   function productPrice(product){return product?.displayPrice||product?.localizedPrice||product?.priceString||null}
   function productPeriod(product){return product?.billingPeriodLabel||product?.subscriptionPeriod?.localized||product?.billingPeriod||"månad"}
+  function productIntro(product){const offer=product?.introductoryOffer;return offer?.period?`Provperiod: ${offer.period} (${offer.displayPrice||"0 kr"})`:null}
   async function refreshStoreDisclosure(){
     if(!["apple_native","google_native"].includes(cfg.subscriptionMode))return;
     try{
@@ -206,7 +208,7 @@
     if ($("premiumPrice")) $("premiumPrice").textContent = cfg.subscriptionMode==="manual_test"?"Testprovperiod: 0 kr":nativeStore&&price?`Väderkompassen Premium – ${price}/${period}`:"Butiksköp är inte aktiverade";
     if ($("premiumPriceNote")) $("premiumPriceNote").textContent = role === "trial"
       ? `${trialDays} dag${trialDays === 1 ? "" : "ar"} kvar av provperioden`
-      : nativeStore&&price?"Butikens lokala pris; automatisk förnyelse enligt perioden":"Ingen verklig debitering sker i denna version";
+      : nativeStore&&price?[productIntro(storeProduct),"Butikens lokala pris; automatisk förnyelse enligt perioden"].filter(Boolean).join(" · "):"Ingen verklig debitering sker i denna version";
     if ($("premiumTerms")) $("premiumTerms").textContent=cfg.subscriptionMode==="manual_test"
       ? "Testprovperioden varar tre dagar, kostar 0 kr, avslutas automatiskt och blir inte en betalprenumeration."
       : nativeStore&&price
@@ -230,17 +232,17 @@
               : "Du har inte aktiverat provperioden.";
     }
     if ($("premiumPurchase")) {
-      const canStart = Boolean(session?.user) && cfg.subscriptionMode==="manual_test" && role === "free" && !trialUsed;
+      const canStart = Boolean(session?.user) && role === "free" && (["apple_native","google_native"].includes(cfg.subscriptionMode)||cfg.subscriptionMode==="manual_test"&&!trialUsed);
       $("premiumPurchase").classList.toggle("hidden", !canStart);
       $("premiumPurchase").disabled = !canStart;
-      $("premiumPurchase").textContent = "Starta 3 dagars gratis provperiod";
+      $("premiumPurchase").textContent = ["apple_native","google_native"].includes(cfg.subscriptionMode)?"Bli Premium":"Starta 3 dagars gratis provperiod";
     }
     if ($("premiumCancel")) {
       const canCancel = entitlement?.can_manage_subscription && ["trial", "premium"].includes(role) && !cancelled;
       $("premiumCancel").classList.toggle("hidden", !canCancel);
       $("premiumCancel").textContent=provider==="manual_test"?"Avsluta vid periodens slut":"Hantera prenumeration";
     }
-    $("restorePurchases")?.classList.toggle("hidden",!["apple","google"].includes(provider));
+    $("restorePurchases")?.classList.toggle("hidden",cfg.subscriptionMode!=="apple_native"&&!["apple","google"].includes(provider));
   }
 
   async function startPremiumTrial() {
@@ -248,8 +250,9 @@
       setMessage("premiumState", "Du måste vara inloggad för att starta provperioden.", true);
       return;
     }
-    if (cfg.subscriptionMode!=="manual_test")return setMessage("premiumState","Premiumköp kräver native-appen.",true);
-    if (!window.confirm("Starta en tre dagar lång testprovperiod? Ingen debitering sker och perioden blir inte automatiskt betald Premium.")) return;
+    const nativePurchase=["apple_native","google_native"].includes(cfg.subscriptionMode),googlePurchase=cfg.subscriptionMode==="google_native";
+    if (!nativePurchase&&cfg.subscriptionMode!=="manual_test")return setMessage("premiumState","Premiumköp kräver native-appen.",true);
+    if (!nativePurchase&&!window.confirm("Starta en tre dagar lång testprovperiod? Ingen debitering sker och perioden blir inte automatiskt betald Premium.")) return;
 
     const button = $("premiumPurchase");
     const originalText = button?.textContent || "Starta 3 dagars gratis provperiod";
@@ -261,13 +264,14 @@
 
     try {
       entitlement=await subscriptionProvider.startSubscription();
+      if(entitlement?.pending){setMessage("premiumState","Köpet väntar på bekräftelse. Premium aktiveras först efter serververifiering.");return}
       await loadProfile();
-      if (effectiveRole(profile) !== "trial" || !entitlement?.is_trial) {
-        throw new Error("Provperioden kunde inte aktiveras. Kontrollera att den senaste Supabase-migrationen är körd.");
+      if (!hasPremiumAccess()) {
+        throw new Error(nativePurchase?`${googlePurchase?"Google Play":"Apple"}-köpet genomfördes men backend har ännu inte verifierat Premium.`:"Provperioden kunde inte aktiveras. Kontrollera att den senaste Supabase-migrationen är körd.");
       }
 
       renderPremiumInfo();
-      setMessage("premiumState", "Testprovperioden är aktiv i tre dagar. Ingen debitering sker i webbversionen.");
+      setMessage("premiumState",nativePurchase?(entitlement?.is_trial?`${googlePurchase?"Google Plays":"Apples"} provperiod är verifierad och Premium är aktivt.`:`${googlePurchase?"Google Play":"Apple"}-prenumerationen är verifierad och Premium är aktivt.`):"Testprovperioden är aktiv i tre dagar. Ingen debitering sker i webbversionen.");
       window.dispatchEvent(new CustomEvent("vk:access-changed", { detail: getAccessState() }));
     } catch (error) {
       console.error("Kunde inte starta Premium-provperiod", error);
@@ -298,7 +302,22 @@
   }
 
   async function restorePurchases(){
-    try{await entitlementProvider().restorePurchases()}catch(error){setMessage("premiumState",error.message,true)}
+    return withBusy("restorePurchases",async()=>{
+      setMessage("premiumState","Synkar köp med Apple …");
+      try{entitlement=await entitlementProvider().restorePurchases();await loadProfile();renderPremiumInfo();setMessage("premiumState",hasPremiumAccess()?"Köpet är återställt och verifierat.":"Apple hittade ingen aktiv Premiumprenumeration.",!hasPremiumAccess());window.dispatchEvent(new CustomEvent("vk:access-changed",{detail:getAccessState()}))}
+      catch(error){setMessage("premiumState",error.message||"Köpet kunde inte återställas.",true)}
+    })
+  }
+  async function syncAppleEntitlement(force=false){
+    if(cfg.subscriptionMode!=="apple_native"||!session?.user)return null;
+    if(!force&&Date.now()-lastAppleSyncAt<300000)return null;
+    if(appleSyncPromise)return appleSyncPromise;
+    appleSyncPromise=(async()=>{
+      try{const synced=await subscriptionProvider.syncPurchases();lastAppleSyncAt=Date.now();if(synced){entitlement=synced;await loadProfile()}return synced}
+      catch(error){if(cfg.debug)console.warn("Apple-synk misslyckades",error?.message||error);return null}
+      finally{appleSyncPromise=null}
+    })();
+    return appleSyncPromise;
   }
 
   async function loadProfile() {
@@ -532,6 +551,7 @@
     $("premiumPurchase")?.addEventListener("click", startPremiumTrial);
     $("premiumCancel")?.addEventListener("click", manageSubscription);
     $("restorePurchases")?.addEventListener("click", restorePurchases);
+    window.addEventListener("vk:native-app-state",event=>{if(event.detail?.isActive)syncAppleEntitlement().catch(()=>{})});
     $("openAdmin")?.addEventListener("click", () => { $("profileDialog").close(); window.dispatchEvent(new CustomEvent("vk:open-admin")); });
     bindDialogDismiss("authDialog", "authClose");
     bindDialogDismiss("profileDialog", "profileClose");
@@ -550,6 +570,7 @@
     const { data } = await client.auth.getSession();
     session = data.session;
     await loadProfile();
+    await syncAppleEntitlement(true);
     dispatchCloudSettings();
 
     if (callback.error) {

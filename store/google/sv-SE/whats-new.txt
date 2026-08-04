@@ -1,1 +1,1 @@
-Tydligare Premiumvillkor, integritets- och supportsidor, extern kontoborttagning samt förberedelser för butikernas integritets- och innehållsgranskning.
+Androidversionen är förberedd för Android Studio, signerad AAB och Google Play Internal Testing. Premium använder fortsatt Google Play med serververifiering. Prognoser, poäng, ranking och design är oförändrade.

@@ -1,4 +1,4 @@
-# Tillgänglighet – RC-underlag
+# Tillgänglighet – v15.0.0
 
 Kodgranskning visar semantiska knappar, formulärlabels, dialogrubriker, statusregioner, text tillsammans med färgstatus och responsiv layout. Native WebView stöder systemets textskalning; fokusordningen följer DOM.
 

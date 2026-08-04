@@ -1,10 +1,36 @@
-## v14.5.0 – Store compliance och Release Candidate
+## v15.0.4 – Native Android, signering och Google Play Internal Testing
 
-Release Candidate-underlaget innehåller svenska utkast till integritetspolicy och villkor, publika support-/integritets-/villkors-/kontoborttagningssidor, tydliga prenumerationsupplysningar, butikstexter, privacy/Data Safety-/åldersklassificeringsunderlag och maskinläsbara releasekontroller. Produktionsklienten har avstängda riktiga köp, lokala annonsplatshållare och explicit CORS-allowlist.
+Androidprojektet har en reproducerbar JDK 21/SDK 36/Gradle-byggkedja, toolchain- och releasekontroller, säker lokal upload-signering samt dokumenterade steg för emulator, fysisk enhet, signerad AAB och Internal Testing. Identiteten är `se.vaderkompassen.app`, minSdk 24, compile/target 36, versionName 15.0.4 och versionCode 15004.
 
-Versionen är **BLOCKED för publik butiksproduktion** tills juridik och URL:er verifierats, StoreKit/Play Billing med backendverifiering fungerar, samtycke/annonser beslutats, signing finns lokalt och ikoner/skärmbilder godkänts. Kör `npm run check:store-compliance`, `npm run check:production-config` och `npm run security:release-check`.
+Google Play Billing från v15.0.2 är funktionellt oförändrat och kräver fortsatt Play Console-produkt, licenstestare, servicekonto, RTDN och riktig Internal Testing. iOS stannar på 15.0.3 build 5 och Workern på 15.0.2. Ingen väder-, poäng-, ranking-, snapshot-, Premium- eller designlogik ändras. Se `docs/ANDROID_SETUP.md`, `docs/ANDROID_SIGNING.md` och `docs/GOOGLE_INTERNAL_TESTING.md`.
 
-Poäng, ranking, prognosmodeller, aktiviteter och platsregister är oförändrade. Ingen Supabase-migration ingår.
+## v15.0.3 – Native iOS, Xcode och TestFlight
+
+iOS-projektet har en reproducerbar production-sync, simulator- och osignerad releasebuild, toolchain-/archivekontroll samt en separat iOS-säkerhetskontroll. Bundle-ID är `se.vaderkompassen.app`, minimum iOS 15, version 15.0.3 och build 5. Full signing väljs lokalt i Xcode; inga certifikat, profiler eller Apple-hemligheter finns i Git.
+
+Versionen förbereder men laddar inte upp till TestFlight. Fysisk enhet, Archive, Validate, App Store Connect, riktig StoreKit Sandbox och intern TestFlight-installation kräver Andreas Team och externa Apple-inställningar. Android, Worker/backend, väder, poäng, ranking, snapshots, cache och webbdesign är oförändrade. Se `docs/IOS_SETUP.md` och `docs/TESTFLIGHT.md`.
+
+## v15.0.2 – Google Play Billing och Premium för Android
+
+Android har en egen nativebrygga mot Google Play Billing 9.1.0 för butikens produktdata, köp, pending, restore/sync, acknowledgement och prenumerationshantering. Workern verifierar varje purchase token genom Google Play Developer API innan central entitlement kan ge Premium. RTDN är endast förändringssignal och följs alltid av en ny serverhämtning. Tokens lagras endast hashade.
+
+Implementation i repot är skild från externa krav: Play-produkten, base plan/offer, servicekonto, licenstestare, Internal Testing och Pub/Sub/RTDN måste skapas och verifieras av Andreas enligt `docs/GOOGLE_PLAY_BILLING.md`. Versionen är blockerad för Google Play-produktion tills detta är klart. Apple, iOS-build, design, väder, poäng, ranking, snapshots och cache är funktionellt oförändrade.
+
+## v15.0.1 – Apple StoreKit och Premium för iOS
+
+iOS har nu en StoreKit 2-brygga för produktdata, köp, återställning och Apples hanteringsvy. Premium aktiveras först efter att Cloudflare Workern hämtat och verifierat aktuell status genom App Store Server API. App Store Server Notifications V2 håller statusen synkroniserad vid förnyelse, uppsägning, grace period, betalningsproblem och återbetalning. Lokal kvittoverifiering eller klientstatus är aldrig sanningskälla.
+
+Releasen är **BLOCKED för App Store-publicering** tills Apple-credentials och produkt är konfigurerade, Supabase-migrationen körts samt full Xcode-build och Sandbox-matrisen i `docs/STOREKIT.md` passerat. Android, reklam, poäng, ranking, prognoser och design ändras inte.
+
+## v15.0.0 – Första publika produktionsversionen
+
+Väderkompassen är versionsmässigt fryst för den första publika releasen på webb, iOS och Android. Releasen samlar aktivitetsbaserade väderrekommendationer, topplista, karta, 1 000 verifierade platser, konton och den beslutade Free/Premium-modellen utan att ändra poäng eller ranking.
+
+Releaseunderlaget innehåller juridiska utkast, offentliga support-/integritets-/villkors-/kontoborttagningssidor, butikstexter, privacy/Data Safety-/åldersklassificeringsunderlag, rollback- och hotfixplan samt automatiska releasekontroller.
+
+Versionen är **BLOCKED för butikspublicering** tills StoreKit/Play Billing med backendverifiering, köpåterställning och abonnemangshantering fungerar, AdMob/CMP och signing är konfigurerade, juridiken är granskad och signerade nativebyggen passerar. Produktionsklienten fabricerar inga köp eller annonser.
+
+Kör `npm run check:versions`, `npm run validate:places`, `npm run check:production-config`, `npm run check:store-compliance`, `npm run security:release-check`, `npm run build:web` och `npm test`. Poäng, ranking, prognosmodeller och aktiviteter är oförändrade. Ingen Supabase-migration ingår.
 
 ## v14.4.5 – Prognosuppdatering varje timme
 

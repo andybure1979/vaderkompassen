@@ -4,8 +4,8 @@ Slutlig rating bestäms av Apple respektive Google/IARC. Andreas ska fylla i por
 
 ## Apple – rekommenderat faktaunderlag
 
-- Reklam: **Ja**. Free har beslutade reklamplatser, även om RC endast visar placeholders och AdMob är blockerat.
-- In-app purchases/subscriptions: **Ja** när Premiumprodukten skickas för granskning; RC-koden aktiverar inte riktiga köp.
+- Reklam: **Ja**. Free har beslutade reklamplatser, även om AdMob är blockerat tills samtycke och produktionskonfiguration finns.
+- In-app purchases/subscriptions: **Ja** när Premiumprodukten skickas för granskning; nuvarande produktionskonfiguration aktiverar inte riktiga köp.
 - Användargenererat innehåll: Nej (visningsnamn är inte publikt innehåll).
 - Kommunikation mellan användare: Nej.
 - Tävlingar/gambling/loot boxes: Nej.
@@ -16,7 +16,7 @@ Slutlig rating bestäms av Apple respektive Google/IARC. Andreas ska fylla i por
 
 ## Google Play / IARC
 
-- Ads: **Yes** eftersom Free-affärsmodellen innehåller reklam; produktionsannonser är inte aktiva i RC.
+- Ads: **Yes** eftersom Free-affärsmodellen innehåller reklam; produktionsannonser är inte aktiva innan AdMob/CMP är konfigurerade.
 - Digital purchases: **Yes** när prenumeration ingår i publiceringen.
 - User interaction/UGC/chat: No.
 - Location sharing: No.

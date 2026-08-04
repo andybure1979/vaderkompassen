@@ -1,9 +1,9 @@
-# Native setup – v14.5.0 Release Candidate
+# Native setup – v15.0.4
 
 - App-ID/bundle-ID: `se.vaderkompassen.app`.
-- Version: `14.5.0`; iOS build `2`; Android versionCode `14500`.
-- Production-build ska använda `VK_SUBSCRIPTION_MODE=disabled` och `VK_ADS_MODE=disabled` tills verkliga providers, backendverifiering och samtycke är klara.
-- iOS archive kräver lokalt Apple Team/signing. Android release-AAB kräver `VK_ANDROID_KEYSTORE_PATH` och tillhörande lokala miljövariabler. Inget signingmaterial får committas.
+- Version: iOS `15.0.3` build `5`; Android `15.0.4`/versionCode `15004`.
+- iOS har StoreKit 2 och serververifiering men är blockerad tills extern Apple-konfiguration och Sandbox-test är klara. Reklam är fortsatt avstängd.
+- iOS archive kräver lokalt Apple Team/signing. Android release-AAB använder privata `VADERKOMPASSEN_UPLOAD_*`-värden enligt `ANDROID_SIGNING.md`. Inget signingmaterial får committas.
 - Kör releasekontrollerna och följ `RELEASE_CHECKLIST.md`, `STORE_SUBSCRIPTIONS.md` och `STORE_ASSETS.md`.
 
 ## Status och verktyg
@@ -27,9 +27,16 @@ npm ci
 npm run build:web
 npm run cap:sync
 npm run cap:ios
+npm run cap:ios:storekit
 npm run cap:android
+npm run cap:android:billing
 npm run build:android:debug
 npm run build:android:bundle
+npm run check:android-toolchain
+npm run android:build:debug
+npm run android:build:release-check
+npm run android:bundle:release
+npm run security:android-release-check
 npm run version:check
 ```
 
@@ -39,13 +46,13 @@ npm run version:check
 
 1. Gå med i Apple Developer Program.
 2. Registrera Bundle ID `se.vaderkompassen.app`.
-3. Skapa appen i App Store Connect med version 14.5.0 och stigande buildnummer.
+3. Skapa appen i App Store Connect med version 15.0.1 och stigande buildnummer.
 4. Installera Xcode 26 eller senare och öppna `ios/App/App.xcodeproj`.
 5. Välj Andreas Apple Developer Team under Signing & Capabilities. Inga certifikat/provisioningprofiler ska läggas i Git.
 6. Kontrollera iPhone/iPad, rotation, safe area, status bar, splash och den slutliga 1024×1024-ikonen.
 7. Lägg `vaderkompassen://auth/callback` i Supabase Auth redirect allowlist. Konfigurera senare Universal Links och Associated Domains innan publikt OAuth-flöde.
 8. Testa registrering, verifieringslänk, OAuth, lösenordsåterställning, bakgrund/återgång och externa kartlänkar på simulator och fysisk enhet.
-9. När StoreKit-provider valts: skapa abonnemangsgrupp/produkt `se.vaderkompassen.premium.monthly`, avtal, skatt och bankuppgifter; testa Sandbox och backendverifiering innan `apple_native` aktiveras.
+9. Följ `STOREKIT.md`: skapa abonnemangsgrupp/produkt `se.vaderkompassen.premium.monthly`, Apple-nyckel, Notifications V2 och Sandbox-test innan `apple_native` distribueras.
 10. Skapa framtida AdMob iOS-app/testenheter innan någon AdMob-plugin aktiveras.
 11. Välj Generic iOS Device, kör Product → Archive, Validate App och Distribute App till TestFlight.
 12. Fyll i App Privacy, kontoborttagning, reviewkontakt och testkonto i App Store Connect.
@@ -56,9 +63,9 @@ npm run version:check
 2. Skapa Play Console-app med package name `se.vaderkompassen.app` och aktivera Play App Signing.
 3. Öppna katalogen `android/` i Android Studio och testa telefon samt surfplatta.
 4. Lägg `vaderkompassen://auth/callback` i Supabase redirect allowlist. Lägg senare till verifierad Android App Link när webbdomän och `assetlinks.json` finns.
-5. Skapa upload key lokalt och sätt `VK_ANDROID_KEYSTORE_PATH`, `VK_ANDROID_KEYSTORE_PASSWORD`, `VK_ANDROID_KEY_ALIAS`, `VK_ANDROID_KEY_PASSWORD`. Keystore och lösenord får aldrig läggas i Git.
-6. Kör `npm run build:android:bundle`; resultatet får laddas upp till Internal Testing först efter ikon-, Auth- och dataskyddskontroll.
-7. Skapa senare abonnemangsprodukten `premium_monthly`, licenstestare och backendverifiering/RTDN innan `google_native` aktiveras.
+5. Skapa upload key lokalt och konfigurera `VADERKOMPASSEN_UPLOAD_*` enligt `ANDROID_SIGNING.md`. Keystore och lösenord får aldrig läggas i Git.
+6. Kör `npm run android:bundle:release`; resultatet får laddas upp till Internal Testing först efter ikon-, Auth- och dataskyddskontroll.
+7. Följ `GOOGLE_PLAY_BILLING.md` för produkten `premium_monthly`, base plan `monthly`, licenstestare, servicekonto och RTDN innan `google_native` distribueras.
 8. Skapa framtida AdMob Android-app och endast officiella testannonsenheter före pluginaktivering.
 9. Fyll i Data safety: konto/e-post, appinställningar och prenumerationsstatus; ingen plats, kamera eller fillagringsbehörighet används.
 
@@ -74,14 +81,14 @@ npm run version:check
 
 ## Cloudflare
 
-1. Kontrollera production Worker URL och att `/health` visar 14.4.0 efter framtida deploy.
+1. Kontrollera production Worker URL och att `/health` visar 15.0.0 efter en senare, uttryckligen godkänd deploy.
 2. Native WebView-anrop kan sakna vanlig webb-Origin. Verifiera CORS mot verkliga iOS-/Androidbyggen; bredda aldrig till osäkra adminanrop.
 3. Använd Workers Paid för snapshot/ranking-cronens CPU-marginal.
 4. Behåll service-role och övriga Worker-secrets endast i Cloudflare.
 
 ## CI och GitHub Environments
 
-Workflows bygger web/Worker, Android debug och osignerad iOS simulator. Skapa GitHub Environments `development`, `staging`, `production`. Framtida secrets kan omfatta publika miljövärden, Android signing och Apple/App Store Connect-credentials, men produktionsupload är inte aktiverad i v14.5.0.
+Workflows bygger web/Worker, Android debug och osignerad iOS simulator. Skapa GitHub Environments `development`, `staging`, `production`. Framtida secrets kan omfatta publika miljövärden, Android signing och Apple/App Store Connect-credentials, men produktionsupload är inte aktiverad i v15.0.0.
 
 ## Kvar före butiksdistribution
 

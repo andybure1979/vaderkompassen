@@ -194,12 +194,10 @@ for(const activity of ["cinema","indoorPool"]){
   });
 }
 
-test("providerverifieringsstubbar kräver admin-token och returnerar not configured",async()=>{
-  const state=setup(),url="https://worker.test/v1/subscriptions/apple/verify";
-  assert.equal((await worker.fetch(new Request(url,{method:"POST"}),env,state.ctx)).status,401);
-  const protectedEnv={...env,ADMIN_TOKEN:"admin-test"};
-  const response=await worker.fetch(new Request(url,{method:"POST",headers:{"x-admin-token":"admin-test"}}),protectedEnv,state.ctx);
-  assert.equal(response.status,501);assert.deepEqual(await response.json(),{ok:false,error:"Provider verification not configured",provider:"apple"});
+test("Apple-synk failar stängt när serverkonfigurationen saknas",async()=>{
+  const state=setup(),url="https://worker.test/v1/subscriptions/apple/sync";
+  const response=await worker.fetch(new Request(url,{method:"POST",headers:{"content-type":"application/json"},body:"{}"}),env,state.ctx);
+  assert.equal(response.status,503);assert.match((await response.json()).error,/inte konfigurerad/);
 });
 
 test("admin health kräver användarens bearer-session",async()=>{

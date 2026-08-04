@@ -1,6 +1,13 @@
 apply plugin: 'com.android.application'
 
-def releaseKeystorePath = System.getenv('VK_ANDROID_KEYSTORE_PATH')
+def signingValue = { String propertyName, String legacyEnvironmentName ->
+    providers.gradleProperty(propertyName).orElse(providers.environmentVariable(propertyName)).orElse(providers.environmentVariable(legacyEnvironmentName)).orNull
+}
+def releaseKeystorePath = signingValue('VADERKOMPASSEN_UPLOAD_STORE_FILE', 'VK_ANDROID_KEYSTORE_PATH')
+def releaseStorePassword = signingValue('VADERKOMPASSEN_UPLOAD_STORE_PASSWORD', 'VK_ANDROID_KEYSTORE_PASSWORD')
+def releaseKeyAlias = signingValue('VADERKOMPASSEN_UPLOAD_KEY_ALIAS', 'VK_ANDROID_KEY_ALIAS')
+def releaseKeyPassword = signingValue('VADERKOMPASSEN_UPLOAD_KEY_PASSWORD', 'VK_ANDROID_KEY_PASSWORD')
+def releaseSigningComplete = [releaseKeystorePath, releaseStorePassword, releaseKeyAlias, releaseKeyPassword].every { it }
 
 android {
     namespace = "se.vaderkompassen.app"
@@ -9,8 +16,8 @@ android {
         applicationId "se.vaderkompassen.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 14500
-        versionName "14.5.0"
+        versionCode 15004
+        versionName "15.0.4"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -19,12 +26,12 @@ android {
         }
     }
     signingConfigs {
-        if (releaseKeystorePath) {
+        if (releaseSigningComplete) {
             release {
                 storeFile file(releaseKeystorePath)
-                storePassword System.getenv('VK_ANDROID_KEYSTORE_PASSWORD')
-                keyAlias System.getenv('VK_ANDROID_KEY_ALIAS')
-                keyPassword System.getenv('VK_ANDROID_KEY_PASSWORD')
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
             }
         }
     }
@@ -32,8 +39,15 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-            if (releaseKeystorePath) signingConfig signingConfigs.release
+            if (releaseSigningComplete) signingConfig signingConfigs.release
         }
+    }
+}
+
+tasks.register('verifyReleaseSigning') {
+    doLast {
+        if (!releaseSigningComplete) throw new GradleException('Signerad AAB kräver VADERKOMPASSEN_UPLOAD_STORE_FILE, VADERKOMPASSEN_UPLOAD_STORE_PASSWORD, VADERKOMPASSEN_UPLOAD_KEY_ALIAS och VADERKOMPASSEN_UPLOAD_KEY_PASSWORD i ~/.gradle/gradle.properties eller miljön.')
+        if (!file(releaseKeystorePath).isFile()) throw new GradleException('Konfigurerad upload-keystore finns inte.')
     }
 }
 
@@ -49,6 +63,7 @@ dependencies {
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
+    implementation "com.android.billingclient:billing:9.1.0"
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"

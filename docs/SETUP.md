@@ -1,6 +1,19 @@
 # Installation och drift
 
-## Väderkompassen v14.5.0
+## Väderkompassen v15.0.2 – Google Play Billing
+
+Kör `supabase/migrations/20260803_1502_google_play_billing.sql` i testmiljön efter v15.0.1 och följ `GOOGLE_PLAY_BILLING.md` för Play Console, servicekonto, Developer API och RTDN. Bygg Android med `npm run cap:android:billing`. Production får inte aktiveras innan signerad Internal Testing-build och hela Google Play-matrisen har verifierats.
+
+## Väderkompassen v15.0.1 – Apple StoreKit
+
+1. Kör `supabase/migrations/20260803_1501_apple_storekit.sql` i testmiljön.
+2. Konfigurera Apple-produkt, App Store Server API-nyckel och Notifications V2 enligt `STOREKIT.md`.
+3. Sätt Apple-hemligheterna endast i Cloudflare och bygg iOS med `npm run cap:ios:storekit`.
+4. Kör hela Sandbox-matrisen innan production aktiveras. Releasen är blockerad tills den och full Xcode-build har passerat.
+
+Ingen Worker-deploy eller databasmigration ska göras i production innan separat godkännande.
+
+## Väderkompassen v15.0.0
 
 För native iOS/Android, miljöer, signing, Supabase redirect, butiksförberedelser och CI: se `NATIVE_SETUP.md`.
 
@@ -8,10 +21,10 @@ För native iOS/Android, miljöer, signing, Supabase redirect, butiksförberedel
 2. Publicera hela projektet till GitHub.
 3. Kör `supabase/migrations/20260801_1436_prebuilt_forecast_rankings.sql` i Supabase.
 4. Kör `npm run validate:places`, `npm run build:web`, `npm run check:production-config` och `npm run security:release-check`.
-5. Kör `npm run deploy:production`. Kommandot deployar root-entrypointen och stoppar om publik Worker-version inte är `14.5.0`.
-6. Kontrollera att webbplatsen visar `Väderkompassen v14.5.0` i sidfoten.
+5. Kör `npm run deploy:production`. Kommandot deployar root-entrypointen och stoppar om publik Worker-version inte är `15.0.0`.
+6. Kontrollera att webbplatsen visar `Väderkompassen v15.0.0` i sidfoten.
 
-Ingen databasändring krävs för v14.5.0. `npm run check:store-compliance` ska rapportera produktionsblockerarna och returnerar avsiktligt exit code 1 så länge signing, riktiga butiksköp och annonser/samtycke saknas. Efter Worker-deploy måste ett nytt snapshot byggas och visa `placesRequested=1000` samt `placesAvailable=1000` innan releasen betraktas som verifierad.
+Ingen databasändring krävs för v15.0.0. `npm run check:store-compliance` ska rapportera produktionsblockerarna och returnerar avsiktligt exit code 1 så länge signing, riktiga butiksköp och annonser/samtycke saknas. Efter Worker-deploy måste ett nytt snapshot byggas och visa `placesRequested=1000` samt `placesAvailable=1000` innan releasen betraktas som verifierad.
 
 ## Prestandaverifiering i v14.3.6
 

@@ -2,6 +2,11 @@
 
 ## Klart
 
+- **15.0.3** Reproducerbar iOS/Xcode-byggkedja och TestFlight-förberedelse; signing, Archive/Validate och verklig TestFlight återstår manuellt.
+- **15.0.4** Reproducerbar Android/SDK 36-byggkedja, säker upload-signering och Google Play Internal Testing-förberedelse; riktig Play-installation och Billingmatris återstår manuellt.
+
+- **15.0.2** Google Play Billing/Developer API/RTDN implementerat i repo; Play Console, Cloud och Internal Testing återstår manuellt.
+
 - **14.0.0** Identitet, autentisering, profiler och roller.
 - **14.0.1–14.0.2** Stabil konto- och profilupplevelse.
 - **14.0.3** Kontoprofil och molnsynk.
@@ -33,6 +38,8 @@
 - **14.4.4** Begränsad Open-Meteo-samtidighet, säker retry och komplett feldiagnostik för snapshotjobb.
 - **14.4.5** Prognosens snapshotjobb körs en gång per hel timme för lägre leverantörs- och Workerbelastning.
 - **14.5.0 RC** Store-compliancekod, juridik-/supportsidor, butiksunderlag och blockerande releasekontroller. Publik butiksproduktion väntar på juridik, signing, butiksköp, samtycke och assets.
+- **15.0.0 release freeze** Endast blockerande fel, säkerhet, datakvalitet, compliance, bygg och riskfri prestanda får ändras. Inga nya aktiviteter, poängmodeller, datakällor, Premiumförmåner, adminfunktioner eller UI-koncept.
+- **15.1.0 eller senare** Produktönskemål och större förbättringar tas först efter stabiliserad publik lansering.
 
 ## Nästa
 

@@ -2,4 +2,4 @@ Väderkompassen kräver nätverk för aktuell prognos. Free visar dagens prognos
 
 Kontoborttagning: logga in, öppna Profil och välj Radera mitt konto. Kartnavigation öppnar en extern kartapp.
 
-Release Candidate har inga aktiva riktiga butiksköp eller produktionsannonser. Skicka inte subscription-IAP för granskning innan StoreKit 2, serververifiering och sandboxflöde är klara.
+Version 15.0.1 innehåller StoreKit 2, restore/manage, App Store Server API och Notifications V2. Bygget får inte skickas innan Apple-konfiguration, migration och hela Sandboxflödet har verifierats. Produktionsannonser är avstängda tills AdMob och samtycke är godkända.
