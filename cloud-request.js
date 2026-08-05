@@ -21,6 +21,9 @@
     if(Number.isFinite(prepared))return prepared;
     return typeof fallback==="function"?fallback(row,activity):null;
   }
+  function canReuseValidator(requestKey,dataKey,validator,hasData){
+    return Boolean(validator?.etag&&hasData&&requestKey===dataKey);
+  }
   function createManager({onEvent=()=>{}}={}){
     let active=null;
     function run(key,task){
@@ -39,7 +42,7 @@
     function abort(){active?.controller.abort();active=null;}
     return {run,abort};
   }
-  const api={createManager,createRequestKey,getRowScore};
+  const api={createManager,createRequestKey,getRowScore,canReuseValidator};
   root.VK_CLOUD_REQUESTS=api;
   if(typeof module!=="undefined"&&module.exports)module.exports=api;
 })(typeof globalThis!=="undefined"?globalThis:this);

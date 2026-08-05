@@ -17,6 +17,15 @@ test("läser kompakt score och stöder äldre serverScores",()=>{
   assert.equal(cloudRequests.getRowScore({},"ski",()=>41),41);
 });
 
+test("återanvänder ETag endast för payload från exakt samma kanoniska urval",()=>{
+  const north=cloudRequests.createRequestKey("https://worker.test",{regions:["Norra Sverige"]});
+  const combined=cloudRequests.createRequestKey("https://worker.test",{regions:["Norra Sverige","Mellansverige"]});
+  const validator={etag:'W/"combined"'};
+  assert.equal(cloudRequests.canReuseValidator(combined,north,validator,true),false);
+  assert.equal(cloudRequests.canReuseValidator(combined,combined,validator,true),true);
+  assert.equal(cloudRequests.canReuseValidator(combined,combined,validator,false),false);
+});
+
 test("återanvänder ett pågående Promise för identisk URL",async()=>{
   const manager=cloudRequests.createManager();let calls=0;
   const task=async()=>{calls++;await new Promise(resolve=>setTimeout(resolve,5));return "ok"};

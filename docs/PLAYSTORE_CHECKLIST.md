@@ -1,7 +1,7 @@
 # Google Play-checklista – v15.0.6
 
 - [ ] Appnamn, kort/lång beskrivning, kategori, webbplats, support och kontakt är inlagda per språk.
-- [ ] VersionName 15.0.6, versionCode 15006 och application ID `se.vaderkompassen.app` stämmer.
+- [ ] VersionName 15.0.6, versionCode 15007 och application ID `se.vaderkompassen.app` stämmer.
 - [ ] Integritetspolicy och kontoborttagnings-URL är publika över HTTPS.
 - [ ] Data Safety matchar `docs/GOOGLE_PLAY_DATA_SAFETY.md`, releasebinären och aktiverad AdMob-konfiguration.
 - [ ] ”Contains ads” är markerat när Free-reklam ingår.

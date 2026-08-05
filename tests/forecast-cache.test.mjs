@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import worker,{canonicalForecastUrl,compactForecastRow,FORECAST_ROW_FIELDS,normalizeForecastRequest} from "../cloudflare/src/index.js";
+import worker,{canonicalForecastUrl,compactForecastRow,dedupeRankingEntries,FORECAST_ROW_FIELDS,normalizeForecastRequest} from "../cloudflare/src/index.js";
 
 class MemoryCache{
   constructor(){this.items=new Map();this.puts=0}
@@ -26,7 +26,9 @@ function setup({delay=0,failSnapshot=false,rankedBody=null,prebuiltRecords=null,
       calls.prebuilt++;
       if(!prebuiltRecords)return new Response(JSON.stringify({message:"forecast_rankings missing"}),{status:404});
       const dayFilter=String(url.searchParams.get("forecast_day")||"").replace(/^eq\./,"");
-      return new Response(JSON.stringify(dayFilter?prebuiltRecords.filter(record=>record.forecast_day===dayFilter):prebuiltRecords),{status:200});
+      const regionFilter=[...String(url.searchParams.get("or")||"").matchAll(/region\.eq\.([^,)]+)/g)].map(match=>match[1]);
+      const selected=prebuiltRecords.filter(record=>(!dayFilter||record.forecast_day===dayFilter)&&(!regionFilter.length||regionFilter.includes(record.region)));
+      return new Response(JSON.stringify(selected),{status:200});
     }
     if(url.pathname.endsWith("/forecast_snapshots")&&url.searchParams.get("select")==="meta:payload->meta"){
       calls.summary++;
@@ -94,6 +96,19 @@ test("förbyggd ranking undviker legacy-RPC och regional JSON-expansion",async()
   assert.equal(state.calls.ranked,0);assert.equal(state.calls.head,0);assert.equal(state.calls.snapshot,0);assert.equal(state.calls.prebuilt,2);assert.equal(state.calls.summary,1);
   assert.equal(response.headers.get("X-Vaderkompassen-Supabase-Calls"),"3");
   assert.deepEqual({requested:body.meta.placesRequested,fresh:body.meta.placesFresh,fallback:body.meta.placesFallback,available:body.meta.placesAvailable},{requested:1000,fresh:809,fallback:21,available:830});
+});
+
+test("flera regioner slås ihop, dedupliceras med placeId och sorteras globalt före slice",async()=>{
+  const entry=(placeId,place,region,score)=>({rankSortScore:score,row:{placeId,place,region,area:region,confidence:80,serverScore:score,day:"2026-08-01"}});
+  const records=[
+    {snapshot_version:"snapshot-20260801",generated_at:"2026-08-01T00:00:00Z",forecast_day:"2026-08-01",region:"Norra Sverige",ranked_rows:[entry("north","Norr", "Norra Sverige",80),entry("shared","Delad norr","Norra Sverige",70)]},
+    {snapshot_version:"snapshot-20260801",generated_at:"2026-08-01T00:00:00Z",forecast_day:"2026-08-01",region:"Mellansverige",ranked_rows:[entry("middle","Mitt", "Mellansverige",95),entry("shared","Delad mitt","Mellansverige",90)]}
+  ];
+  const state=setup({prebuiltRecords:records}),response=await worker.fetch(request("activity=general&regions=Norra%20Sverige,Mellansverige"),env,state.ctx),body=await response.json();
+  const result=body.dailyResults["2026-08-01"];
+  assert.deepEqual(result.map(row=>row.placeId),["middle","shared","north"]);
+  assert.equal(result.filter(row=>row.placeId==="shared").length,1);
+  assert.deepEqual(dedupeRankingEntries(records.flatMap(record=>record.ranked_rows)).sort((a,b)=>b.rankSortScore-a.rankSortScore).map(entry=>entry.row.placeId),["middle","shared","north"]);
 });
 
 test("legacy-RPC får ett serverbestämt platsurval och går direkt till cache",async()=>{

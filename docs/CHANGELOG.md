@@ -2,8 +2,11 @@
 
 ## 15.0.6 (build 9) – Standardregion vid ny installation
 
+- Android behåller versionName 15.0.6 och använder versionCode 15007 för nästa testbuild.
 - Ny installation startar med Mellansverige som enda vald region.
 - Befintliga giltiga lokala och molnsynkade regionval bevaras.
+- Topplistan uppdateras korrekt från hela det nya urvalet när regioner eller områden ändras.
+- Native-appen får pull-to-refresh och kontrollerar prognosen efter minst fem minuter i bakgrunden.
 
 ## 15.0.6.1 – Annonsfri startupfix
 

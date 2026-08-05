@@ -39,8 +39,8 @@ test("frontend skiljer endast transportmängd och polling efter befintlig entitl
   assert.match(app,/days:hasPremiumUiAccess\(\)\?"all":"1"/);
   assert.match(app,/const FREE_REFRESH_MS=30\*60\*1000/);
   assert.match(app,/const PREMIUM_REFRESH_MS=15\*60\*1000/);
-  assert.match(app,/headers\["If-None-Match"\]=validator\.etag/);
-  assert.match(app,/if\(response\.status===304\)return \{notModified:true/);
+  assert.match(app,/canReuseValidator\(requestUrl,activeForecastDataKey,validator/);
+  assert.match(app,/if\(response\.status===304\)/);
   assert.match(app,/document\.visibilityState==="hidden"/);
 });
 

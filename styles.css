@@ -42,6 +42,7 @@ dialog{width:min(520px,calc(100% - 24px));border:0;border-radius:25px;padding:0;
 
 /* v13.8.2 – kartzoom och finputsning */
 #modelCount{font-size:10px!important;line-height:1.25;max-width:48%;text-align:right;font-weight:750;letter-spacing:.01em}
+.forecast-update{display:flex;align-items:center;justify-content:flex-end;gap:7px;max-width:58%}.forecast-update #modelCount{max-width:none}.refresh-button{flex:0 0 31px;width:31px;height:31px;border:1px solid var(--border);border-radius:50%;background:var(--card);color:var(--activity-deep,var(--primary-deep));font-size:19px;line-height:1;box-shadow:var(--shadow-soft)}.refresh-button:disabled{opacity:.5}.refresh-button.refreshing{animation:spin .8s linear infinite}.refresh-message{margin:-5px 0 9px;text-align:right;color:var(--muted);font-size:10px}.pull-refresh-indicator{position:fixed;z-index:4;top:calc(5px + env(safe-area-inset-top));left:50%;display:flex;align-items:center;gap:7px;padding:7px 11px;border-radius:999px;background:var(--surface);color:var(--muted);font-size:11px;box-shadow:var(--shadow);opacity:0;pointer-events:none;transform:translate(-50%,-52px);transition:transform .16s,opacity .16s}.pull-refresh-indicator.visible{opacity:1}.pull-refresh-indicator.refreshing{transform:translate(-50%,54px)}.pull-refresh-indicator .spinner{width:13px;height:13px}
 #weatherMap{touch-action:none;cursor:grab}
 #weatherMap:active{cursor:grabbing}
 .leaflet-container{touch-action:none;-webkit-user-select:none;user-select:none}

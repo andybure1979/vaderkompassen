@@ -296,6 +296,18 @@ function requestedScore(row,activity){
   const prepared=row.serverScores?.[activity];
   return {sortScore:Number.isFinite(prepared)?prepared:serverScore(row,activity),responseScore:Number.isFinite(prepared)?prepared:null};
 }
+const rankingIdentity=row=>row?.placeId||null;
+const rankingEntryScore=entry=>Number.isFinite(entry?.rankSortScore)?entry.rankSortScore:entry?.sortScore;
+const compareRankingEntries=(a,b)=>rankingEntryScore(b)-rankingEntryScore(a)||(b.row?.confidence||0)-(a.row?.confidence||0);
+export function dedupeRankingEntries(entries){
+  const unique=new Map(),legacy=[];
+  for(const entry of entries||[]){
+    const key=rankingIdentity(entry.row);if(!key){legacy.push(entry);continue}
+    const previous=unique.get(key);
+    if(!previous||compareRankingEntries(entry,previous)<0)unique.set(key,entry);
+  }
+  return [...unique.values(),...legacy];
+}
 function activityCategory(activity){return activity==='ski'?'skiing':activity}
 function rowMatchesActivity(row,activity){
   const categories=row.categories||PLACE_BY_ID.get(row.placeId)?.categories||PLACE_BY_NAME.get(row.place)?.categories||[];
@@ -363,8 +375,8 @@ const rankingStore={
       }
     }
     for(const day of Object.keys(dailyResults)){
-      const candidates=dailyResults[day];performanceMetrics.rowsMatched+=candidates.length;
-      const sortStarted=now();candidates.sort((a,b)=>b.rankSortScore-a.rankSortScore||(b.row?.confidence||0)-(a.row?.confidence||0));performanceMetrics.sortMs+=now()-sortStarted;
+      const candidates=dedupeRankingEntries(dailyResults[day]);performanceMetrics.rowsMatched+=candidates.length;
+      const sortStarted=now();candidates.sort(compareRankingEntries);performanceMetrics.sortMs+=now()-sortStarted;
       dailyResults[day]=candidates.slice(0,FORECAST_ROWS_PER_DAY).map(entry=>entry.row);
       performanceMetrics.rowsReturned+=dailyResults[day].length;
       if(!dailyResults[day].length)delete dailyResults[day];
@@ -509,7 +521,7 @@ async function latestSnapshot(env,normalized,performanceMetrics){
   for(const day of Object.keys(dailyResults)){
     const filtered=dailyResults[day];
     // Läs eller beräkna poängen exakt en gång per matchad rad före sorteringen.
-    const decorated=filtered.map(row=>({row,...requestedScore(row,requested)}));
+    const decorated=dedupeRankingEntries(filtered.map(row=>({row,...requestedScore(row,requested)})));
     const sortStarted=now();
     decorated.sort((a,b)=>b.sortScore-a.sortScore||(b.row.confidence||0)-(a.row.confidence||0));
     performanceMetrics.sortMs+=now()-sortStarted;

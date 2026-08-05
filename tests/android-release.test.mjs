@@ -6,7 +6,7 @@ const read=file=>readFileSync(new URL(`../${file}`,import.meta.url),"utf8");
 test("Android releaseidentitet, SDK och buildnummer är synkade",()=>{
   const gradle=read("android/app/build.gradle");
   assert.match(gradle,/namespace = "se\.vaderkompassen\.app"/);assert.match(gradle,/applicationId "se\.vaderkompassen\.app"/);
-  assert.match(gradle,/versionName "15\.0\.6"/);assert.match(gradle,/versionCode 15006/);
+  assert.match(gradle,/versionName "15\.0\.6"/);assert.match(gradle,/versionCode 15007/);
   const vars=read("android/variables.gradle");assert.match(vars,/minSdkVersion = 24/);assert.match(vars,/compileSdkVersion = 36/);assert.match(vars,/targetSdkVersion = 36/);
 });
 test("Androidmanifestet har endast nödvändiga permissions och avgränsad deeplink",()=>{
