@@ -34,6 +34,15 @@ test("AdMob initieras inte före entitlement eller UMP-beslut",async()=>{
   assert.deepEqual(calls,["consent","initialize","banner"]);
 });
 
+test("disabled gör både Free och Premium helt annonsfria",async()=>{
+  const {ads,calls}=load(fakePlugin),controller=ads.createController({...config,enabled:false,mode:"disabled"}),el=element();el.classList.owner=el;
+  await controller.showBanner("main_bottom_banner",el);
+  await controller.setAccess({resolved:true,role:"free",premium:false});
+  assert.deepEqual(calls,[]);assert.equal(el.hidden,true);assert.equal(controller.getStatus().provider,"none");
+  await controller.setAccess({resolved:true,role:"premium",premium:true});
+  assert.deepEqual(calls,[]);assert.equal(el.hidden,true);
+});
+
 test("Premiumuppgradering förstör aktiv annons och lämnar ingen yta",async()=>{
   const {ads,calls}=load(fakePlugin),controller=ads.createController(config),el=element();el.classList.owner=el;
   await controller.showBanner("main_bottom_banner",el);

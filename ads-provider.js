@@ -116,6 +116,7 @@
   class AdsController{
     constructor(config={}){this.config=config;this.access={resolved:false};this.provider=new NoAdsProvider(config);this.elements=new Map();this.generation=0}
     desiredProvider(){
+      if(!this.config?.enabled||this.config?.mode==="disabled")return NoAdsProvider;
       if(!accessAllowsAds(this.access))return NoAdsProvider;
       if(root.VK_NATIVE?.isNativePlatform?.())return AdMobProvider;
       return this.config.mode==="placeholder"?WebPlaceholderAdProvider:NoAdsProvider;

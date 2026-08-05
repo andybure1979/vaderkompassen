@@ -3,8 +3,8 @@ import {readFile} from "node:fs/promises";
 import test from "node:test";
 
 const read=path=>readFile(new URL(`../${path}`,import.meta.url),"utf8");
-const [pkg,capacitor,native,auth,app,ads,html,gitignore,migration,storekit,mainView,googleBilling]=await Promise.all([
-  read("package.json").then(JSON.parse),read("capacitor.config.ts"),read("native-platform.js"),read("auth.js"),read("app.js"),read("ads-provider.js"),read("index.html"),read(".gitignore"),read("supabase/migrations/20260802_1440_account_deletion.sql"),read("ios/App/App/VaderkompassenPurchasesPlugin.swift"),read("ios/App/App/MainViewController.swift"),read("android/app/src/main/java/se/vaderkompassen/app/GooglePlayBillingPlugin.java")
+const [pkg,capacitor,native,auth,app,ads,html,gitignore,migration,storekit,mainView,googleBilling,iosPackage,plist,packageResolved,nativeAdsHook]=await Promise.all([
+  read("package.json").then(JSON.parse),read("capacitor.config.ts"),read("native-platform.js"),read("auth.js"),read("app.js"),read("ads-provider.js"),read("index.html"),read(".gitignore"),read("supabase/migrations/20260802_1440_account_deletion.sql"),read("ios/App/App/VaderkompassenPurchasesPlugin.swift"),read("ios/App/App/MainViewController.swift"),read("android/app/src/main/java/se/vaderkompassen/app/GooglePlayBillingPlugin.java"),read("ios/App/CapApp-SPM/Package.swift"),read("ios/App/App/Info.plist"),read("ios/App/App.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved"),read("scripts/configure-native-ads.mjs")
 ]);
 
 test("Capacitor 8 och officiella plugins är exakt låsta",()=>{
@@ -50,6 +50,15 @@ test("iOS använder StoreKit 2 och central fail-closed annonsprovider",()=>{
   assert.match(ads,/class AdMobProvider/);assert.match(ads,/async requestConsent\(\)/);
   assert.match(ads,/if\(!consent\.canRequestAds\)throw/);
   assert.match(html,/ads-provider\.js\?v=15\.0\.6/);
+});
+
+test("annonsfri iOS production länkar inte Google Mobile Ads eller UMP",()=>{
+  assert.doesNotMatch(iosPackage,/CapacitorCommunityAdmob|GoogleMobileAds|UserMessagingPlatform/);
+  assert.doesNotMatch(plist,/GADApplicationIdentifier/);
+  assert.doesNotMatch(packageResolved,/google-mobile-ads|google-user-messaging-platform/);
+  assert.match(nativeAdsHook,/capacitor sync saknar AdMob-pluginen/i);
+  assert.match(nativeAdsHook,/ca-app-pub-3940256099942544~1458002511/);
+  assert.match(pkg.scripts["capacitor:sync:after"],/configure-native-ads/);
 });
 
 test("kontoborttagning kräver nylig auth och behåller minimal butiksrevision",()=>{
