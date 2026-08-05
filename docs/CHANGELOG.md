@@ -1,5 +1,10 @@
 # Ändringslogg
 
+## 15.0.6 (build 9) – Standardregion vid ny installation
+
+- Ny installation startar med Mellansverige som enda vald region.
+- Befintliga giltiga lokala och molnsynkade regionval bevaras.
+
 ## 15.0.6.1 – Annonsfri startupfix
 
 - Behåller App Store marketing version 15.0.6 och höjer iOS buildnumret från 7 till 8.

@@ -3,6 +3,7 @@ const PLACE_BY_NAME=new Map(PLACE_REGISTRY.map(place=>[place.name,place]));
 const PLACES=PLACE_REGISTRY.filter(place=>place.enabled).map(globalThis.VK_PLACE_REGISTRY.placeTuple);
 
 const REGIONS = ["Södra Sverige","Mellansverige","Norra Sverige","Jylland","Fyn","Själland","Østlandet","Sørlandet","Vestlandet","Trøndelag","Nord-Norge"];
+const DEFAULT_REGIONS=["Mellansverige"];
 const COUNTRY_REGIONS={
   Sverige:["Södra Sverige","Mellansverige","Norra Sverige"],
   Danmark:["Jylland","Fyn","Själland"],
@@ -12,6 +13,7 @@ const REGION_AREAS=Object.fromEntries(REGIONS.map(region=>[
   region,[...new Set(PLACES.filter(p=>p[2]===region).map(p=>p[1]))].sort((a,b)=>a.localeCompare(b,"sv"))
 ]));
 const ALL_AREAS=[...new Set(PLACES.map(p=>p[1]))];
+const defaultAreas=()=>DEFAULT_REGIONS.flatMap(region=>REGION_AREAS[region]||[]);
 const ACTIVITIES = {
   general:{label:"Sol och bad",icon:"☀️"},
   coast:{label:"Kustväder",icon:"🏖️"},
@@ -143,17 +145,23 @@ function clearAppCacheStorage({includeCurrentWeather=false}={}){
 try{clearAppCacheStorage()}catch{}
 
 const defaults={
-  temp:22,rain:3,sun:2,wind:1.5,regions:[...REGIONS],areas:[...ALL_AREAS],activity:"general",
+  temp:22,rain:3,sun:2,wind:1.5,regions:[...DEFAULT_REGIONS],areas:defaultAreas(),activity:"general",
   sourceMode:"auto",sources:Object.keys(MODELS)
 };
-let settings={...defaults,...JSON.parse(localStorage.getItem(SETTINGS_KEY)||"{}")};
-if(!Array.isArray(settings.regions)){ settings.regions=[...REGIONS]; }
-if(!Array.isArray(settings.areas))settings.areas=[...ALL_AREAS];
+let storedSettings={};
+try{
+  const parsed=JSON.parse(localStorage.getItem(SETTINGS_KEY)||"{}");
+  if(parsed&&typeof parsed==="object"&&!Array.isArray(parsed))storedSettings=parsed;
+}catch{}
+let settings={...defaults,...storedSettings};
+if(!Array.isArray(settings.regions)){ settings.regions=[...DEFAULT_REGIONS]; }
+if(!Array.isArray(settings.areas))settings.areas=defaultAreas();
 if(settings.regions.includes("Danmark")){ settings.regions=settings.regions.filter(x=>x!=="Danmark").concat(["Jylland","Fyn","Själland"]); }
 settings.regions=[...new Set(settings.regions.filter(x=>REGIONS.includes(x)))];
-if(!settings.regions.length)settings.regions=[...REGIONS];
-settings.areas=[...new Set(settings.areas.filter(x=>ALL_AREAS.includes(x)))];
-if(!settings.areas.length)settings.areas=[...ALL_AREAS];
+if(!settings.regions.length)settings.regions=[...DEFAULT_REGIONS];
+const selectedRegionAreas=new Set(settings.regions.flatMap(region=>REGION_AREAS[region]||[]));
+settings.areas=[...new Set(settings.areas.filter(x=>ALL_AREAS.includes(x)&&selectedRegionAreas.has(x)))];
+if(!settings.areas.length)settings.areas=settings.regions.flatMap(region=>REGION_AREAS[region]||[]);
 if(!["auto","manual"].includes(settings.sourceMode))settings.sourceMode="auto";
 if(!Array.isArray(settings.sources))settings.sources=Object.keys(MODELS);
 settings.sources=[...new Set(settings.sources.filter(x=>Object.hasOwn(MODELS,x)))];
@@ -161,10 +169,12 @@ if(!settings.sources.length)settings.sources=Object.keys(MODELS);
 
 function normalizeSettings(candidate={}){
   const next={...defaults,...candidate};
-  next.regions=Array.isArray(next.regions)?[...new Set(next.regions.filter(x=>REGIONS.includes(x)))]:[...REGIONS];
-  if(!next.regions.length)next.regions=[...REGIONS];
-  next.areas=Array.isArray(next.areas)?[...new Set(next.areas.filter(x=>ALL_AREAS.includes(x)))]:[...ALL_AREAS];
-  if(!next.areas.length)next.areas=[...ALL_AREAS];
+  next.regions=Array.isArray(next.regions)?[...new Set(next.regions.filter(x=>REGIONS.includes(x)))]:[...DEFAULT_REGIONS];
+  if(!next.regions.length)next.regions=[...DEFAULT_REGIONS];
+  next.areas=Array.isArray(next.areas)?[...new Set(next.areas.filter(x=>ALL_AREAS.includes(x)))]:next.regions.flatMap(region=>REGION_AREAS[region]||[]);
+  const allowedAreas=new Set(next.regions.flatMap(region=>REGION_AREAS[region]||[]));
+  next.areas=next.areas.filter(area=>allowedAreas.has(area));
+  if(!next.areas.length)next.areas=next.regions.flatMap(region=>REGION_AREAS[region]||[]);
   next.activity=Object.hasOwn(ACTIVITIES,next.activity)?next.activity:"general";
   next.sourceMode=["auto","manual"].includes(next.sourceMode)?next.sourceMode:"auto";
   next.sources=Array.isArray(next.sources)?[...new Set(next.sources.filter(x=>Object.hasOwn(MODELS,x)))]:Object.keys(MODELS);

@@ -6,7 +6,7 @@
 - [ ] Copyright och ansvarig juridisk aktör är fastställda.
 - [ ] Support-, marketing- och privacy-URL svarar över HTTPS utan inloggning.
 - [ ] Kontaktperson och telefon/e-post i App Store Connect är aktuella.
-- [ ] Version 15.0.6, build 8 och bundle ID `se.vaderkompassen.app` stämmer.
+- [ ] Version 15.0.6, build 9 och bundle ID `se.vaderkompassen.app` stämmer.
 
 ## Privacy, juridik och köp
 

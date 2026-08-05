@@ -2,7 +2,7 @@
 
 ## Annonsfri första productionrelease
 
-iOS 15.0.6 build 8 byggs utan Capacitor AdMob-pluginen, Google Mobile Ads SDK och UMP när `VK_ADS_MODE=disabled`. Capacitors `capacitor:sync:after`-hook tar då bort native AdMob-beroendet och `GADApplicationIdentifier` från productionprojektet. Inget test- eller produktions-App-ID paketeras. Free och Premium är båda annonsfria.
+iOS 15.0.6 build 9 byggs utan Capacitor AdMob-pluginen, Google Mobile Ads SDK och UMP när `VK_ADS_MODE=disabled`. Capacitors `capacitor:sync:after`-hook tar då bort native AdMob-beroendet och `GADApplicationIdentifier` från productionprojektet. Inget test- eller produktions-App-ID paketeras. Free och Premium är båda annonsfria.
 
 Development/staging kan fortsatt använda pluginen med `VK_ADS_MODE=test` och `VK_ADS_ENABLED=true`. Då används endast Googles officiella test-App-ID och test-annons-ID:n. Ett senare produktionsinförande kräver separat godkännande och riktiga ID:n.
 
