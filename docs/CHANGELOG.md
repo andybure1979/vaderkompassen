@@ -1,5 +1,13 @@
 # Ändringslogg
 
+## 15.0.6.1 – Annonsfri startupfix
+
+- Behåller App Store marketing version 15.0.6 och höjer iOS buildnumret från 7 till 8.
+- Kopplar bort Capacitor AdMob-pluginen, Google Mobile Ads SDK och UMP från annonsfri iOS-production när `ADS_CONFIG.mode` är `disabled`.
+- Tar bort kravet på `GADApplicationIdentifier` i annonsfri production utan att lägga in ett falskt eller verkligt produktions-ID.
+- Behåller build-time-stöd för pluginen och Googles officiella test-App-ID i development/staging med uttryckligt testläge.
+- Gör både Free och Premium annonsfria i den första productionreleasen. StoreKit, Billing, Auth, Worker, prognoser, ranking och UI är oförändrade.
+
 ## 15.0.6 – Juridik, butiksmaterial och publicering
 
 - Färdigställer svenskt och engelskt butiksunderlag för App Store och Google Play.

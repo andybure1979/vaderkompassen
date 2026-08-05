@@ -14,6 +14,8 @@ test("Androidmanifestet har endast nödvändiga permissions och avgränsad deepl
   assert.deepEqual([...manifest.matchAll(/uses-permission android:name="([^"]+)"/g)].map(m=>m[1]).sort(),["android.permission.ACCESS_NETWORK_STATE","android.permission.INTERNET"]);
   assert.match(manifest,/android:scheme="vaderkompassen" android:host="auth" android:path="\/callback"/);
   assert.doesNotMatch(manifest,/usesCleartextTraffic|ACCESS_FINE_LOCATION|CAMERA|RECORD_AUDIO/);
+  assert.match(manifest,/MobileAdsInitProvider[^>]+android:enabled="\$\{admobEnabled\}"/);
+  const gradle=read("android/app/build.gradle");assert.match(gradle,/admobEnabled: !admobAppId\.isBlank\(\)/);
 });
 test("signering läses utanför Git och signerad bundle kräver komplett konfiguration",()=>{
   const gradle=read("android/app/build.gradle"),ignore=read("android/.gitignore"),scripts=read("package.json");

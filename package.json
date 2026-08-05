@@ -20,6 +20,7 @@
     "check:ads-config": "node scripts/check-ads-config.mjs",
     "security:release-check": "node scripts/security-release-check.mjs",
     "cap:copy": "npm run build:web && cap copy",
+    "capacitor:sync:after": "node scripts/configure-native-ads.mjs",
     "cap:sync": "npm run build:web && cap sync",
     "cap:ios": "npm run build:web && cap sync ios",
     "cap:ios:storekit": "VK_ENVIRONMENT=production VK_SUBSCRIPTION_MODE=apple_native npm run build:web && cap sync ios",

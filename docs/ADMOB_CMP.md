@@ -1,5 +1,11 @@
 # AdMob och samtycke (CMP) – v15.0.5
 
+## Annonsfri första productionrelease
+
+iOS 15.0.6 build 8 byggs utan Capacitor AdMob-pluginen, Google Mobile Ads SDK och UMP när `VK_ADS_MODE=disabled`. Capacitors `capacitor:sync:after`-hook tar då bort native AdMob-beroendet och `GADApplicationIdentifier` från productionprojektet. Inget test- eller produktions-App-ID paketeras. Free och Premium är båda annonsfria.
+
+Development/staging kan fortsatt använda pluginen med `VK_ADS_MODE=test` och `VK_ADS_ENABLED=true`. Då används endast Googles officiella test-App-ID och test-annons-ID:n. Ett senare produktionsinförande kräver separat godkännande och riktiga ID:n.
+
 Väderkompassen använder `@capacitor-community/admob` 8.0.0 som Capacitor-brygga till Google Mobile Ads SDK och Google User Messaging Platform (UMP). Produktionsannonser är **BLOCKED** och fail-closed tills riktiga plattformsspecifika ID:n, publicerade CMP-meddelanden och butikernas deklarationer är verifierade.
 
 ## Runtimeflöde
