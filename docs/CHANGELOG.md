@@ -1,5 +1,7 @@
 # Ändringslogg
 
+- v15.0.6 build 10: Tydligare visuell återkoppling vid pull-to-refresh.
+
 ## 15.0.6 (build 9) – Standardregion vid ny installation
 
 - Android behåller versionName 15.0.6 och använder versionCode 15007 för nästa testbuild.

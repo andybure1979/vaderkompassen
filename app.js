@@ -1983,12 +1983,34 @@ $("updateNow").onclick=()=>navigator.serviceWorker.getRegistration().then(r=>r?.
 renderActivities();
 renderAccessUi();
 setDataMode("checking");
-const refreshIndicator=$("pullRefreshIndicator"),refreshButton=$("refreshForecast"),refreshMessage=$("refreshMessage");
-let refreshMessageTimer=0;
+const refreshIndicator=$("pullRefreshIndicator"),refreshText=$("pullRefreshText"),refreshButton=$("refreshForecast"),refreshMessage=$("refreshMessage");
+const pullScrollContainer=document.scrollingElement||document.documentElement;
+const pullEventTarget=pullScrollContainer===document.documentElement||pullScrollContainer===document.body?document:pullScrollContainer;
+const pullDebugEnabled=Boolean(globalThis.VK_CONFIG?.debug)&&globalThis.VK_CONFIG?.environment!=="production";
+let refreshMessageTimer=0,pullIndicatorTimer=0;
 function showRefreshMessage(message,error=false){
   if(!refreshMessage||!message)return;
   clearTimeout(refreshMessageTimer);refreshMessage.textContent=message;refreshMessage.classList.remove("hidden");refreshMessage.classList.toggle("error",error);
   refreshMessageTimer=setTimeout(()=>refreshMessage.classList.add("hidden"),4500);
+}
+function setPullIndicator(text,state="pull",duration=0){
+  clearTimeout(pullIndicatorTimer);refreshText.textContent=text;
+  refreshIndicator.classList.remove("threshold","refreshing","success","error");refreshIndicator.classList.add("visible");
+  if(state!=="pull")refreshIndicator.classList.add(state);
+  refreshIndicator.querySelector(".spinner").classList.toggle("hidden",state!=="refreshing");
+  if(duration)pullIndicatorTimer=setTimeout(()=>{refreshIndicator.classList.remove("visible","threshold","refreshing","success","error");refreshIndicator.style.transform=""},duration);
+}
+function instrumentPull(event){
+  if(pullDebugEnabled)console.debug("[pull-to-refresh]",event.type,event.distance===undefined?{}:{distance:event.distance});
+  if(event.type==="pullStart")setPullIndicator("Dra ned för att uppdatera");
+  else if(event.type==="pullDistanceChanged"){
+    const ready=event.distance>=64;setPullIndicator(ready?"Släpp för att uppdatera":"Dra ned för att uppdatera",ready?"threshold":"pull");
+    refreshIndicator.style.transform=`translate(-50%,${Math.min(0,-8+event.distance/8)}px)`;
+  }else if(event.type==="thresholdReached")setPullIndicator("Släpp för att uppdatera","threshold");
+  else if(event.type==="refreshStarted")setPullIndicator("Uppdaterar prognosen…","refreshing");
+  else if(event.type==="refreshCompleted")setPullIndicator("Prognosen är uppdaterad","success",2200);
+  else if(event.type==="refreshUnchanged")setPullIndicator("Prognosen är redan aktuell","success",2200);
+  else if(event.type==="refreshFailed")setPullIndicator("Kunde inte uppdatera. Försök igen.","error",3200);
 }
 async function refreshForecast(reason){
   const result=await load({background:true});
@@ -2001,29 +2023,27 @@ async function refreshForecast(reason){
 }
 forecastRefresh=globalThis.VK_REFRESH.createRefreshController({
   refresh:refreshForecast,
+  onEvent:instrumentPull,
   onState:({active,reason})=>{
     refreshButton.disabled=active;refreshButton.classList.toggle("refreshing",active);
-    refreshIndicator.classList.toggle("refreshing",active&&(reason==="pull"));
-    if(active&&reason==="pull")refreshIndicator.classList.add("visible");
-    if(!active)setTimeout(()=>{refreshIndicator.classList.remove("visible","refreshing");refreshIndicator.style.transform=""},250);
+    if(!active&&!(refreshIndicator.classList.contains("success")||refreshIndicator.classList.contains("error")))setTimeout(()=>{refreshIndicator.classList.remove("visible","threshold","refreshing");refreshIndicator.style.transform=""},250);
   }
 });
 refreshButton.onclick=()=>forecastRefresh.request("manual");
-const refreshGestureBlocked=target=>window.scrollY>0||document.documentElement.scrollTop>0||Boolean(document.querySelector("dialog[open]"))||Boolean(target?.closest?.("#weatherMap,.leaflet-container"))||forecastRefresh.isRefreshing();
+const refreshGestureBlocked=target=>pullScrollContainer.scrollTop>0||Boolean(document.querySelector("dialog[open]"))||Boolean(target?.closest?.("#weatherMap,.leaflet-container"))||forecastRefresh.isRefreshing();
 if(window.VK_NATIVE?.isNativePlatform?.()){
-  document.addEventListener("touchstart",event=>{
+  pullEventTarget.addEventListener("touchstart",event=>{
     const touch=event.touches[0];if(touch)forecastRefresh.startPull(touch.clientY,!refreshGestureBlocked(event.target));
   },{passive:true});
-  document.addEventListener("touchmove",event=>{
+  pullEventTarget.addEventListener("touchmove",event=>{
     const touch=event.touches[0];if(!touch)return;
     const distance=forecastRefresh.movePull(touch.clientY);
-    if(distance>0){refreshIndicator.classList.add("visible");refreshIndicator.style.transform=`translate(-50%,${Math.min(54,distance-18)}px)`}
     if(distance>10)event.preventDefault();
   },{passive:false});
-  document.addEventListener("touchend",()=>{
-    if(!forecastRefresh.endPull()){refreshIndicator.classList.remove("visible");refreshIndicator.style.transform=""}
+  pullEventTarget.addEventListener("touchend",()=>{
+    if(!forecastRefresh.endPull()){refreshIndicator.classList.remove("visible","threshold");refreshIndicator.style.transform=""}
   },{passive:true});
-  document.addEventListener("touchcancel",()=>forecastRefresh.cancelPull(),{passive:true});
+  pullEventTarget.addEventListener("touchcancel",()=>{forecastRefresh.cancelPull();refreshIndicator.classList.remove("visible","threshold");refreshIndicator.style.transform=""},{passive:true});
 }
 if(!restoreWeatherCache())load();
 function appVisibilityChanged(isActive){
