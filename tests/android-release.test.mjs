@@ -6,12 +6,16 @@ const read=file=>readFileSync(new URL(`../${file}`,import.meta.url),"utf8");
 test("Android releaseidentitet, SDK och buildnummer är synkade",()=>{
   const gradle=read("android/app/build.gradle");
   assert.match(gradle,/namespace = "se\.vaderkompassen\.app"/);assert.match(gradle,/applicationId "se\.vaderkompassen\.app"/);
-  assert.match(gradle,/versionName "15\.0\.6"/);assert.match(gradle,/versionCode 15007/);
+  assert.match(gradle,/versionName "15\.0\.6"/);assert.match(gradle,/versionCode 15008/);
   const vars=read("android/variables.gradle");assert.match(vars,/minSdkVersion = 24/);assert.match(vars,/compileSdkVersion = 36/);assert.match(vars,/targetSdkVersion = 36/);
 });
 test("Androidmanifestet har endast nödvändiga permissions och avgränsad deeplink",()=>{
   const manifest=read("android/app/src/main/AndroidManifest.xml");
-  assert.deepEqual([...manifest.matchAll(/uses-permission android:name="([^"]+)"/g)].map(m=>m[1]).sort(),["android.permission.ACCESS_NETWORK_STATE","android.permission.INTERNET"]);
+  const activePermissions=[...manifest.matchAll(/<uses-permission android:name="([^"]+)"([^>]*)\/>/g)]
+    .filter(([, ,attributes])=>!attributes.includes('tools:node="remove"')).map(([,name])=>name).sort();
+  assert.deepEqual(activePermissions,["android.permission.ACCESS_NETWORK_STATE","android.permission.INTERNET"]);
+  for(const permission of ["com.google.android.gms.permission.AD_ID","android.permission.ACCESS_ADSERVICES_AD_ID","android.permission.ACCESS_ADSERVICES_ATTRIBUTION","android.permission.ACCESS_ADSERVICES_TOPICS","android.permission.WAKE_LOCK","android.permission.FOREGROUND_SERVICE"])
+    assert.match(manifest,new RegExp(`${permission.replaceAll(".","\\.")}" tools:node="remove"`));
   assert.match(manifest,/android:scheme="vaderkompassen" android:host="auth" android:path="\/callback"/);
   assert.doesNotMatch(manifest,/usesCleartextTraffic|ACCESS_FINE_LOCATION|CAMERA|RECORD_AUDIO/);
   assert.match(manifest,/MobileAdsInitProvider[^>]+android:enabled="\$\{admobEnabled\}"/);

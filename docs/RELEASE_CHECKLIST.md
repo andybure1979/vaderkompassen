@@ -1,4 +1,4 @@
-# Release checklist v15.0.4
+# Release checklist v15.0.6 – Android RC
 
 Markera inte externa steg som klara utan bevis.
 
@@ -25,7 +25,7 @@ Markera inte externa steg som klara utan bevis.
 - [ ] `20260803_1501_apple_storekit.sql` körd och RLS/RPC-behörighet verifierad
 - [ ] Sandboxköp, trial, restore, manage, renewal/cancel/refund verifierade
 - [ ] Inga falska butiksköp; butikspris och intervall visas från produktdata
-- [ ] Reklam endast Free; inga produktionsannonser i test; samtycke och placering godkända
+- [x] Production är annonsfri för både Free och Premium; AdMob och UMP är avstängda
 
 ## iOS
 
@@ -38,9 +38,9 @@ Markera inte externa steg som klara utan bevis.
 
 ## Android
 
-- [ ] JDK 21, SDK/Build Tools 36, Platform Tools och Gradle Wrapper passerar `check:android-toolchain`
-- [ ] Debug- och osignerad Release-build passerar; emulator/fysisk enhet testad
-- [ ] Signing/keystore lokalt, package ID, target SDK, signerad AAB 15.0.4/15004
+- [x] JDK 21, SDK/Build Tools 36, Platform Tools och Gradle Wrapper kan bygga projektet
+- [x] Debug- och osignerad Release-build passerar; versionCode 15007 är sedan tidigare verifierad i emulator/Internal Testing
+- [x] Signing/keystore lokalt, package ID, target SDK och signerad AAB 15.0.6/15008 verifierade
 - [ ] Merged permissions, Data Safety, IARC, account deletion URL
 - [ ] Ikon/feature graphic/skärmbilder och Internal/Closed Testing
 - [ ] ProductDetails, köp, pending, backendverifiering, acknowledgement, restore och manage testade från Play-installation

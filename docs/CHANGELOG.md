@@ -1,5 +1,12 @@
 # Ändringslogg
 
+## 15.0.6 (Android versionCode 15008) – Google Play Release Candidate
+
+- Behåller funktionalitet, design, prognoser, poäng, ranking, Premium, Auth och molnsynk oförändrade.
+- Förbereder en ny Android App Bundle med versionCode 15008 eftersom 15007 redan har laddats upp till Internal Testing.
+- Production är fortsatt helt annonsfri; AdMob och UMP är avstängda.
+- Verifierar en signerad release-AAB med privat lokal upload key utan signingmaterial i Git.
+
 - v15.0.6 build 10: Tydligare visuell återkoppling vid pull-to-refresh.
 - Lösenordsåterställning öppnar nu en säker vy där användaren kan välja och spara ett nytt lösenord.
 

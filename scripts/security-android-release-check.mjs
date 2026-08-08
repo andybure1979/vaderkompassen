@@ -14,7 +14,7 @@ for(const file of textFiles){
   if(/BEGIN (RSA |EC )?PRIVATE KEY|service_role\s*[:=]\s*["'][A-Za-z0-9_-]{20,}/i.test(text))findings.push(`${file}: privat nyckel/service-role`);
 }
 const gradle=readFileSync(path.join(root,"android/app/build.gradle"),"utf8"),manifest=readFileSync(path.join(root,"android/app/src/main/AndroidManifest.xml"),"utf8");
-if(!/versionName "15\.0\.6"/.test(gradle)||!/versionCode 15007/.test(gradle))findings.push("Androidversionen är inte 15.0.6/15007");
+if(!/versionName "15\.0\.6"/.test(gradle)||!/versionCode 15008/.test(gradle))findings.push("Androidversionen är inte 15.0.6/15008");
 if(!/applicationId "se\.vaderkompassen\.app"/.test(gradle)||!/namespace = "se\.vaderkompassen\.app"/.test(gradle))findings.push("applicationId/namespace är inkonsekvent");
 if(!/android:scheme="vaderkompassen" android:host="auth" android:path="\/callback"/.test(manifest))findings.push("Auth-deeplink saknas");
 if(forbiddenFiles.length)findings.push(`privata/genererade filer spåras: ${forbiddenFiles.join(", ")}`);

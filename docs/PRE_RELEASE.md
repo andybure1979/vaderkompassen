@@ -1,11 +1,11 @@
-# Pre-release – v15.0.6
+# Pre-release – v15.0.6 Android RC (versionCode 15008)
 
 ## Kod och reproducerbarhet
 
-- [ ] Arbetsytan innehåller endast avsedda ändringar och inga hemligheter/genererade binärer.
-- [ ] `npm ci`, tester, versionskontroll, webbbygg, native sync och alla testbyggen passerar.
-- [ ] Worker ligger kvar på 15.0.2 och ingen Worker-/väder-/ranking-/Premium-/Auth-logik har ändrats.
-- [ ] Rätt commit/tagg och checksummor för IPA/AAB dokumenteras.
+- [x] Inga hemligheter eller genererade binärer är spårade; en sedan tidigare lokal iOS-projektändring ligger kvar utanför Android-RC:n.
+- [x] `npm ci`, 126 tester, versionskontroll, webbbygg, native sync samt debug-, release- och AAB-build passerar.
+- [x] Worker ligger kvar på 15.0.2 och ingen Worker-/väder-/ranking-/Premium-/Auth-logik har ändrats.
+- [x] Signerad Android-AAB och dess SHA-256 är verifierade lokalt; commit dokumenteras efter skapande.
 
 ## Publiceringsunderlag
 
@@ -13,7 +13,7 @@
 - [ ] Samtliga publika URL:er svarar och motsvarar repots godkända text.
 - [ ] Apple/Google privacy, ålder, reklam och köpformulär matchar aktuell binär.
 - [ ] Assets, metadata, testkonton, supportberedskap och release notes är godkända.
-- [ ] StoreKit/Play Billing, servernotiser, AdMob/CMP och signing är produktionsverifierade.
+- [ ] Play Billing, servernotiser och signing är produktionsverifierade. AdMob/CMP är avstängda i den annonsfria första releasen.
 
 ## Regression
 
@@ -21,4 +21,4 @@
 - [ ] Fiske, surf och skidväder visar oförändrade poäng/ranking och relevanta fakta.
 - [ ] Rollback- och incidentplan är bemannad.
 
-Aktuell status: **BLOCKED**. Juridisk granskning, externa portalinställningar, färdiga assets och signerade butikstester återstår.
+Aktuell Androidstatus: **READY FOR GOOGLE PLAY PRODUCTION** avseende lokala blockerande kontroller. Signerad AAB 15.0.6/15008 är verifierad. Uppladdning, Play App Signing, produkt/base plan/trial, köpflöden och aktuell Internal Testing-build kräver fortsatt manuell verifiering i Play Console.
