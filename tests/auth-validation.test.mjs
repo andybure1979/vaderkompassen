@@ -33,5 +33,13 @@ test("kontoknappar skyddas mot dubbla samtidiga anrop", () => {
   assert.match(auth, /withBusy\("emailSignup"/);
   assert.match(auth, /withBusy\("emailLogin"/);
   assert.match(auth, /withBusy\("resetPassword"/);
+  assert.match(auth, /withBusy\("saveNewPassword"/);
 });
 
+test("lösenordsåterställning har separat callback och sparar nytt lösenord", () => {
+  assert.match(auth, /flow", "password-recovery"/);
+  assert.match(auth, /event === "PASSWORD_RECOVERY"/);
+  assert.match(auth, /client\.auth\.updateUser\(\{password\}\)/);
+  assert.match(auth, /Lösenorden stämmer inte överens\./);
+  assert.match(auth, /signOut\(\{scope:"local"\}\)/);
+});

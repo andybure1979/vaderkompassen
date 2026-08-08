@@ -100,6 +100,15 @@
   <p class="legal-consent">Genom att skapa konto godkänner du <a href="https://andybure1979.github.io/vaderkompassen/public/terms/" target="_blank" rel="noopener">användarvillkoren</a> och har tagit del av <a href="https://andybure1979.github.io/vaderkompassen/public/privacy/" target="_blank" rel="noopener">integritetspolicyn</a>.</p>
 </form></dialog>
 
+<dialog id="passwordRecoveryDialog" class="account-dialog" aria-labelledby="passwordRecoveryTitle"><form id="passwordRecoveryForm">
+  <div class="dialog-head"><div><span class="section-kicker">KONTO</span><h2 id="passwordRecoveryTitle">Välj nytt lösenord</h2></div><button id="passwordRecoveryCancel" type="button" class="icon-btn" aria-label="Avbryt lösenordsåterställning">✕</button></div>
+  <p class="account-intro">Ange ett nytt lösenord med minst 6 tecken.</p>
+  <label>Nytt lösenord<input id="newPassword" type="password" autocomplete="new-password" minlength="6" required></label>
+  <label>Bekräfta lösenord<input id="confirmNewPassword" type="password" autocomplete="new-password" minlength="6" required></label>
+  <p id="passwordRecoveryMessage" class="account-message hidden" role="status"></p>
+  <button id="saveNewPassword" type="submit" class="primary">Spara nytt lösenord</button>
+</form></dialog>
+
 <dialog id="profileDialog" class="account-dialog"><form method="dialog">
   <div class="dialog-head"><div><span class="section-kicker">MIN PROFIL</span><h2 id="profileName">Ditt konto</h2></div><button id="profileClose" type="button" class="icon-btn" aria-label="Stäng profil">✕</button></div>
   <p id="profileNotice" class="account-message hidden" role="status"></p>

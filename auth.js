@@ -12,6 +12,7 @@
   let profile = null;
   let entitlement = null;
   let pendingVerificationNotice = false;
+  let pendingPasswordRecovery = false;
   let cloudSettingsRequested = false;
   let lastAppleSyncAt=0,appleSyncPromise=null;
 
@@ -102,6 +103,12 @@
     return window.VK_NATIVE?.authRedirectUrl?.()||new URL("./", window.location.href).href;
   }
 
+  function passwordRecoveryRedirectUrl() {
+    const url = new URL(appRedirectUrl());
+    url.searchParams.set("flow", "password-recovery");
+    return url.href;
+  }
+
   function closeDialog(id) {
     const dialog = $(id);
     if (dialog?.open) dialog.close();
@@ -120,18 +127,31 @@
     const hash = new URLSearchParams(location.hash.replace(/^#/, ""));
     const error = search.get("error_description") || hash.get("error_description");
     const isCallback = search.has("code") || hash.has("access_token") || search.has("token_hash");
-    return { error, isCallback };
+    const isRecovery = search.get("flow") === "password-recovery" || hash.get("type") === "recovery" || search.get("type") === "recovery";
+    return { error, isCallback, isRecovery };
+  }
+
+  function isPasswordRecoveryUrl(url,search,hash) {
+    return search.get("flow") === "password-recovery" || hash.get("type") === "recovery" || search.get("type") === "recovery" || url.pathname.includes("password-recovery");
+  }
+
+  function openPasswordRecovery() {
+    pendingPasswordRecovery = false;
+    closeDialog("authDialog");closeDialog("profileDialog");
+    if (!$("passwordRecoveryDialog")?.open) $("passwordRecoveryDialog")?.showModal();
+    setTimeout(() => $("newPassword")?.focus(), 0);
   }
 
   async function handleNativeAuthUrl(rawUrl) {
     if (!client || !rawUrl) return false;
     const url=new URL(rawUrl),search=new URLSearchParams(url.search),hash=new URLSearchParams(url.hash.replace(/^#/,""));
+    const recovery=isPasswordRecoveryUrl(url,search,hash);
     const error=search.get("error_description")||hash.get("error_description");
-    if(error){setMessage("authMessage",authErrorMessage(error,"login"),true);$("authDialog")?.showModal();return false}
+    if(error){setMessage("authMessage",authErrorMessage(error,recovery?"reset":"login"),true);$("authDialog")?.showModal();return false}
     const code=search.get("code");
-    if(code){const {error:exchangeError}=await client.auth.exchangeCodeForSession(code);if(exchangeError)throw exchangeError;return true}
+    if(code){const {error:exchangeError}=await client.auth.exchangeCodeForSession(code);if(exchangeError)throw exchangeError;if(recovery)openPasswordRecovery();return true}
     const accessToken=hash.get("access_token"),refreshToken=hash.get("refresh_token");
-    if(accessToken&&refreshToken){const {error:sessionError}=await client.auth.setSession({access_token:accessToken,refresh_token:refreshToken});if(sessionError)throw sessionError;return true}
+    if(accessToken&&refreshToken){const {error:sessionError}=await client.auth.setSession({access_token:accessToken,refresh_token:refreshToken});if(sessionError)throw sessionError;if(recovery)openPasswordRecovery();return true}
     return false;
   }
 
@@ -502,10 +522,35 @@
     if (!credentials) return;
     return withBusy("resetPassword", async () => {
       try {
-        const { error } = await client.auth.resetPasswordForEmail(credentials.email, { redirectTo: appRedirectUrl() });
-        setMessage("authMessage", error ? authErrorMessage(error, "reset") : "Återställningslänk skickad.", Boolean(error));
+        const { error } = await client.auth.resetPasswordForEmail(credentials.email, { redirectTo: passwordRecoveryRedirectUrl() });
+        setMessage("authMessage", error ? authErrorMessage(error, "reset") : "Återställningslänk skickad. Kontrollera även skräpposten.", Boolean(error));
       } catch (error) { setMessage("authMessage", authErrorMessage(error, "reset"), true); }
     });
+  }
+
+  async function saveNewPassword(event) {
+    event.preventDefault();
+    if(!client)return setMessage("passwordRecoveryMessage","Kontofunktionen är tillfälligt otillgänglig.",true);
+    const password=$("newPassword")?.value||"",confirmation=$("confirmNewPassword")?.value||"";
+    if(password.length<6)return setMessage("passwordRecoveryMessage","Lösenordet måste innehålla minst 6 tecken.",true);
+    if(password!==confirmation)return setMessage("passwordRecoveryMessage","Lösenorden stämmer inte överens.",true);
+    return withBusy("saveNewPassword",async()=>{
+      setMessage("passwordRecoveryMessage","Sparar nytt lösenord …");
+      try{
+        const {error}=await client.auth.updateUser({password});
+        if(error)return setMessage("passwordRecoveryMessage",authErrorMessage(error,"reset"),true);
+        $("newPassword").value="";$("confirmNewPassword").value="";closeDialog("passwordRecoveryDialog");
+        setMessage("profileNotice","Lösenordet är uppdaterat. Du är nu inloggad.");
+        if(!$("profileDialog")?.open)$("profileDialog")?.showModal();
+      }catch(error){setMessage("passwordRecoveryMessage",authErrorMessage(error,"reset"),true)}
+    });
+  }
+
+  async function cancelPasswordRecovery() {
+    closeDialog("passwordRecoveryDialog");
+    try{await client?.auth.signOut({scope:"local"})}catch{}
+    setMessage("authMessage","Lösenordsåterställningen avbröts.");
+    if(!$("authDialog")?.open)$("authDialog")?.showModal();
   }
 
   async function signOut() {
@@ -543,6 +588,9 @@
     $("appleLogin")?.addEventListener("click", () => oauth("apple"));
     $("googleLogin")?.addEventListener("click", () => oauth("google"));
     $("resetPassword")?.addEventListener("click", resetPassword);
+    $("passwordRecoveryForm")?.addEventListener("submit", saveNewPassword);
+    $("passwordRecoveryCancel")?.addEventListener("click", cancelPasswordRecovery);
+    $("passwordRecoveryDialog")?.addEventListener("cancel",event=>{event.preventDefault();cancelPasswordRecovery()});
     $("signOut")?.addEventListener("click", signOut);
     $("deleteAccount")?.addEventListener("click", deleteAccount);
     $("manageBeforeDelete")?.addEventListener("click", manageSubscription);
@@ -560,7 +608,8 @@
 
   async function init() {
     const callback = callbackState();
-    pendingVerificationNotice = callback.isCallback;
+    pendingVerificationNotice = callback.isCallback && !callback.isRecovery;
+    pendingPasswordRecovery = callback.isRecovery;
     bind();
     if (!client) {
       renderAccount();
@@ -577,6 +626,8 @@
       setMessage("authMessage", authErrorMessage(callback.error.replace(/\+/g, " "), "login"), true);
       $("authDialog").showModal();
       clearAuthCallbackUrl();
+    } else if (callback.isRecovery && session?.user) {
+      openPasswordRecovery();clearAuthCallbackUrl();
     } else if (callback.isCallback && session?.user) {
       pendingVerificationNotice = false;
       setMessage("profileNotice", "Din e-postadress är verifierad och du är nu inloggad.");
@@ -584,11 +635,14 @@
       clearAuthCallbackUrl();
     }
 
-    client.auth.onAuthStateChange(async (_event, nextSession) => {
+    client.auth.onAuthStateChange(async (event, nextSession) => {
       session = nextSession;
       cloudSettingsRequested = false;
       await loadProfile();
       dispatchCloudSettings();
+      if ((event === "PASSWORD_RECOVERY" || pendingPasswordRecovery) && nextSession?.user) {
+        openPasswordRecovery();clearAuthCallbackUrl();return;
+      }
       if (pendingVerificationNotice && nextSession?.user) {
         pendingVerificationNotice = false;
         setMessage("profileNotice", "Din e-postadress är verifierad och du är nu inloggad.");

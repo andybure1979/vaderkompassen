@@ -1,6 +1,7 @@
 # Ändringslogg
 
 - v15.0.6 build 10: Tydligare visuell återkoppling vid pull-to-refresh.
+- Lösenordsåterställning öppnar nu en säker vy där användaren kan välja och spara ett nytt lösenord.
 
 ## 15.0.6 (build 9) – Standardregion vid ny installation
 
