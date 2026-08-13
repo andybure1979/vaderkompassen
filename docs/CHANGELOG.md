@@ -1,5 +1,11 @@
 # Ändringslogg
 
+## 15.0.6 – E-postinloggning i första releasen
+
+- Tar bort synliga Apple- och Google-inloggningsalternativ från kontovyn.
+- Production tillåter endast befintlig registrering, inloggning och lösenordsåterställning med e-post och lösenord.
+- Behåller intern providerkompatibilitet och befintliga användarkonton utan migration; StoreKit och Google Play Billing är oförändrade.
+
 ## 15.0.6 (Android versionCode 15008) – Google Play Release Candidate
 
 - Behåller funktionalitet, design, prognoser, poäng, ranking, Premium, Auth och molnsynk oförändrade.

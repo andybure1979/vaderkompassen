@@ -503,6 +503,7 @@
   }
 
   async function oauth(provider) {
+    if(cfg.name==="production"||cfg.socialAuthEnabled!==true)return setMessage("authMessage","Logga in med e-post och lösenord.",true);
     if (!client) return setMessage("authMessage", "Kontofunktionen är tillfälligt otillgänglig.", true);
     setMessage("authMessage", `Öppnar ${provider === "apple" ? "Apple" : "Google"} …`);
     try {
@@ -585,8 +586,6 @@
     $("accountBtn")?.addEventListener("click", openAccount);
     $("authForm")?.addEventListener("submit", signInWithPassword);
     $("emailSignup")?.addEventListener("click", signUp);
-    $("appleLogin")?.addEventListener("click", () => oauth("apple"));
-    $("googleLogin")?.addEventListener("click", () => oauth("google"));
     $("resetPassword")?.addEventListener("click", resetPassword);
     $("passwordRecoveryForm")?.addEventListener("submit", saveNewPassword);
     $("passwordRecoveryCancel")?.addEventListener("click", cancelPasswordRecovery);
